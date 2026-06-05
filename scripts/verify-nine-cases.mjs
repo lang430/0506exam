@@ -86,7 +86,7 @@ const cases = [
     source: "real",
     sheets: await readWorkbook("门店调拨单-卡片式.xlsx"),
     rule: defaultRules.find((rule) => rule.id === "cards"),
-    expectedRows: 10
+    expectedRows: 9
   },
   {
     name: "门店配送确认单",

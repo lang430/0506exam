@@ -20,6 +20,12 @@ const text = (value: unknown): string => String(value ?? "").trim();
 
 const rowHasContent = (row: string[]): boolean => row.some((cell) => text(cell));
 
+const normalizeSheets = (sheets: SheetSnapshot[]): SheetSnapshot[] =>
+  sheets.map((sheet) => ({
+    ...sheet,
+    rows: sheet.rows.map((row) => Array.isArray(row) ? row.map((cell) => text(cell)) : [])
+  }));
+
 const toNumber = (value: string): number | string => {
   const match = text(value).match(/-?\d+(\.\d+)?/);
   return match ? Number(match[0]) : text(value);
@@ -161,6 +167,7 @@ const parseCards = (sheets: SheetSnapshot[], rule: ParseRule): OrderRow[] => {
     const headerMap = makeHeaderMap(card[itemHeaderIndex] ?? []);
     for (const row of card.slice(itemHeaderIndex + 1)) {
       if (!rowHasContent(row)) continue;
+      if (rule.stopWhenContains && row.join(" ").includes(rule.stopWhenContains)) break;
       const item = { ...base, id: crypto.randomUUID(), errors: [] };
       for (const field of orderFields) {
         const value = readMapping(field, row, headerMap, rule, sheet.name);
@@ -206,10 +213,11 @@ const parseText = (sheets: SheetSnapshot[], rule: ParseRule): OrderRow[] => {
 };
 
 export const parseByRule = (sheets: SheetSnapshot[], rule: ParseRule): OrderRow[] => {
-  if (rule.mode === "matrix") return parseMatrix(sheets, rule);
-  if (rule.mode === "cards") return parseCards(sheets, rule);
-  if (rule.mode === "text") return parseText(sheets, rule);
-  return parseTable(sheets, rule);
+  const normalizedSheets = normalizeSheets(sheets);
+  if (rule.mode === "matrix") return parseMatrix(normalizedSheets, rule);
+  if (rule.mode === "cards") return parseCards(normalizedSheets, rule);
+  if (rule.mode === "text") return parseText(normalizedSheets, rule);
+  return parseTable(normalizedSheets, rule);
 };
 
 export const validateRows = (rows: OrderRow[], existingCodes: Set<string>): ValidationIssue[] => {

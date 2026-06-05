@@ -75,6 +75,7 @@ const rules = [
     sheetStrategy: "first",
     boundaryPattern: "调拨记录",
     itemHeaderPattern: "物品编码",
+    stopWhenContains: "合计",
     mappings: {
       skuCode: { source: "header", header: "物品编码" },
       skuName: { source: "header", header: "物品名称" },

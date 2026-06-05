@@ -34,6 +34,9 @@ const aiRequestTimeoutMs = 30000;
 const previewText = (value: unknown, maxLength = 240): string =>
   String(value ?? "").replace(/\s+/g, " ").trim().slice(0, maxLength);
 
+const safeRows = (sheet: SheetSnapshot): string[][] =>
+  sheet.rows.map((row) => Array.isArray(row) ? row.map((cell) => String(cell ?? "")) : []);
+
 const classifyModelFailure = (content: string, status?: number): { category: string; message: string } => {
   const lower = content.toLowerCase();
   if (status === 401 || status === 403 || lower.includes("invalid api key") || lower.includes("unauthorized")) {
@@ -63,6 +66,7 @@ const fieldAliasEntries: Array<[string, keyof ParseRule["mappings"]]> = [
   ["storeName", "storeName"],
   ["门店", "storeName"],
   ["收货门店", "storeName"],
+  ["调入门店", "storeName"],
   ["客户", "storeName"],
   ["订货方", "storeName"],
   ["receiverName", "receiverName"],
@@ -72,6 +76,7 @@ const fieldAliasEntries: Array<[string, keyof ParseRule["mappings"]]> = [
   ["联系人", "receiverName"],
   ["receiverPhone", "receiverPhone"],
   ["电话", "receiverPhone"],
+  ["收货电话", "receiverPhone"],
   ["收件人电话", "receiverPhone"],
   ["收货人电话", "receiverPhone"],
   ["手机号", "receiverPhone"],
@@ -122,7 +127,8 @@ const findHeaderMapping = (field: keyof ParseRule["mappings"], payload: Payload,
   const aliases = fieldAliasEntries.filter(([, target]) => target === field).map(([alias]) => alias);
   const normalizedAliases = aliases.map((alias) => alias.trim().toLowerCase().replace(/[\s_*＊（()）-]/g, ""));
   for (const sheet of payload.sheets) {
-    const header = sheet.rows[Math.max(headerRow - 1, 0)] ?? [];
+    const rows = safeRows(sheet);
+    const header = rows[Math.max(headerRow - 1, 0)] ?? [];
     for (const cell of header) {
       const normalizedCell = String(cell ?? "").trim().toLowerCase().replace(/[\s_*＊（()）-]/g, "");
       if (normalizedCell && normalizedAliases.some((alias) => normalizedCell.includes(alias) || alias.includes(normalizedCell))) {
@@ -146,7 +152,7 @@ const scoreHeaderRow = (row: string[]): number => {
 const inferHeaderRow = (payload: Payload, fallback: number): number => {
   let best = { rowNumber: fallback, score: 0 };
   for (const sheet of payload.sheets) {
-    sheet.rows.slice(0, 20).forEach((row, index) => {
+    safeRows(sheet).slice(0, 20).forEach((row, index) => {
       const score = scoreHeaderRow(row);
       if (score > best.score) best = { rowNumber: index + 1, score };
     });
@@ -163,7 +169,7 @@ const inferTailExtractions = (payload: Payload): ParseRule["tailExtractions"] =>
     { field: "storeName", label: "收货门店" }
   ] as const;
   const found: ParseRule["tailExtractions"] = [];
-  const textRows = payload.sheets.flatMap((sheet) => sheet.rows);
+  const textRows = payload.sheets.flatMap((sheet) => safeRows(sheet));
   for (const item of labels) {
     if (textRows.some((row) => row.some((cell) => String(cell ?? "").includes(item.label)))) {
       found.push(item);
@@ -173,12 +179,12 @@ const inferTailExtractions = (payload: Payload): ParseRule["tailExtractions"] =>
 };
 
 const inferStopWhenContains = (payload: Payload): string | undefined =>
-  payload.sheets.some((sheet) => sheet.rows.some((row) => row.some((cell) => String(cell ?? "").trim() === "合计")))
+  payload.sheets.some((sheet) => safeRows(sheet).some((row) => row.some((cell) => String(cell ?? "").trim() === "合计")))
     ? "合计"
     : undefined;
 
 const payloadText = (payload: Payload): string =>
-  payload.sheets.flatMap((sheet) => sheet.rows.map((row) => row.join(" "))).join("\n");
+  payload.sheets.flatMap((sheet) => safeRows(sheet).map((row) => row.join(" "))).join("\n");
 
 const looksLikePdfTextItems = (payload: Payload): boolean => {
   const content = payloadText(payload);
@@ -188,6 +194,14 @@ const looksLikePdfTextItems = (payload: Payload): boolean => {
     /规格型号/.test(content) &&
     /(发货数量|数量)/.test(content) &&
     /\b[A-Z]{2,}[A-Z0-9-]{2,}\b/.test(content);
+};
+
+const looksLikeCardItems = (payload: Payload): boolean => {
+  const content = payloadText(payload);
+  return /调拨记录/.test(content) &&
+    /物品编码/.test(content) &&
+    /物品名称/.test(content) &&
+    /(数量|发货数量|出库数量)/.test(content);
 };
 
 const inferTextItemPattern = (payload: Payload): string | undefined =>
@@ -213,11 +227,19 @@ const normalizeModelRule = (rule: Partial<ParseRule>, payload: Payload): Partial
   if (!rule || typeof rule !== "object") return null;
   const mappings: ParseRule["mappings"] = {};
   const rawMappings = rule.mappings && typeof rule.mappings === "object" ? rule.mappings as Record<string, unknown> : {};
+  const cardLike = looksLikeCardItems(payload);
   for (const [rawField, rawMapping] of Object.entries(rawMappings)) {
     const field = normalizeFieldName(rawField);
     if (!field) continue;
     const mapping = normalizeMapping(rawMapping);
     if (mapping) mappings[field] = mapping;
+  }
+  if (cardLike) {
+    mappings.skuCode ??= { source: "header", header: "物品编码" };
+    mappings.skuName ??= { source: "header", header: "物品名称" };
+    mappings.spec ??= { source: "header", header: "规格" };
+    mappings.quantity ??= { source: "header", header: "数量" };
+    mappings.remark ??= { source: "header", header: "备注" };
   }
   if (!Object.keys(mappings).length) return null;
   const rawSheetStrategy = rule.sheetStrategy as unknown;
@@ -225,7 +247,7 @@ const normalizeModelRule = (rule: Partial<ParseRule>, payload: Payload): Partial
   const headerRow = inferHeaderRow(payload, Number(rule.headerRow || 1));
   const dataStartRow = Number(rule.dataStartRow || Math.max(headerRow + 1, 2));
   const itemPattern = rule.itemPattern ?? inferTextItemPattern(payload);
-  const mode = itemPattern ? "text" : rule.mode && ["table", "matrix", "cards", "text"].includes(rule.mode) ? rule.mode : "table";
+  const mode = itemPattern ? "text" : cardLike ? "cards" : rule.mode && ["table", "matrix", "cards", "text"].includes(rule.mode) ? rule.mode : "table";
   if (itemPattern) {
     mappings.externalCode ??= { source: "regex", pattern: "单据编号：\\s*([A-Z0-9]+)" };
     mappings.storeName ??= { source: "regex", pattern: "收货机构：\\s*([^\\s]+)" };
@@ -247,10 +269,17 @@ const normalizeModelRule = (rule: Partial<ParseRule>, payload: Payload): Partial
     headerRow,
     dataStartRow,
     itemPattern,
-    stopWhenContains: rule.stopWhenContains ?? inferStopWhenContains(payload),
+    boundaryPattern: rule.boundaryPattern ?? (cardLike ? "调拨记录" : undefined),
+    itemHeaderPattern: rule.itemHeaderPattern ?? (cardLike ? "物品编码" : undefined),
+    stopWhenContains: rule.stopWhenContains ?? (cardLike ? "合计" : inferStopWhenContains(payload)),
     assumptions: Array.isArray(rule.assumptions) ? rule.assumptions.map((item) => typeof item === "string" ? item : JSON.stringify(item)) : ["大模型生成规则，已由服务端归一化字段映射"],
     mappings,
-    tailExtractions: rule.tailExtractions?.length ? rule.tailExtractions : inferTailExtractions(payload)
+    tailExtractions: rule.tailExtractions?.length ? rule.tailExtractions : cardLike ? [
+      { field: "storeName", label: "调入门店" },
+      { field: "receiverName", label: "收货人" },
+      { field: "receiverPhone", label: "电话" },
+      { field: "receiverAddress", label: "收货地址" }
+    ] : inferTailExtractions(payload)
   };
 };
 
@@ -380,6 +409,7 @@ ColumnMapping 只能使用以下形式：
 禁止使用 column、columnIndex、field、description。
 列号 index 从 1 开始。普通 Excel 明细表优先使用 mode="table"。
 如果文件是 PDF/Word 抽取出的连续文本，不要使用 header 表头映射；应使用 mode="text" 并输出 itemPattern，用命名捕获组提取 skuCode、skuName、spec、quantity。
+如果 Excel 中出现多段“调拨记录/记录 #n/门店信息 + 内部物品明细小表”，不要按整张表生成普通 table；应使用 mode="cards"，设置 boundaryPattern 为记录边界文本，itemHeaderPattern 为内部小表表头，例如“物品编码”，并通过 tailExtractions 提取调入门店、收货人、电话、收货地址。
 连续文本表格式 PDF 常见 itemPattern 形态示例：
 "\\b\\d+\\s+(?<remark>[^\\s]+)\\s+(?<skuCode>[A-Z0-9-]{4,})\\s+(?<skuName>.+?)\\s+(?<spec>(?:\\d[^\\s]*(?:\\s*/\\s*[^\\s]+)?|[A-Z0-9]+码|均码))\\s+(?<unit>件|瓶|包|桶|袋|盒|箱)\\s+(?<quantity>\\d+)\\b"
 收货机构、收货人、电话、地址、单据编号可用 mappings 中的 regex 从整块文本提取。
