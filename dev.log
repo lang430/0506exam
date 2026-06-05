@@ -6,15 +6,15 @@
 - Local:         http://localhost:3000
 - Network:       http://198.18.0.1:3000
 - Environments: .env.local
-✓ Ready in 2.9s
+✓ Ready in 609ms
 
 ○ Compiling / ...
- GET / 200 in 5.4s (next.js: 5.2s, application-code: 242ms)
+ GET / 200 in 5.8s (next.js: 5.6s, application-code: 250ms)
 {
   severity_local: 'NOTICE',
   severity: 'NOTICE',
   code: '42P07',
-  message: 'relation "parse_rules" already exists, skipping',
+  message: 'relation "ai_usage_events" already exists, skipping',
   file: 'parse_utilcmd.c',
   line: '207',
   routine: 'transformCreateStmt'
@@ -23,40 +23,16 @@
   severity_local: 'NOTICE',
   severity: 'NOTICE',
   code: '42P07',
-  message: 'relation "parse_rules_updated_at_idx" already exists, skipping',
+  message: 'relation "ai_usage_events_created_at_idx" already exists, skipping',
   file: 'index.c',
   line: '889',
   routine: 'index_create'
 }
- GET /api/rules 200 in 6.2s (next.js: 587ms, application-code: 5.6s)
-⨯ SyntaxError: Unexpected token '<', "<think>
-Th"... is not valid JSON
-    at JSON.parse (<anonymous>)
-    at POST (app\api\ai-rules\route.ts:81:46)
-  79 | ...const data = await response.json();
-  80 | ...const content = data.choices?.[0]?.message?.content ?? "{}";
-> 81 | ...return NextResponse.json({ rule: { ...JSON.parse(content), id: crypto.randomUUID() }, d...
-     |                                               ^
-  82 | ...
-  83 | ...
- POST /api/ai-rules 500 in 50s (next.js: 615ms, application-code: 50s)
-⨯ SyntaxError: Unexpected token '<', "<think>
-Th"... is not valid JSON
-    at JSON.parse (<anonymous>)
-    at POST (app\api\ai-rules\route.ts:81:46)
-  79 | ...const data = await response.json();
-  80 | ...const content = data.choices?.[0]?.message?.content ?? "{}";
-> 81 | ...return NextResponse.json({ rule: { ...JSON.parse(content), id: crypto.randomUUID() }, d...
-     |                                               ^
-  82 | ...
-  83 | ...
- POST /api/ai-rules 500 in 70s (next.js: 11ms, application-code: 70s)
- POST /api/ai-rules 200 in 51s (next.js: 50ms, application-code: 51s)
 {
   severity_local: 'NOTICE',
   severity: 'NOTICE',
   code: '42P07',
-  message: 'relation "parse_rules" already exists, skipping',
+  message: 'relation "ai_usage_events" already exists, skipping',
   file: 'parse_utilcmd.c',
   line: '207',
   routine: 'transformCreateStmt'
@@ -65,10 +41,63 @@ Th"... is not valid JSON
   severity_local: 'NOTICE',
   severity: 'NOTICE',
   code: '42P07',
-  message: 'relation "parse_rules_updated_at_idx" already exists, skipping',
+  message: 'relation "ai_usage_events_created_at_idx" already exists, skipping',
   file: 'index.c',
   line: '889',
   routine: 'index_create'
 }
- GET /api/rules 200 in 5.0s (next.js: 89ms, application-code: 4.9s)
- POST /api/ai-rules 200 in 61s (next.js: 75ms, application-code: 61s)
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "ai_usage_events" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "ai_usage_events_created_at_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "ai_usage_events" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "ai_usage_events_created_at_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "ai_usage_events" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "ai_usage_events_created_at_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
+}
+ POST /api/ai-rules 200 in 2.7min (next.js: 772ms, application-code: 2.7min)

@@ -19,3 +19,6 @@
 - 已接入 Supabase/Postgres 环境变量和 AIHUBMIX 环境变量，新增 `.env.local`（已加入 `.gitignore`）。
 - 已新增并执行 `database.sql`，确认 `parse_rules`、`import_batches`、`imported_orders` 存在且 RLS 开启；`/api/rules` 已返回 `database` 模式。
 - AIHUBMIX 接口实测可连通，但当前 `coding-minimax-m3-free` 返回非纯 JSON；`/api/ai-rules` 已做 JSON 提取失败降级，返回 200 和启发式规则。
+- 已按规则加入 5 个候选模型：`xiaomi-mimo-v2.5-pro-free`、`xiaomi-mimo-v2.5-free`、`coding-glm-5.1-free`、`coding-minimax-m2.7-free`、`coding-minimax-m3-free`。
+- 已加入 AI 请求配额：每分钟 5 次、每天 500 次；数据库模式写入 `ai_usage_events`，并用事务 advisory lock 做并发保护。
+- 实测候选模型顺序尝试：前三个模型供应商返回 429，后两个返回非规则 JSON；接口最终降级但保持 200，不中断流程。

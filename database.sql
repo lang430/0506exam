@@ -43,6 +43,12 @@ create table if not exists public.imported_orders (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.ai_usage_events (
+  id bigint generated always as identity primary key,
+  model text not null,
+  created_at timestamptz not null default now()
+);
+
 create index if not exists parse_rules_updated_at_idx
   on public.parse_rules (updated_at desc);
 
@@ -60,6 +66,9 @@ create index if not exists imported_orders_payload_gin_idx
 
 create index if not exists import_batches_created_at_idx
   on public.import_batches (created_at desc);
+
+create index if not exists ai_usage_events_created_at_idx
+  on public.ai_usage_events (created_at desc);
 
 create or replace function public.set_updated_at()
 returns trigger
@@ -84,9 +93,11 @@ for each row execute function public.set_updated_at();
 alter table public.parse_rules enable row level security;
 alter table public.import_batches enable row level security;
 alter table public.imported_orders enable row level security;
+alter table public.ai_usage_events enable row level security;
 
 revoke all on table public.parse_rules from anon, authenticated;
 revoke all on table public.import_batches from anon, authenticated;
 revoke all on table public.imported_orders from anon, authenticated;
+revoke all on table public.ai_usage_events from anon, authenticated;
 
 commit;
