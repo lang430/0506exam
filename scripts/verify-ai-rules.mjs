@@ -47,6 +47,7 @@ const response = await fetch(process.env.AI_BASE_URL, {
   })
 });
 const body = await response.text();
+const contentType = response.headers.get("content-type") ?? "";
 console.log(JSON.stringify({
   hasKey: Boolean(process.env.AI_API_KEY),
   keyLength: process.env.AI_API_KEY?.length ?? 0,
@@ -54,7 +55,8 @@ console.log(JSON.stringify({
   model: process.env.AI_MODEL,
   status: response.status,
   ok: response.ok,
+  contentType,
   elapsedMs: Date.now() - startedAt,
   bodyPreview: body.slice(0, 1000)
 }, null, 2));
-if (!response.ok) process.exit(1);
+if (!response.ok || !contentType.includes("application/json")) process.exit(1);

@@ -241,6 +241,7 @@ ${JSON.stringify(payload).slice(0, 12000)}`;
         elapsedMs: Date.now() - startedAt,
         headers: redactHeaders(response.headers)
       });
+      const contentType = response.headers.get("content-type") ?? "";
       if (!response.ok) {
         const errorText = previewText(await response.text());
         const failure = classifyModelFailure(errorText, response.status);
@@ -249,6 +250,12 @@ ${JSON.stringify(payload).slice(0, 12000)}`;
         continue;
       }
       const rawBody = await response.text();
+      if (!contentType.includes("application/json")) {
+        const rawPreview = previewText(rawBody);
+        logAiRules("model-response-non-json-content-type", { requestId, model, attemptIndex, status: response.status, contentType, bodyPreview: rawPreview });
+        attempts.push({ model, attemptIndex, ok: false, error: "大模型接口返回了非 JSON 内容，请检查 AI_BASE_URL 是否为 chat/completions 接口", category: "invalid-response", status: response.status, contentPreview: rawPreview, quota });
+        continue;
+      }
       let data: { choices?: Array<{ message?: { content?: string }; finish_reason?: string }>; usage?: unknown };
       try {
         data = JSON.parse(rawBody) as typeof data;
