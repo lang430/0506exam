@@ -47,13 +47,14 @@ export default function Page() {
   const [toast, setToast] = useState("等待上传文件");
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [progressText, setProgressText] = useState("0/0");
   const [filter, setFilter] = useState("");
   const [previewLimit, setPreviewLimit] = useState(300);
   const [historyPage, setHistoryPage] = useState(1);
   const selectedRule = rules.find((rule) => rule.id === selectedRuleId) ?? rules[0];
   const existingCodes = useMemo(() => new Set(history.map((row) => row.externalCode).filter(Boolean)), [history]);
   const visibleRows = rows.slice(0, previewLimit);
-  const filteredHistory = history.filter((row) => [row.externalCode, row.receiverName, row.storeName].join(" ").includes(filter));
+  const filteredHistory = history.filter((row) => [row.externalCode, row.receiverName, row.storeName, row.submittedAt].join(" ").includes(filter));
   const historyPageSize = 24;
   const totalHistoryPages = Math.max(1, Math.ceil(filteredHistory.length / historyPageSize));
   const pagedHistory = filteredHistory.slice((historyPage - 1) * historyPageSize, historyPage * historyPageSize);
@@ -81,6 +82,7 @@ export default function Page() {
   const readFile = async (file: File): Promise<void> => {
     setBusy(true);
     setProgress(12);
+    setProgressText("0/1");
     setFileName(file.name);
     try {
       const buffer = await file.arrayBuffer();
@@ -95,10 +97,12 @@ export default function Page() {
           return { name, rows };
         });
         setSheets(nextSheets);
+        setProgressText(`${nextSheets.reduce((sum, sheet) => sum + sheet.rows.length, 0)}/${nextSheets.reduce((sum, sheet) => sum + sheet.rows.length, 0)}`);
       } else if (lower.endsWith(".docx")) {
         const mammoth = await import("mammoth/mammoth.browser");
         const result = await mammoth.extractRawText({ arrayBuffer: buffer });
         setSheets(sheetRowsFromText(file.name, result.value));
+        setProgressText("1/1");
       } else if (lower.endsWith(".pdf")) {
         const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
         const doc = await pdfjs.getDocument({ data: new Uint8Array(buffer), disableWorker: true }).promise;
@@ -107,6 +111,8 @@ export default function Page() {
           const page = await doc.getPage(pageNo);
           const content = await page.getTextContent();
           lines.push(content.items.map((item: { str?: string }) => item.str ?? "").join(" "));
+          setProgress(Math.round((pageNo / doc.numPages) * 90));
+          setProgressText(`${pageNo}/${doc.numPages}`);
         }
         setSheets(sheetRowsFromText(file.name, lines.join("\n")));
       } else {
@@ -189,6 +195,8 @@ export default function Page() {
     const parsed = parseByRule(sheets, selectedRule);
     const nextIssues = validateRows(parsed, existingCodes);
     setPreviewLimit(300);
+    setProgress(100);
+    setProgressText(`${parsed.length}/${parsed.length}`);
     setRows(parsed.map((row) => ({ ...row, errors: nextIssues.filter((issue) => issue.rowId === row.id).map((issue) => issue.message) })));
     setIssues(nextIssues);
     setTimedToast(`试解析完成：${parsed.length} 行，${nextIssues.length} 个问题`);
@@ -199,6 +207,15 @@ export default function Page() {
     const nextIssues = validateRows(nextRows, existingCodes);
     setRows(nextRows.map((row) => ({ ...row, errors: nextIssues.filter((issue) => issue.rowId === row.id).map((issue) => issue.message) })));
     setIssues(nextIssues);
+  };
+
+  const moveCellFocus = (event: React.KeyboardEvent<HTMLInputElement>): void => {
+    if (event.key !== "Enter" && event.key !== "Tab") return;
+    const inputs = Array.from(document.querySelectorAll<HTMLInputElement>("[data-grid-cell='true']"));
+    const index = inputs.indexOf(event.currentTarget);
+    if (index < 0) return;
+    event.preventDefault();
+    inputs[Math.min(index + 1, inputs.length - 1)]?.focus();
   };
 
   const addEmptyRow = (): void => {
@@ -245,7 +262,15 @@ export default function Page() {
   const submitOrders = async (): Promise<void> => {
     if (issues.length) return setTimedToast("存在校验错误，请修正后再提交");
     setBusy(true);
-    setProgress(60);
+    setProgress(10);
+    setProgressText(`0/${rows.length}`);
+    const total = Math.max(rows.length, 1);
+    const step = Math.max(1, Math.ceil(total / 10));
+    for (let done = 0; done < total; done += step) {
+      setProgress(Math.min(90, Math.round((done / total) * 90)));
+      setProgressText(`${Math.min(done, total)}/${total}`);
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
     const response = await fetch("/api/orders", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(rows) });
     const data = await response.json();
     const nextHistory = [...rows, ...history];
@@ -253,6 +278,7 @@ export default function Page() {
     localStorage.setItem("orders", JSON.stringify(nextHistory));
     setBusy(false);
     setProgress(100);
+    setProgressText(`${rows.length}/${rows.length}`);
     setTimedToast(`提交成功 ${data.saved ?? rows.length} 条，模式：${data.mode}`);
   };
 
@@ -276,6 +302,7 @@ export default function Page() {
               <span>支持 Excel、Word、PDF；上传后手动选择规则或新建 AI 草案</span>
             </label>
             <div className="progress"><span style={{ width: `${progress}%` }} /></div>
+            <div className="progress-meta"><span>{progress}%</span><span>{progressText}</span></div>
             <div className="sheet-list">{sheets.map((sheet) => <span key={sheet.name}>{sheet.name} · {sheet.rows.length} 行</span>)}</div>
           </section>
 
@@ -309,7 +336,7 @@ export default function Page() {
                 {visibleRows.map((row) => (
                   <tr key={row.id} className={row.errors.length ? "bad" : ""}>
                     <td><button className="icon" onClick={() => setRows(rows.filter((item) => item.id !== row.id))}><Trash2 size={15} /></button></td>
-                    {fields.map((field) => <td key={field.key}><input value={String(row[field.key] ?? "")} onChange={(event) => updateCell(row.id, field.key, event.target.value)} /></td>)}
+                    {fields.map((field) => <td key={field.key}><input data-grid-cell="true" value={String(row[field.key] ?? "")} onKeyDown={moveCellFocus} onChange={(event) => updateCell(row.id, field.key, event.target.value)} /></td>)}
                   </tr>
                 ))}
               </tbody>
@@ -326,9 +353,9 @@ export default function Page() {
 
         <section className="panel wide">
           <div className="panel-title"><Database size={18} /> 已导入运单</div>
-          <input className="search" value={filter} onChange={(event) => { setFilter(event.target.value); setHistoryPage(1); }} placeholder="按外部编码、收件人、门店筛选" />
+          <input className="search" value={filter} onChange={(event) => { setFilter(event.target.value); setHistoryPage(1); }} placeholder="按外部编码、收件人、门店、提交时间筛选" />
           <div className="history">
-            {pagedHistory.map((row) => <div key={row.id}><strong>{row.externalCode || row.storeName || "未命名运单"}</strong><span>{row.receiverName} {row.skuName} × {row.quantity}</span></div>)}
+            {pagedHistory.map((row) => <div key={row.id}><strong>{row.externalCode || row.storeName || "未命名运单"}</strong><span>{row.receiverName} {row.skuName} × {row.quantity}</span><span>{row.submittedAt ? new Date(row.submittedAt).toLocaleString("zh-CN") : "本地暂存"}</span></div>)}
             {!filteredHistory.length && <p className="empty">暂无历史记录</p>}
           </div>
           <div className="pager">

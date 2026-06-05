@@ -22,3 +22,6 @@
 - 已按规则加入 5 个候选模型：`xiaomi-mimo-v2.5-pro-free`、`xiaomi-mimo-v2.5-free`、`coding-glm-5.1-free`、`coding-minimax-m2.7-free`、`coding-minimax-m3-free`。
 - 已加入 AI 请求配额：每分钟 5 次、每天 500 次；数据库模式写入 `ai_usage_events`，并用事务 advisory lock 做并发保护。
 - 实测候选模型顺序尝试：前三个模型供应商返回 429，后两个返回非规则 JSON；接口最终降级但保持 200，不中断流程。
+- 重新通读 `考试要求-文件版本.html` 后补齐：进度条处理条数/总条数、提交进度、历史提交时间筛选、Enter/Tab 单元格移动。
+- 新增 `scripts/verify-requirements.mjs`，覆盖 Next App Router、手动规则、创建/复制/删除、上传格式、进度条、表格编辑、全量错误、导出、数据库、AI 限流、默认规则等关键要求。
+- 最新复验通过：`npm run typecheck`、`npm run build`、`npm audit --json`、`npx tsx scripts/verify-demos.mjs`、`npx tsx scripts/verify-performance.mjs`、`npx tsx scripts/verify-requirements.mjs`；浏览器 DOM 复验关键控件存在。

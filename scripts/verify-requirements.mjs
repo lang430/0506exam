@@ -1,0 +1,29 @@
+import { readFileSync } from "node:fs";
+import { defaultRules } from "../lib/default-rules.ts";
+
+const page = readFileSync("app/page.tsx", "utf-8");
+const css = readFileSync("app/globals.css", "utf-8");
+const db = readFileSync("database.sql", "utf-8");
+
+const checks = {
+  nextAppRouter: readFileSync("app/layout.tsx", "utf-8").includes("metadata"),
+  manualRuleSelection: page.includes("手动选择规则") || page.includes("选择规则"),
+  createEditDeleteCopyRules: ["新建规则", "保存", "删除", "复制"].every((text) => page.includes(text)),
+  uploadFormats: [".xlsx", ".xls", ".docx", ".pdf"].every((text) => page.includes(text)),
+  progressCount: page.includes("progressText"),
+  fixedHeaderAndHorizontalScroll: css.includes("position: sticky") && css.includes("overflow: auto"),
+  inlineEdit: page.includes("data-grid-cell"),
+  fullErrorList: page.includes("已全部列出") && !page.includes("issues.slice(0, 30)"),
+  exportExcel: page.includes("万能导入预览结果.xlsx"),
+  databaseTables: ["parse_rules", "import_batches", "imported_orders", "ai_usage_events"].every((text) => db.includes(text)),
+  aiRateLimit: db.includes("ai_usage_events") && readFileSync("lib/ai-quota.ts", "utf-8").includes("AI_RATE_LIMIT_PER_MINUTE"),
+  defaultRulesCoverAvailableDemos: defaultRules.length >= 6,
+  pdfRule: defaultRules.some((rule) => rule.id === "pdf-text-items"),
+  matrixRule: defaultRules.some((rule) => rule.mode === "matrix"),
+  cardRule: defaultRules.some((rule) => rule.mode === "cards"),
+  textRule: defaultRules.some((rule) => rule.mode === "text")
+};
+
+const failed = Object.entries(checks).filter(([, value]) => !value);
+console.log(JSON.stringify({ checks, failed: failed.map(([name]) => name) }, null, 2));
+if (failed.length) process.exitCode = 1;

@@ -29,8 +29,8 @@ export async function GET() {
   const sql = getSql();
   if (!sql) return NextResponse.json({ rows: [], mode: "local-demo" });
   await ensureTable(sql);
-  const rows = await sql`select payload from imported_orders order by created_at desc limit 500`;
-  return NextResponse.json({ rows: rows.map((row) => row.payload), mode: "database" });
+  const rows = await sql`select payload, created_at from imported_orders order by created_at desc limit 500`;
+  return NextResponse.json({ rows: rows.map((row) => ({ ...row.payload, submittedAt: row.created_at })), mode: "database" });
 }
 
 export async function POST(request: Request) {

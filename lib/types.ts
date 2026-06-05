@@ -26,6 +26,7 @@ export interface OrderRow {
   spec: string;
   remark: string;
   source: string;
+  submittedAt?: string;
   errors: string[];
 }
 
