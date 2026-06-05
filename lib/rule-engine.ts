@@ -112,9 +112,24 @@ const parseMatrix = (sheets: SheetSnapshot[], rule: ParseRule): OrderRow[] => {
         const value = readMapping(field, row, headerMap, rule, sheet.name);
         if (value) item[field] = field === "quantity" ? toNumber(value) as never : value as never;
       }
-      item.storeName = text(header[index]);
-      item.quantity = quantity;
-      result.push(item);
+      const columnLabel = text(header[index]);
+      const rowStore = rule.matrixRowStoreMapping ? readMapping("storeName", row, headerMap, { ...rule, mappings: { storeName: rule.matrixRowStoreMapping } }, sheet.name) : "";
+      if (rule.matrixColumnRole === "date") {
+        item.storeName = rowStore;
+        item.remark = [item.remark, columnLabel].filter(Boolean).join(" ");
+      } else {
+        item.storeName = columnLabel;
+      }
+      if (rule.compoundCellPattern) {
+        const pattern = new RegExp(rule.compoundCellPattern, "g");
+        for (const match of String(row[index] ?? "").matchAll(pattern)) {
+          const compound = { ...item, id: crypto.randomUUID(), skuName: text(match.groups?.skuName), quantity: toNumber(text(match.groups?.quantity)), errors: [] };
+          if (compound.skuName && Number(compound.quantity) > 0) result.push(compound);
+        }
+      } else {
+        item.quantity = quantity;
+        result.push(item);
+      }
     }
   }
   return result;
@@ -161,8 +176,9 @@ const parseText = (sheets: SheetSnapshot[], rule: ParseRule): OrderRow[] => {
   const content = sheets.flatMap((sheet) => sheet.rows.map((row) => row.join(" "))).join("\n");
   if (rule.itemPattern) {
     const result: OrderRow[] = [];
+    const blocks = rule.blockPattern ? content.split(new RegExp(rule.blockPattern)).filter((block) => block.trim()) : [content];
     const itemPattern = new RegExp(rule.itemPattern, "g");
-    for (const match of content.matchAll(itemPattern)) {
+    for (const block of blocks) for (const match of block.matchAll(itemPattern)) {
       const item = emptyRow("文本解析");
       const groups = match.groups ?? {};
       for (const field of orderFields) {
@@ -171,7 +187,7 @@ const parseText = (sheets: SheetSnapshot[], rule: ParseRule): OrderRow[] => {
       }
       for (const field of orderFields) {
         if (item[field]) continue;
-        const value = readMapping(field, [content], new Map(), rule, item.source, content);
+        const value = readMapping(field, [block], new Map(), rule, item.source, block);
         if (value) item[field] = field === "quantity" ? toNumber(value) as never : value as never;
       }
       if (item.skuCode || item.skuName) result.push(item);

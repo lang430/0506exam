@@ -62,12 +62,16 @@ export interface ParseRule {
   dataStartRow?: number;
   stopWhenContains?: string;
   boundaryPattern?: string;
+  blockPattern?: string;
   itemHeaderPattern?: string;
   itemPattern?: string;
   mappings: Partial<Record<OrderField, ColumnMapping>>;
   tailExtractions?: TailExtraction[];
   matrixValueStartColumn?: number;
   matrixValueEndColumn?: number;
+  matrixColumnRole?: "store" | "date";
+  matrixRowStoreMapping?: ColumnMapping;
+  compoundCellPattern?: string;
 }
 
 export interface ValidationIssue {

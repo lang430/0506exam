@@ -202,11 +202,15 @@ export default function Page() {
     setTimedToast(`试解析完成：${parsed.length} 行，${nextIssues.length} 个问题`);
   };
 
-  const updateCell = (id: string, field: OrderField, value: string): void => {
-    const nextRows = rows.map((row) => row.id === id ? { ...row, [field]: field === "quantity" ? value : value } : row);
+  const revalidateAndSetRows = (nextRows: OrderRow[]): void => {
     const nextIssues = validateRows(nextRows, existingCodes);
     setRows(nextRows.map((row) => ({ ...row, errors: nextIssues.filter((issue) => issue.rowId === row.id).map((issue) => issue.message) })));
     setIssues(nextIssues);
+  };
+
+  const updateCell = (id: string, field: OrderField, value: string): void => {
+    const nextRows = rows.map((row) => row.id === id ? { ...row, [field]: field === "quantity" ? value : value } : row);
+    revalidateAndSetRows(nextRows);
   };
 
   const moveCellFocus = (event: React.KeyboardEvent<HTMLInputElement>): void => {
@@ -235,9 +239,11 @@ export default function Page() {
       source,
       errors: []
     }, ...rows];
-    const nextIssues = validateRows(nextRows, existingCodes);
-    setRows(nextRows.map((row) => ({ ...row, errors: nextIssues.filter((issue) => issue.rowId === row.id).map((issue) => issue.message) })));
-    setIssues(nextIssues);
+    revalidateAndSetRows(nextRows);
+  };
+
+  const deletePreviewRow = (id: string): void => {
+    revalidateAndSetRows(rows.filter((row) => row.id !== id));
   };
 
   const exportExcel = async (): Promise<void> => {
@@ -273,13 +279,15 @@ export default function Page() {
     }
     const response = await fetch("/api/orders", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(rows) });
     const data = await response.json();
+    const successCount = Number(data.saved ?? rows.length);
+    const failureCount = Math.max(rows.length - successCount, 0);
     const nextHistory = [...rows, ...history];
     setHistory(nextHistory);
     localStorage.setItem("orders", JSON.stringify(nextHistory));
     setBusy(false);
     setProgress(100);
     setProgressText(`${rows.length}/${rows.length}`);
-    setTimedToast(`提交成功 ${data.saved ?? rows.length} 条，模式：${data.mode}`);
+    setTimedToast(`提交结果：成功 ${successCount} 条，失败 ${failureCount} 条，模式：${data.mode}`);
   };
 
   return (
@@ -335,7 +343,7 @@ export default function Page() {
               <tbody>
                 {visibleRows.map((row) => (
                   <tr key={row.id} className={row.errors.length ? "bad" : ""}>
-                    <td><button className="icon" onClick={() => setRows(rows.filter((item) => item.id !== row.id))}><Trash2 size={15} /></button></td>
+                    <td><button className="icon" onClick={() => deletePreviewRow(row.id)}><Trash2 size={15} /></button></td>
                     {fields.map((field) => <td key={field.key}><input data-grid-cell="true" value={String(row[field.key] ?? "")} onKeyDown={moveCellFocus} onChange={(event) => updateCell(row.id, field.key, event.target.value)} /></td>)}
                   </tr>
                 ))}
