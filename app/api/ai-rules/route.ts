@@ -52,6 +52,55 @@ const classifyModelFailure = (content: string, status?: number): { category: str
 
 type RawMapping = Partial<ColumnMapping> & { column?: number; columnIndex?: number };
 
+const fieldAliasEntries: Array<[string, keyof ParseRule["mappings"]]> = [
+  ["externalCode", "externalCode"],
+  ["单号", "externalCode"],
+  ["订单号", "externalCode"],
+  ["出库单号", "externalCode"],
+  ["配送单号", "externalCode"],
+  ["storeName", "storeName"],
+  ["门店", "storeName"],
+  ["收货门店", "storeName"],
+  ["客户", "storeName"],
+  ["订货方", "storeName"],
+  ["receiverName", "receiverName"],
+  ["收件人", "receiverName"],
+  ["联系人", "receiverName"],
+  ["receiverPhone", "receiverPhone"],
+  ["电话", "receiverPhone"],
+  ["手机号", "receiverPhone"],
+  ["receiverAddress", "receiverAddress"],
+  ["地址", "receiverAddress"],
+  ["收货地址", "receiverAddress"],
+  ["skuCode", "skuCode"],
+  ["productCode", "skuCode"],
+  ["物品编码", "skuCode"],
+  ["商品编码", "skuCode"],
+  ["产品编码", "skuCode"],
+  ["skuName", "skuName"],
+  ["productName", "skuName"],
+  ["物品名称", "skuName"],
+  ["商品名称", "skuName"],
+  ["产品名称", "skuName"],
+  ["quantity", "quantity"],
+  ["数量", "quantity"],
+  ["订货数量", "quantity"],
+  ["原订货数量", "quantity"],
+  ["实发数量", "quantity"],
+  ["配送数量", "quantity"],
+  ["spec", "spec"],
+  ["规格", "spec"],
+  ["规格型号", "spec"],
+  ["remark", "remark"],
+  ["备注", "remark"]
+];
+
+const normalizeFieldName = (field: string): keyof ParseRule["mappings"] | undefined => {
+  const key = field.trim().toLowerCase().replace(/[\s_（()）-]/g, "");
+  const found = fieldAliasEntries.find(([alias]) => alias.trim().toLowerCase().replace(/[\s_（()）-]/g, "") === key);
+  return found?.[1];
+};
+
 const normalizeMapping = (mapping: unknown): ColumnMapping | undefined => {
   if (!mapping || typeof mapping !== "object") return undefined;
   const raw = mapping as RawMapping;
@@ -70,16 +119,20 @@ const normalizeModelRule = (rule: Partial<ParseRule>, payload: Payload): Partial
   if (!rule || typeof rule !== "object") return null;
   const mappings: ParseRule["mappings"] = {};
   const rawMappings = rule.mappings && typeof rule.mappings === "object" ? rule.mappings as Record<string, unknown> : {};
-  for (const field of orderFields) {
-    const mapping = normalizeMapping(rawMappings[field]);
+  for (const [rawField, rawMapping] of Object.entries(rawMappings)) {
+    const field = normalizeFieldName(rawField);
+    if (!field) continue;
+    const mapping = normalizeMapping(rawMapping);
     if (mapping) mappings[field] = mapping;
   }
   if (!Object.keys(mappings).length) return null;
+  const rawSheetStrategy = rule.sheetStrategy as unknown;
+  const sheetStrategy = rawSheetStrategy === "all" || (typeof rawSheetStrategy === "object" && rawSheetStrategy && (rawSheetStrategy as { type?: unknown }).type === "all") ? "all" : "first";
   return {
     ...rule,
     name: String(rule.name ?? `AI规则-${payload.fileName.replace(/\.[^.]+$/, "")}`).slice(0, 50),
     mode: rule.mode && ["table", "matrix", "cards", "text"].includes(rule.mode) ? rule.mode : "table",
-    sheetStrategy: rule.sheetStrategy === "all" ? "all" : "first",
+    sheetStrategy,
     headerRow: Number(rule.headerRow || 1),
     dataStartRow: Number(rule.dataStartRow || Math.max(Number(rule.headerRow || 1) + 1, 2)),
     assumptions: Array.isArray(rule.assumptions) ? rule.assumptions.map((item) => typeof item === "string" ? item : JSON.stringify(item)) : ["大模型生成规则，已由服务端归一化字段映射"],
@@ -168,7 +221,7 @@ export async function POST(request: Request) {
   const systemPrompt = `你是出库单导入规则生成器。你的唯一任务是输出一个可被 JSON.parse 解析的 ParseRule JSON 对象。
 禁止输出 Markdown、代码块、解释、前后缀、思考过程、自然语言说明或 <think>。
 不要直接解析明细数据，只生成规则。`;
-  const userPrompt = `请根据文件快照生成 ParseRule。
+const userPrompt = `请根据文件快照生成 ParseRule。
 输出格式必须满足：
 {
   "name": "简短规则名",
@@ -190,6 +243,20 @@ export async function POST(request: Request) {
   },
   "assumptions": ["判断依据"]
 }
+注意：sheetStrategy 必须是字符串 "first" 或 "all"，不能是对象。
+mappings 只能包含以下字段名：externalCode、storeName、receiverName、receiverPhone、receiverAddress、skuCode、skuName、quantity、spec、remark。
+禁止输出 lineNo、category、productCode、productName、brand、picker、orderUnit 等原表字段名。
+字段含义对应：
+- skuCode：商品/SKU/物品/产品编码
+- skuName：商品/SKU/物品/产品名称
+- quantity：数量、实发数量、订货数量、配送数量
+- spec：规格、规格型号
+- storeName：门店、收货门店、客户、订货方
+- externalCode：单号、订单号、出库单号、配送单号
+- receiverName：收件人、联系人
+- receiverPhone：电话、手机号
+- receiverAddress：地址、收货地址
+- remark：备注
 ColumnMapping 只能使用以下形式：
 - 按列号取值：{"source":"index","index":1}
 - 按表头取值：{"source":"header","header":"表头文本"}
