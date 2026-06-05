@@ -26,6 +26,7 @@ const checks = {
   openRouterConfigured: runtimeConfig.includes("OPENROUTER_API_KEYS") && runtimeConfig.includes("openrouter") && runtimeConfig.includes("https://openrouter.ai/api/v1/chat/completions"),
   aiKeyPoolConfigured: runtimeConfig.includes("apiKeys") && aiRoute.includes("apiKeyCount") && aiRoute.includes("keyIndex"),
   openRouterOnly: ![runtimeConfig, aiRoute].some((content) => content.includes("AIHUBMIX") || content.includes("aihubmix")),
+  openRouterAttemptLimit: aiRoute.includes("maxOpenRouterAttempts = 3") && aiRoute.includes("attemptedCount >= maxOpenRouterAttempts"),
   aiRuleNormalization: aiRoute.includes("normalizeModelRule") && aiRoute.includes("normalizeMapping") && aiRoute.includes("columnIndex"),
   aiLocalConfigSupported: runtimeConfig.includes(".env.local") && runtimeConfig.includes("readFileSync") && runtimeConfig.includes("encoding: \"utf-8\""),
   aiQuotaUsesRuntimeConfig: readFileSync("lib/ai-quota.ts", "utf-8").includes("getAiQuotaConfig"),

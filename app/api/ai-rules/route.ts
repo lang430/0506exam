@@ -26,6 +26,8 @@ const logAiRules = (event: string, details: Record<string, unknown>): void => {
   console.info(`[ai-rules] ${event}`, JSON.stringify(details));
 };
 
+const maxOpenRouterAttempts = 3;
+
 const previewText = (value: unknown, maxLength = 240): string =>
   String(value ?? "").replace(/\s+/g, " ").trim().slice(0, maxLength);
 
@@ -227,14 +229,17 @@ export async function POST(request: Request) {
 {"name":"AI规则","mode":"table","sheetStrategy":"first","headerRow":1,"dataStartRow":2,"mappings":{"skuCode":{"source":"index","index":6},"quantity":{"source":"index","index":9}},"assumptions":["第1行是表头"]}
 文件快照：${JSON.stringify(payload).slice(0, 18000)}`;
   const attempts: AiAttempt[] = [];
+  let attemptedCount = 0;
   for (const [keyIndex, apiKey] of apiKeys.entries()) {
     for (const model of candidateModels) {
+      if (attemptedCount >= maxOpenRouterAttempts) break;
       const quota = await consumeAiQuota(`${provider}:${keyIndex}:${model}`);
       if (!quota.allowed) {
         logAiRules("quota-blocked", { requestId, model, keyIndex, quota });
         attempts.push({ model, keyIndex, ok: false, error: quota.reason, category: "local-quota", quota });
         break;
       }
+      attemptedCount += 1;
       try {
       logAiRules("model-attempt", { requestId, model, keyIndex, quota });
       const startedAt = Date.now();
@@ -323,11 +328,12 @@ export async function POST(request: Request) {
       attempts.push({ model, keyIndex, ok: false, error: error instanceof Error ? error.message : "模型请求失败", quota });
       }
     }
+    if (attemptedCount >= maxOpenRouterAttempts) break;
   }
   const preferredFailure = attempts.find((attempt) => attempt.category === "provider-quota" || attempt.category === "auth" || attempt.category === "rate-limit") ?? attempts.at(-1);
   const fallbackReason = preferredFailure?.error
     ? `${preferredFailure.error}，已降级为启发式规则`
     : "所有候选模型均未返回可用规则，已降级为启发式规则";
-  logAiRules("fallback", { requestId, reason: fallbackReason, attempts });
+  logAiRules("fallback", { requestId, reason: fallbackReason, attemptedCount, maxOpenRouterAttempts, attempts });
   return NextResponse.json({ rule: fallbackRule(payload, fallbackReason), degraded: true, error: fallbackReason, configStatus, attempts }, { status: 200 });
 }
