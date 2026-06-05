@@ -29,7 +29,7 @@ const logAiRules = (event: string, details: Record<string, unknown>): void => {
 };
 
 const maxAiAttempts = 3;
-const aiRequestTimeoutMs = 12000;
+const aiRequestTimeoutMs = 25000;
 
 const previewText = (value: unknown, maxLength = 240): string =>
   String(value ?? "").replace(/\s+/g, " ").trim().slice(0, maxLength);
@@ -133,6 +133,24 @@ const findHeaderMapping = (field: keyof ParseRule["mappings"], payload: Payload,
   return undefined;
 };
 
+const inferTailExtractions = (payload: Payload): ParseRule["tailExtractions"] => {
+  const labels = [
+    { field: "receiverName", label: "收货人" },
+    { field: "receiverPhone", label: "电话" },
+    { field: "receiverAddress", label: "地址" },
+    { field: "storeName", label: "收货机构" },
+    { field: "storeName", label: "收货门店" }
+  ] as const;
+  const found: ParseRule["tailExtractions"] = [];
+  const textRows = payload.sheets.flatMap((sheet) => sheet.rows);
+  for (const item of labels) {
+    if (textRows.some((row) => row.some((cell) => String(cell ?? "").includes(item.label)))) {
+      found.push(item);
+    }
+  }
+  return found;
+};
+
 const normalizeMapping = (mapping: unknown): ColumnMapping | undefined => {
   if (!mapping || typeof mapping !== "object") return undefined;
   const raw = mapping as RawMapping;
@@ -176,7 +194,8 @@ const normalizeModelRule = (rule: Partial<ParseRule>, payload: Payload): Partial
     headerRow,
     dataStartRow,
     assumptions: Array.isArray(rule.assumptions) ? rule.assumptions.map((item) => typeof item === "string" ? item : JSON.stringify(item)) : ["大模型生成规则，已由服务端归一化字段映射"],
-    mappings
+    mappings,
+    tailExtractions: rule.tailExtractions?.length ? rule.tailExtractions : inferTailExtractions(payload)
   };
 };
 
@@ -309,7 +328,7 @@ ColumnMapping 只能使用以下形式：
 ${JSON.stringify(payload).slice(0, 12000)}`;
   const attempts: AiAttempt[] = [];
   let attemptedCount = 0;
-  const maxAttempts = payload.auto ? 1 : maxAiAttempts;
+  const maxAttempts = maxAiAttempts;
   for (let attemptIndex = 0; attemptIndex < maxAttempts; attemptIndex += 1) {
       const quota = await consumeAiQuota(`${provider}:${model}`);
       if (!quota.allowed) {

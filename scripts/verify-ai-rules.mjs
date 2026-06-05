@@ -1,5 +1,5 @@
 import ExcelJS from "exceljs";
-import { readdirSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { parseByRule } from "../lib/rule-engine.ts";
 
@@ -12,7 +12,10 @@ const cellText = (cell) => {
 };
 
 const demoDir = join(process.cwd(), "demos");
-const fileName = readdirSync(demoDir, { encoding: "utf8" }).find((name) => name.endsWith(".xlsx"));
+const targetFile = "12.25海口龙湖天街-配送发货单PS2512220005001(1).xlsx";
+const fileName = existsSync(join(demoDir, targetFile))
+  ? targetFile
+  : readdirSync(demoDir, { encoding: "utf8" }).find((name) => name.endsWith(".xlsx"));
 if (!fileName) throw new Error("未找到 xlsx demo 文件");
 
 const workbook = new ExcelJS.Workbook();
@@ -83,10 +86,33 @@ if (response.ok && contentType.includes("application/json")) {
     sheetStrategy: rawRule.sheetStrategy === "all" || rawRule.sheetStrategy?.type === "all" ? "all" : "first",
     headerRow: Number(rawRule.headerRow || 1),
     dataStartRow: Number(rawRule.dataStartRow || 2),
-    mappings
+    mappings,
+    tailExtractions: [
+      { field: "receiverName", label: "收货人" },
+      { field: "receiverPhone", label: "电话" },
+      { field: "receiverAddress", label: "地址" },
+      { field: "storeName", label: "收货机构" }
+    ]
   };
-  parsedRows = parseByRule(sheets, rule).length;
-  rulePreview = { name: rule.name, mode: rule.mode, sheetStrategy: rule.sheetStrategy, headerRow: rule.headerRow, dataStartRow: rule.dataStartRow, mappingFields: Object.keys(rule.mappings) };
+  const parsed = parseByRule(sheets, rule);
+  parsedRows = parsed.length;
+  rulePreview = {
+    name: rule.name,
+    mode: rule.mode,
+    sheetStrategy: rule.sheetStrategy,
+    headerRow: rule.headerRow,
+    dataStartRow: rule.dataStartRow,
+    mappingFields: Object.keys(rule.mappings),
+    first: parsed[0] ? {
+      storeName: parsed[0].storeName,
+      receiverName: parsed[0].receiverName,
+      receiverPhone: parsed[0].receiverPhone,
+      receiverAddress: parsed[0].receiverAddress,
+      skuCode: parsed[0].skuCode,
+      skuName: parsed[0].skuName,
+      quantity: parsed[0].quantity
+    } : null
+  };
 }
 console.log(JSON.stringify({
   hasKey: Boolean(process.env.AI_API_KEY),
@@ -101,4 +127,4 @@ console.log(JSON.stringify({
   rulePreview,
   bodyPreview: body.slice(0, 1000)
 }, null, 2));
-if (!response.ok || !contentType.includes("application/json") || !parsedRows) process.exit(1);
+if (!response.ok || !contentType.includes("application/json") || !parsedRows || !rulePreview?.first?.skuCode || !rulePreview?.first?.skuName || !(Number(rulePreview?.first?.quantity) > 0) || !(rulePreview?.first?.storeName || (rulePreview?.first?.receiverName && rulePreview?.first?.receiverPhone && rulePreview?.first?.receiverAddress))) process.exit(1);
