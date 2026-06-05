@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "functions": {
+    "/api/ai-rules": {},
+    "/api/orders": {},
+    "/api/rules": {}
+  }
+}
