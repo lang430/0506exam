@@ -40,8 +40,10 @@ const readMapping = (
   headerMap: Map<string, number>,
   rule: ParseRule,
   sheetName: string,
-  rawText = row.join(" ")
+  rawText = row.join(" "),
+  groups: Record<string, string> = {}
 ): string => {
+  if (groups[field]) return text(groups[field]);
   const mapping = rule.mappings[field];
   if (!mapping) return "";
   if (mapping.source === "static") return text(mapping.value);
@@ -157,6 +159,25 @@ const parseCards = (sheets: SheetSnapshot[], rule: ParseRule): OrderRow[] => {
 
 const parseText = (sheets: SheetSnapshot[], rule: ParseRule): OrderRow[] => {
   const content = sheets.flatMap((sheet) => sheet.rows.map((row) => row.join(" "))).join("\n");
+  if (rule.itemPattern) {
+    const result: OrderRow[] = [];
+    const itemPattern = new RegExp(rule.itemPattern, "g");
+    for (const match of content.matchAll(itemPattern)) {
+      const item = emptyRow("文本解析");
+      const groups = match.groups ?? {};
+      for (const field of orderFields) {
+        const value = readMapping(field, [match[0]], new Map(), rule, item.source, match[0], groups);
+        if (value) item[field] = field === "quantity" ? toNumber(value) as never : value as never;
+      }
+      for (const field of orderFields) {
+        if (item[field]) continue;
+        const value = readMapping(field, [content], new Map(), rule, item.source, content);
+        if (value) item[field] = field === "quantity" ? toNumber(value) as never : value as never;
+      }
+      if (item.skuCode || item.skuName) result.push(item);
+    }
+    return result;
+  }
   const blocks = content.split(new RegExp(rule.boundaryPattern || "\\n\\s*\\n")).filter(Boolean);
   return blocks.map((block, index) => {
     const item = emptyRow(`文本块 ${index + 1}`);

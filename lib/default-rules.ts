@@ -100,5 +100,23 @@ export const defaultRules: ParseRule[] = [
       spec: { source: "index", index: 8 },
       remark: { source: "index", index: 2 }
     }
+  },
+  {
+    id: "pdf-text-items",
+    name: "PDF 文本表格：明细正则 + 底部收货信息",
+    mode: "text",
+    sheetStrategy: "first",
+    itemPattern: "\\b\\d+\\s+(?<remark>[^\\s]+)\\s+(?<skuCode>[A-Z0-9-]{4,})\\s+(?<skuName>.+?)\\s+(?<spec>\\d[^\\s]*(?:\\s*[^\\s]*?)?)\\s+(?<unit>件|瓶|包|桶)\\s+(?<quantity>\\d+)\\b",
+    mappings: {
+      externalCode: { source: "regex", pattern: "单据编号：\\s*([A-Z0-9]+)" },
+      storeName: { source: "regex", pattern: "收货机构：\\s*([^\\s]+)" },
+      receiverName: { source: "regex", pattern: "收货人：\\s*([^\\s]+)" },
+      receiverPhone: { source: "regex", pattern: "收货电话：\\s*([0-9-]+)" },
+      receiverAddress: { source: "regex", pattern: "收货地址：\\s*(.+?)\\s+打印次数" }
+    },
+    assumptions: [
+      "PDF 文本抽取后，明细行需包含序号、物品类别、编码、名称、规格、单位、数量。",
+      "名称和规格之间的边界由规格以数字开头这一特征推断，保存前建议预览确认。"
+    ]
   }
 ];

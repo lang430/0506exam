@@ -1,6 +1,9 @@
 import ExcelJS from "exceljs";
 import { fileURLToPath } from "node:url";
+import { readFileSync } from "node:fs";
+import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { parseByRule, validateRows } from "../lib/rule-engine.ts";
+import { defaultRules } from "../lib/default-rules.ts";
 
 const root = new URL("../demos/", import.meta.url);
 
@@ -101,7 +104,8 @@ const rules = [
       spec: { source: "index", index: 8 },
       remark: { source: "index", index: 2 }
     }
-  }
+  },
+  ...defaultRules.filter((rule) => rule.id === "pdf-text-items")
 ];
 
 const cases = [
@@ -110,6 +114,10 @@ const cases = [
   ["湖南仓.xlsx", "table-hunan"],
   ["门店调拨单-卡片式.xlsx", "cards"],
   ["欢乐牧场模板0430.xlsx", "matrix-store"]
+];
+
+const pdfCases = [
+  ["黔寨寨贵州烙锅（鞍山店）常温.pdf", "pdf-text-items"]
 ];
 
 const readWorkbook = async (fileName) => {
@@ -155,6 +163,44 @@ for (const [fileName, ruleId] of cases) {
     first: {
       storeName: first.storeName,
       receiverName: first.receiverName,
+      skuCode: first.skuCode,
+      skuName: first.skuName,
+      quantity: first.quantity
+    }
+  }, null, 2));
+}
+
+const readPdf = async (fileName) => {
+  const data = new Uint8Array(readFileSync(fileURLToPath(new URL(fileName, root))));
+  const doc = await getDocument({ data, disableWorker: true }).promise;
+  const lines = [];
+  for (let pageNo = 1; pageNo <= doc.numPages; pageNo += 1) {
+    const page = await doc.getPage(pageNo);
+    const content = await page.getTextContent();
+    lines.push(content.items.map((item) => item.str || "").join(" "));
+  }
+  return [{ name: fileName, rows: lines.map((line) => [line]) }];
+};
+
+for (const [fileName, ruleId] of pdfCases) {
+  const sheets = await readPdf(fileName);
+  const rule = rules.find((item) => item.id === ruleId);
+  const rows = parseByRule(sheets, rule);
+  const issues = validateRows(rows, new Set());
+  const first = rows[0] || {};
+  console.log(JSON.stringify({
+    fileName,
+    rule: rule.name,
+    rows: rows.length,
+    issues: issues.length,
+    issueSummary: issues.reduce((acc, issue) => {
+      acc[issue.field] = (acc[issue.field] || 0) + 1;
+      return acc;
+    }, {}),
+    first: {
+      storeName: first.storeName,
+      receiverName: first.receiverName,
+      receiverPhone: first.receiverPhone,
       skuCode: first.skuCode,
       skuName: first.skuName,
       quantity: first.quantity

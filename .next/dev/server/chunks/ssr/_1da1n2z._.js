@@ -225,6 +225,39 @@ const defaultRules = [
                 index: 2
             }
         }
+    },
+    {
+        id: "pdf-text-items",
+        name: "PDF 文本表格：明细正则 + 底部收货信息",
+        mode: "text",
+        sheetStrategy: "first",
+        itemPattern: "\\b\\d+\\s+(?<remark>[^\\s]+)\\s+(?<skuCode>[A-Z0-9-]{4,})\\s+(?<skuName>.+?)\\s+(?<spec>\\d[^\\s]*(?:\\s*[^\\s]*?)?)\\s+(?<unit>件|瓶|包|桶)\\s+(?<quantity>\\d+)\\b",
+        mappings: {
+            externalCode: {
+                source: "regex",
+                pattern: "单据编号：\\s*([A-Z0-9]+)"
+            },
+            storeName: {
+                source: "regex",
+                pattern: "收货机构：\\s*([^\\s]+)"
+            },
+            receiverName: {
+                source: "regex",
+                pattern: "收货人：\\s*([^\\s]+)"
+            },
+            receiverPhone: {
+                source: "regex",
+                pattern: "收货电话：\\s*([0-9-]+)"
+            },
+            receiverAddress: {
+                source: "regex",
+                pattern: "收货地址：\\s*(.+?)\\s+打印次数"
+            }
+        },
+        assumptions: [
+            "PDF 文本抽取后，明细行需包含序号、物品类别、编码、名称、规格、单位、数量。",
+            "名称和规格之间的边界由规格以数字开头这一特征推断，保存前建议预览确认。"
+        ]
     }
 ];
 }),
@@ -288,7 +321,8 @@ const makeHeaderMap = (row)=>{
     });
     return map;
 };
-const readMapping = (field, row, headerMap, rule, sheetName, rawText = row.join(" "))=>{
+const readMapping = (field, row, headerMap, rule, sheetName, rawText = row.join(" "), groups = {})=>{
+    if (groups[field]) return text(groups[field]);
     const mapping = rule.mappings[field];
     if (!mapping) return "";
     if (mapping.source === "static") return text(mapping.value);
@@ -409,6 +443,29 @@ const parseCards = (sheets, rule)=>{
 };
 const parseText = (sheets, rule)=>{
     const content = sheets.flatMap((sheet)=>sheet.rows.map((row)=>row.join(" "))).join("\n");
+    if (rule.itemPattern) {
+        const result = [];
+        const itemPattern = new RegExp(rule.itemPattern, "g");
+        for (const match of content.matchAll(itemPattern)){
+            const item = emptyRow("文本解析");
+            const groups = match.groups ?? {};
+            for (const field of __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$types$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["orderFields"]){
+                const value = readMapping(field, [
+                    match[0]
+                ], new Map(), rule, item.source, match[0], groups);
+                if (value) item[field] = field === "quantity" ? toNumber(value) : value;
+            }
+            for (const field of __TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$types$2e$ts__$5b$app$2d$ssr$5d$__$28$ecmascript$29$__["orderFields"]){
+                if (item[field]) continue;
+                const value = readMapping(field, [
+                    content
+                ], new Map(), rule, item.source, content);
+                if (value) item[field] = field === "quantity" ? toNumber(value) : value;
+            }
+            if (item.skuCode || item.skuName) result.push(item);
+        }
+        return result;
+    }
     const blocks = content.split(new RegExp(rule.boundaryPattern || "\\n\\s*\\n")).filter(Boolean);
     return blocks.map((block, index)=>{
         const item = emptyRow(`文本块 ${index + 1}`);

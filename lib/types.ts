@@ -62,6 +62,7 @@ export interface ParseRule {
   stopWhenContains?: string;
   boundaryPattern?: string;
   itemHeaderPattern?: string;
+  itemPattern?: string;
   mappings: Partial<Record<OrderField, ColumnMapping>>;
   tailExtractions?: TailExtraction[];
   matrixValueStartColumn?: number;
