@@ -1,8 +1,5 @@
-import { config } from "dotenv";
 import postgres from "postgres";
 import { POST } from "../app/api/orders/route.ts";
-
-config({ path: ".env.local" });
 
 const databaseUrl = process.env.DATABASE_URL ||
   process.env.POSTGRES_URL ||
@@ -10,7 +7,7 @@ const databaseUrl = process.env.DATABASE_URL ||
   process.env.POSTGRES_URL_NON_POOLING;
 
 if (!databaseUrl) {
-  console.log(JSON.stringify({ pass: false, error: "数据库环境变量未配置" }, null, 2));
+  console.log(JSON.stringify({ pass: false, error: "数据库环境变量未配置，请使用 Vercel 后台环境变量或在当前进程注入 POSTGRES_URL" }, null, 2));
   process.exit(1);
 }
 

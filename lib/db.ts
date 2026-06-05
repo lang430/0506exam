@@ -1,10 +1,8 @@
 import postgres from "postgres";
+import { getDatabaseConfig } from "@/lib/runtime-config";
 
 export const getDatabaseUrl = (): string | undefined =>
-  process.env.DATABASE_URL ||
-  process.env.POSTGRES_URL ||
-  process.env.POSTGRES_PRISMA_URL ||
-  process.env.POSTGRES_URL_NON_POOLING;
+  getDatabaseConfig().url;
 
 export const getSql = (): postgres.Sql | null => {
   const url = getDatabaseUrl();

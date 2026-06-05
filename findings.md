@@ -16,7 +16,7 @@
 - 题面描述为 9 份出库单，但当前 `demos/` 缺少 Word、周配送计划、多单 PDF 等样例。
 - 5 个 Excel 样例均已纳入验证脚本，分别覆盖尾部信息提取、多 Sheet 合并、跨行同单多 SKU、卡片式边界、SKU × 门店矩阵转置。
 - PDF 文件已通过 `pdfjs-dist` 文本抽取和默认文本明细规则验证，当前 PDF 解析 41 行、0 校验错误。
-- 规则持久化已从浏览器 localStorage 升级为服务端 API：优先数据库，无数据库时使用 `.data/rules.json`。
+- 规则持久化已从浏览器 localStorage 升级为服务端 API，并强制写入 Postgres `parse_rules` 表；无数据库配置时返回明确错误。
 - 性能验证：规则引擎解析 1000 行标准数据约 26 ms；前端用 300 行分批渲染控制大列表压力。
 - `.xls` 支持已由 `@e965/xlsx` 提供，安装后 `npm audit` 为 0 漏洞。
 - Supabase 数据库已实际初始化：3 张业务表存在，RLS 已启用，规则 API 使用 database 模式。

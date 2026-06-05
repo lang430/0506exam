@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { consumeAiQuota } from "@/lib/ai-quota";
+import { getAiConfig } from "@/lib/runtime-config";
 import type { ParseRule, SheetSnapshot } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -70,28 +71,20 @@ const parseModelRule = (content: string): Partial<ParseRule> | null => {
 };
 
 const getCandidateModels = (): string[] => {
-  const defaults = [
-    "xiaomi-mimo-v2.5-pro-free",
-    "xiaomi-mimo-v2.5-free",
-    "coding-glm-5.1-free",
-    "coding-minimax-m2.7-free",
-    "coding-minimax-m3-free"
-  ];
-  const configured = process.env.AI_MODELS || process.env.AI_MODEL;
-  const models = configured ? configured.split(",").map((item) => item.trim()).filter(Boolean) : defaults;
-  return Array.from(new Set(models));
+  return Array.from(new Set(getAiConfig().models));
 };
 
 export async function POST(request: Request) {
   const payload = await request.json() as Payload;
-  const apiKey = process.env.AIHUBMIX_API_KEY || process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY;
-  const baseUrl = process.env.AIHUBMIX_API_KEY
-    ? (process.env.AI_BASE_URL || "https://aihubmix.com/v1/chat/completions")
-    : process.env.DEEPSEEK_API_KEY
-      ? "https://api.deepseek.com/chat/completions"
-      : "https://api.openai.com/v1/chat/completions";
-  const candidateModels = process.env.AIHUBMIX_API_KEY ? getCandidateModels() : [process.env.AI_MODEL || (process.env.DEEPSEEK_API_KEY ? "deepseek-chat" : "gpt-4o-mini")];
-  if (!apiKey) return NextResponse.json({ rule: fallbackRule(payload), degraded: true });
+  const { apiKey, baseUrl } = getAiConfig();
+  const candidateModels = getCandidateModels();
+  if (!apiKey || !baseUrl || !candidateModels.length) {
+    return NextResponse.json({
+      rule: fallbackRule(payload),
+      degraded: true,
+      error: "大模型环境变量未完整配置，请在 Vercel 后台配置 AIHUBMIX_API_KEY、AI_BASE_URL、AI_MODELS"
+    });
+  }
 
   const prompt = `你是物流导入规则设计助手。只输出一个 JSON 对象，不要输出 <think>、Markdown、解释文字或代码块。JSON 必须是 ParseRule，规则用于把文件快照解析为出库单 SKU 行，不要直接解析数据。字段包括 externalCode,storeName,receiverName,receiverPhone,receiverAddress,skuCode,skuName,quantity,spec,remark。行号和列号从 1 开始。必须给出 assumptions 标注推测项。文件快照：${JSON.stringify(payload).slice(0, 18000)}`;
   const attempts: Array<{ model: string; ok: boolean; error?: string; quota?: unknown }> = [];
