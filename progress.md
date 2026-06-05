@@ -16,3 +16,6 @@
 - 复验通过：`npx tsx scripts/verify-performance.mjs` 解析 1000 行约 33 ms；浏览器 DOM 确认复制、删除、加载更多、分页控件存在。
 - 继续补齐 `.xls` 支持和 PDF 默认规则：`@e965/xlsx` 审计 0 漏洞，PDF demo 解析 41 行、0 校验错误。
 - 最新复验通过：`npm run typecheck`、`npm run build`、`npm audit --json`、`npx tsx scripts/verify-demos.mjs`、`npx tsx scripts/verify-performance.mjs`。
+- 已接入 Supabase/Postgres 环境变量和 AIHUBMIX 环境变量，新增 `.env.local`（已加入 `.gitignore`）。
+- 已新增并执行 `database.sql`，确认 `parse_rules`、`import_batches`、`imported_orders` 存在且 RLS 开启；`/api/rules` 已返回 `database` 模式。
+- AIHUBMIX 接口实测可连通，但当前 `coding-minimax-m3-free` 返回非纯 JSON；`/api/ai-rules` 已做 JSON 提取失败降级，返回 200 和启发式规则。

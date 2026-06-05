@@ -3,16 +3,12 @@ import { dirname, join } from "node:path";
 import { NextResponse } from "next/server";
 import postgres from "postgres";
 import { defaultRules } from "@/lib/default-rules";
+import { getSql } from "@/lib/db";
 import type { ParseRule } from "@/lib/types";
 
 export const runtime = "nodejs";
 
 const filePath = join(process.cwd(), ".data", "rules.json");
-
-const getSql = () => {
-  const url = process.env.DATABASE_URL;
-  return url ? postgres(url, { ssl: "require", max: 1 }) : null;
-};
 
 const readFileRules = async (): Promise<ParseRule[]> => {
   try {
@@ -39,8 +35,10 @@ const ensureTable = async (sql: postgres.Sql): Promise<void> => {
   await sql`create table if not exists parse_rules (
     id text primary key,
     payload jsonb not null,
-    updated_at timestamptz default now()
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now()
   )`;
+  await sql`create index if not exists parse_rules_updated_at_idx on parse_rules (updated_at desc)`;
 };
 
 export async function GET() {

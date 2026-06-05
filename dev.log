@@ -4,81 +4,71 @@
 
 ▲ Next.js 16.2.7 (Turbopack)
 - Local:         http://localhost:3000
-- Network:       http://169.254.236.88:3000
-✓ Ready in 3.4s
+- Network:       http://198.18.0.1:3000
+- Environments: .env.local
+✓ Ready in 2.9s
 
 ○ Compiling / ...
- GET / 200 in 5.9s (next.js: 5.6s, application-code: 320ms)
- GET / 200 in 70ms (next.js: 6ms, application-code: 64ms)
- GET / 200 in 93ms (next.js: 8ms, application-code: 85ms)
-⚠ Blocked cross-origin request to Next.js dev resource /_next/webpack-hmr from "127.0.0.1".
-Cross-origin access to Next.js dev resources is blocked by default for safety.
-
-To allow this host in development, add it to "allowedDevOrigins" in next.config.js and restart the dev server:
-
-// next.config.js
-module.exports = {
-  allowedDevOrigins: ['127.0.0.1'],
+ GET / 200 in 5.4s (next.js: 5.2s, application-code: 242ms)
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "parse_rules" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
 }
-
-Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
- GET / 200 in 216ms (next.js: 9ms, application-code: 207ms)
- GET / 200 in 85ms (next.js: 8ms, application-code: 77ms)
- GET / 200 in 208ms (next.js: 96ms, application-code: 113ms)
- GET / 200 in 253ms (next.js: 93ms, application-code: 160ms)
- GET / 200 in 163ms (next.js: 60ms, application-code: 103ms)
- GET / 200 in 176ms (next.js: 66ms, application-code: 111ms)
- GET / 200 in 35ms (next.js: 3ms, application-code: 32ms)
- GET / 200 in 93ms (next.js: 7ms, application-code: 86ms)
- GET / 200 in 103ms (next.js: 5ms, application-code: 97ms)
- GET / 200 in 42ms (next.js: 3ms, application-code: 39ms)
- GET / 200 in 65ms (next.js: 3ms, application-code: 62ms)
- GET / 200 in 43ms (next.js: 3ms, application-code: 40ms)
- GET / 200 in 58ms (next.js: 4ms, application-code: 54ms)
- GET / 200 in 141ms (next.js: 48ms, application-code: 93ms)
-⨯ ./app/page.tsx:141:11
-the name `data` is defined multiple times
-  [90m139 |[0m     [36mconst[0m data = [36mawait[0m response.json();
-  [90m140 |[0m     [36mconst[0m rule = data.rule [36mas[0m [33mParseRule[0m;
-[31m[1m>[0m [90m141 |[0m     [36mconst[0m data = [36mawait[0m saveRuleRemote(rule);
-  [90m    |[0m           [31m[1m^^^^[0m
-  [90m142 |[0m     [36mconst[0m nextRules = data.rules [36mas[0m [33mParseRule[0m[];
-  [90m143 |[0m     setRules(nextRules);
-  [90m144 |[0m     setSelectedRuleId(rule.id);
-
-Ecmascript file had an error
-
-Import traces:
-  Client Component Browser:
-    ./app/page.tsx [Client Component Browser]
-    ./app/page.tsx [Server Component]
-
-  Client Component SSR:
-    ./app/page.tsx [Client Component SSR]
-    ./app/page.tsx [Server Component]
-
-
- GET / 500 in 3.7s (next.js: 3.5s, application-code: 191ms)
- GET /api/rules 500 in 415ms (next.js: 402ms, application-code: 13ms)
-⚠ Blocked cross-origin request to Next.js dev resource /__nextjs_original-stack-frames from "127.0.0.1".
-Cross-origin access to Next.js dev resources is blocked by default for safety.
-
-To allow this host in development, add it to "allowedDevOrigins" in next.config.js and restart the dev server:
-
-// next.config.js
-module.exports = {
-  allowedDevOrigins: ['127.0.0.1'],
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "parse_rules_updated_at_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
 }
-
-Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
-✓ Compiled in 66ms
- GET /api/rules 200 in 363ms (next.js: 324ms, application-code: 39ms)
- GET /api/rules 200 in 14ms (next.js: 4ms, application-code: 11ms)
- GET / 200 in 201ms (next.js: 80ms, application-code: 120ms)
- GET / 200 in 63ms (next.js: 4ms, application-code: 59ms)
- GET / 200 in 52ms (next.js: 3ms, application-code: 49ms)
- GET / 200 in 51ms (next.js: 3ms, application-code: 48ms)
- GET / 200 in 74ms (next.js: 4ms, application-code: 70ms)
- GET / 200 in 303ms (next.js: 12ms, application-code: 291ms)
- GET / 200 in 78ms (next.js: 5ms, application-code: 72ms)
- GET / 200 in 55ms (next.js: 3ms, application-code: 52ms)
+ GET /api/rules 200 in 6.2s (next.js: 587ms, application-code: 5.6s)
+⨯ SyntaxError: Unexpected token '<', "<think>
+Th"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at POST (app\api\ai-rules\route.ts:81:46)
+  79 | ...const data = await response.json();
+  80 | ...const content = data.choices?.[0]?.message?.content ?? "{}";
+> 81 | ...return NextResponse.json({ rule: { ...JSON.parse(content), id: crypto.randomUUID() }, d...
+     |                                               ^
+  82 | ...
+  83 | ...
+ POST /api/ai-rules 500 in 50s (next.js: 615ms, application-code: 50s)
+⨯ SyntaxError: Unexpected token '<', "<think>
+Th"... is not valid JSON
+    at JSON.parse (<anonymous>)
+    at POST (app\api\ai-rules\route.ts:81:46)
+  79 | ...const data = await response.json();
+  80 | ...const content = data.choices?.[0]?.message?.content ?? "{}";
+> 81 | ...return NextResponse.json({ rule: { ...JSON.parse(content), id: crypto.randomUUID() }, d...
+     |                                               ^
+  82 | ...
+  83 | ...
+ POST /api/ai-rules 500 in 70s (next.js: 11ms, application-code: 70s)
+ POST /api/ai-rules 200 in 51s (next.js: 50ms, application-code: 51s)
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "parse_rules" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "parse_rules_updated_at_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
+}
+ GET /api/rules 200 in 5.0s (next.js: 89ms, application-code: 4.9s)
+ POST /api/ai-rules 200 in 61s (next.js: 75ms, application-code: 61s)

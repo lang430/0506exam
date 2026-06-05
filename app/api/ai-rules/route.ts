@@ -53,14 +53,33 @@ const fallbackRule = ({ fileName, sheets }: Payload): ParseRule => {
   };
 };
 
+const parseModelRule = (content: string): Partial<ParseRule> | null => {
+  try {
+    return JSON.parse(content) as Partial<ParseRule>;
+  } catch {
+    const start = content.indexOf("{");
+    const end = content.lastIndexOf("}");
+    if (start < 0 || end <= start) return null;
+    try {
+      return JSON.parse(content.slice(start, end + 1)) as Partial<ParseRule>;
+    } catch {
+      return null;
+    }
+  }
+};
+
 export async function POST(request: Request) {
   const payload = await request.json() as Payload;
-  const apiKey = process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY;
-  const baseUrl = process.env.DEEPSEEK_API_KEY ? "https://api.deepseek.com/chat/completions" : "https://api.openai.com/v1/chat/completions";
-  const model = process.env.AI_MODEL || (process.env.DEEPSEEK_API_KEY ? "deepseek-chat" : "gpt-4o-mini");
+  const apiKey = process.env.AIHUBMIX_API_KEY || process.env.DEEPSEEK_API_KEY || process.env.OPENAI_API_KEY;
+  const baseUrl = process.env.AIHUBMIX_API_KEY
+    ? (process.env.AI_BASE_URL || "https://aihubmix.com/v1/chat/completions")
+    : process.env.DEEPSEEK_API_KEY
+      ? "https://api.deepseek.com/chat/completions"
+      : "https://api.openai.com/v1/chat/completions";
+  const model = process.env.AI_MODEL || (process.env.AIHUBMIX_API_KEY ? "coding-minimax-m3-free" : process.env.DEEPSEEK_API_KEY ? "deepseek-chat" : "gpt-4o-mini");
   if (!apiKey) return NextResponse.json({ rule: fallbackRule(payload), degraded: true });
 
-  const prompt = `你是物流导入规则设计助手。请只输出 JSON，生成 ParseRule。规则用于把文件快照解析为出库单 SKU 行，不要直接解析数据。字段包括 externalCode,storeName,receiverName,receiverPhone,receiverAddress,skuCode,skuName,quantity,spec,remark。行号和列号从 1 开始。必须给出 assumptions 标注推测项。文件快照：${JSON.stringify(payload).slice(0, 18000)}`;
+  const prompt = `你是物流导入规则设计助手。只输出一个 JSON 对象，不要输出 <think>、Markdown、解释文字或代码块。JSON 必须是 ParseRule，规则用于把文件快照解析为出库单 SKU 行，不要直接解析数据。字段包括 externalCode,storeName,receiverName,receiverPhone,receiverAddress,skuCode,skuName,quantity,spec,remark。行号和列号从 1 开始。必须给出 assumptions 标注推测项。文件快照：${JSON.stringify(payload).slice(0, 18000)}`;
   const response = await fetch(baseUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
@@ -74,5 +93,7 @@ export async function POST(request: Request) {
   if (!response.ok) return NextResponse.json({ rule: fallbackRule(payload), degraded: true, error: await response.text() }, { status: 200 });
   const data = await response.json();
   const content = data.choices?.[0]?.message?.content ?? "{}";
-  return NextResponse.json({ rule: { ...JSON.parse(content), id: crypto.randomUUID() }, degraded: false });
+  const parsedRule = parseModelRule(content);
+  if (!parsedRule) return NextResponse.json({ rule: fallbackRule(payload), degraded: true, error: "模型未返回可解析的规则 JSON" }, { status: 200 });
+  return NextResponse.json({ rule: { ...parsedRule, id: crypto.randomUUID() }, degraded: false });
 }
