@@ -10,7 +10,7 @@ const runtimeConfig = readFileSync("lib/runtime-config.ts", "utf-8");
 
 const checks = {
   nextAppRouter: readFileSync("app/layout.tsx", "utf-8").includes("metadata"),
-  manualRuleSelection: page.includes("手动选择规则") || page.includes("选择规则"),
+  manualRuleSelection: page.includes("select value={selectedRuleId}") && page.includes("setSelectedRuleId"),
   createEditDeleteCopyRules: ["新建规则", "保存", "删除", "复制"].every((text) => page.includes(text)),
   uploadFormats: [".xlsx", ".xls", ".docx", ".pdf"].every((text) => page.includes(text)),
   dragAndDropUpload: page.includes("onDragOver") && page.includes("onDrop") && page.includes("handleDrop"),
@@ -20,6 +20,8 @@ const checks = {
   inlineEdit: page.includes("data-grid-cell"),
   addAndDeleteRows: page.includes("新增行") && page.includes("deletePreviewRow"),
   fullErrorList: page.includes("已全部列出") && !page.includes("issues.slice(0, 30)"),
+  previewPagination: page.includes("previewPage") && page.includes("totalPreviewPages") && page.includes("每页 {previewPageSize} 行") && !page.includes("加载更多"),
+  realtimeAiRuleGeneration: page.includes("generateRule(nextSheets") && page.includes("正在实时调用 AI 生成规则"),
   exportExcel: page.includes("万能导入预览结果.xlsx"),
   submitSummary: page.includes("成功 ${successCount} 条，失败 ${failureCount} 条"),
   databaseTables: ["parse_rules", "import_batches", "imported_orders", "ai_usage_events"].every((text) => db.includes(text)),

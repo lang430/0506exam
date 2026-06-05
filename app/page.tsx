@@ -279,7 +279,7 @@ export default function Page() {
     if (!selectedRule) return setTimedToast("请先从数据库选择解析规则");
     const parsed = parseByRule(sheets, selectedRule);
     const nextIssues = validateRows(parsed, existingCodes);
-    setPreviewLimit(300);
+    setPreviewPage(1);
     setProgress(100);
     setProgressText(`${parsed.length}/${parsed.length}`);
     setRows(parsed.map((row) => ({ ...row, errors: nextIssues.filter((issue) => issue.rowId === row.id).map((issue) => issue.message) })));
@@ -325,6 +325,7 @@ export default function Page() {
       errors: []
     }, ...rows];
     revalidateAndSetRows(nextRows);
+    setPreviewPage(1);
   };
 
   const deletePreviewRow = (id: string): void => {
@@ -418,7 +419,7 @@ export default function Page() {
             >
               <input type="file" accept=".xlsx,.xls,.docx,.pdf" onChange={(event) => event.target.files?.[0] && readFile(event.target.files[0])} />
               <strong>{fileName || "拖拽或点击上传文件"}</strong>
-              <span>支持 Excel、Word、PDF；上传后手动选择规则或新建 AI 草案</span>
+              <span>支持 Excel、Word、PDF；上传后实时调用 AI 生成规则草案</span>
             </label>
             <div className="progress"><span style={{ width: `${progress}%` }} /></div>
             <div className="progress-meta"><span>{progress}%</span><span>{progressText}</span></div>
@@ -464,10 +465,12 @@ export default function Page() {
           </div>
           <div className="actions sticky-actions">
             <button onClick={addEmptyRow}><Plus size={16} /> 新增行</button>
-            <button onClick={() => setPreviewLimit((value) => Math.min(value + 300, rows.length))} disabled={previewLimit >= rows.length}><Plus size={16} /> 加载更多</button>
+            <button onClick={() => setPreviewPage((page) => Math.max(1, page - 1))} disabled={previewPage <= 1}>上一页</button>
+            <label className="page-jump"><span>第</span><input className="search" type="number" min={1} max={totalPreviewPages} value={previewPage} onChange={(event) => setPreviewPage(Math.min(totalPreviewPages, Math.max(1, Number(event.target.value) || 1)))} /><span>/ {totalPreviewPages} 页</span></label>
+            <button onClick={() => setPreviewPage((page) => Math.min(totalPreviewPages, page + 1))} disabled={previewPage >= totalPreviewPages}>下一页</button>
             <button onClick={exportExcel} disabled={!rows.length}><Download size={16} /> 导出 Excel</button>
             <button onClick={submitOrders} disabled={!rows.length || busy}><Database size={16} /> 提交下单</button>
-            <span>当前渲染 {visibleRows.length}/{rows.length} 行，按 300 行分批展示以保证流畅</span>
+            <span>当前第 {previewPage} 页，显示 {visibleRows.length} / {rows.length} 行，每页 {previewPageSize} 行</span>
           </div>
         </section>
 

@@ -39,6 +39,8 @@ td input { width: 100%; min-height: 30px; border: 1px solid transparent; border-
 td input:focus { outline: 2px solid #b5e8e8; background: #fff; }
 tr.bad td { background: #fff8f7; }
 .sticky-actions { position: sticky; bottom: 0; align-items: center; padding-top: 12px; background: #fff; }
+.page-jump { display: inline-grid; grid-template-columns: auto 64px auto; align-items: center; gap: 6px; color: #4e5969; font-size: 13px; }
+.page-jump .search { height: 34px; text-align: center; }
 .history-filters { display: grid; grid-template-columns: minmax(220px, 2fr) repeat(4, minmax(140px, 1fr)) auto auto auto; gap: 8px; align-items: end; }
 .history-filters .span-2 { grid-column: span 2; }
 .date-filter { display: grid; gap: 4px; color: #4e5969; font-size: 12px; }
