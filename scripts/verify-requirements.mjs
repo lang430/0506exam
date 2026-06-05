@@ -5,6 +5,8 @@ const page = readFileSync("app/page.tsx", "utf-8");
 const css = readFileSync("app/globals.css", "utf-8");
 const db = readFileSync("database.sql", "utf-8");
 const ordersApi = readFileSync("app/api/orders/route.ts", "utf-8");
+const aiQuota = readFileSync("lib/ai-quota.ts", "utf-8");
+const runtimeConfig = readFileSync("lib/runtime-config.ts", "utf-8");
 
 const checks = {
   nextAppRouter: readFileSync("app/layout.tsx", "utf-8").includes("metadata"),
@@ -24,7 +26,7 @@ const checks = {
   ordersPersistToDatabase: !page.includes("localStorage") && !page.includes("本地暂存") && !ordersApi.includes("local-demo") && ordersApi.includes("import_batches") && ordersApi.includes("imported_orders"),
   historyTableAndFilters: page.includes("historyFilters") && page.includes("history-table") && ["外部编码", "收件人", "提交日期"].every((text) => page.includes(text)),
   clearImportedOrders: page.includes("clearImportedOrders") && ordersApi.includes("export async function DELETE") && ordersApi.includes("delete from imported_orders") && ordersApi.includes("delete from import_batches"),
-  aiRateLimit: db.includes("ai_usage_events") && readFileSync("lib/ai-quota.ts", "utf-8").includes("AI_RATE_LIMIT_PER_MINUTE"),
+  aiRateLimit: db.includes("ai_usage_events") && aiQuota.includes("getAiQuotaConfig") && runtimeConfig.includes("AI_RATE_LIMIT_PER_MINUTE") && runtimeConfig.includes("AI_DAILY_LIMIT"),
   defaultRulesCoverAvailableDemos: defaultRules.length >= 6,
   pdfRule: defaultRules.some((rule) => rule.id === "pdf-text-items"),
   matrixRule: defaultRules.some((rule) => rule.mode === "matrix"),

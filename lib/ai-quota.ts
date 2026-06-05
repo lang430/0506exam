@@ -1,7 +1,7 @@
 import { getSql } from "@/lib/db";
+import { getAiQuotaConfig } from "@/lib/runtime-config";
 
-const minuteLimit = Number(process.env.AI_RATE_LIMIT_PER_MINUTE || 5);
-const dailyLimit = Number(process.env.AI_DAILY_LIMIT || 500);
+const { minuteLimit, dailyLimit } = getAiQuotaConfig();
 const memoryEvents: number[] = [];
 
 export interface QuotaResult {
