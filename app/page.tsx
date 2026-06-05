@@ -48,13 +48,18 @@ export default function Page() {
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
   const [progressText, setProgressText] = useState("0/0");
-  const [filter, setFilter] = useState("");
+  const [historyFilters, setHistoryFilters] = useState({ externalCode: "", receiverName: "", submittedDate: "" });
   const [previewLimit, setPreviewLimit] = useState(300);
   const [historyPage, setHistoryPage] = useState(1);
   const selectedRule = rules.find((rule) => rule.id === selectedRuleId) ?? rules[0];
   const existingCodes = useMemo(() => new Set(history.map((row) => row.externalCode).filter(Boolean)), [history]);
   const visibleRows = rows.slice(0, previewLimit);
-  const filteredHistory = history.filter((row) => [row.externalCode, row.receiverName, row.storeName, row.submittedAt].join(" ").includes(filter));
+  const filteredHistory = history.filter((row) => {
+    const submittedDate = row.submittedAt ? new Date(row.submittedAt).toLocaleDateString("zh-CN") : "";
+    return (!historyFilters.externalCode || row.externalCode.includes(historyFilters.externalCode)) &&
+      (!historyFilters.receiverName || row.receiverName.includes(historyFilters.receiverName)) &&
+      (!historyFilters.submittedDate || submittedDate.includes(historyFilters.submittedDate));
+  });
   const historyPageSize = 24;
   const totalHistoryPages = Math.max(1, Math.ceil(filteredHistory.length / historyPageSize));
   const pagedHistory = filteredHistory.slice((historyPage - 1) * historyPageSize, historyPage * historyPageSize);
@@ -104,7 +109,8 @@ export default function Page() {
         setProgressText("1/1");
       } else if (lower.endsWith(".pdf")) {
         const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
-        const doc = await pdfjs.getDocument({ data: new Uint8Array(buffer), disableWorker: true }).promise;
+        pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/legacy/build/pdf.worker.mjs", import.meta.url).toString();
+        const doc = await pdfjs.getDocument({ data: new Uint8Array(buffer) }).promise;
         const lines: string[] = [];
         for (let pageNo = 1; pageNo <= doc.numPages; pageNo += 1) {
           const page = await doc.getPage(pageNo);
@@ -124,6 +130,12 @@ export default function Page() {
     } finally {
       setBusy(false);
     }
+  };
+
+  const handleDrop = (event: React.DragEvent<HTMLLabelElement>): void => {
+    event.preventDefault();
+    const file = event.dataTransfer.files?.[0];
+    if (file) void readFile(file);
   };
 
   const generateRule = async (): Promise<void> => {
@@ -298,6 +310,19 @@ export default function Page() {
     setTimedToast(`提交结果：成功 ${successCount} 条，失败 ${failureCount} 条，模式：${data.mode}`);
   };
 
+  const clearImportedOrders = async (): Promise<void> => {
+    if (!history.length) return setTimedToast("当前没有可清除的已导入运单");
+    if (!window.confirm("确认清空数据库中的已导入运单数据？此操作不可撤销。")) return;
+    setBusy(true);
+    const response = await fetch("/api/orders", { method: "DELETE" });
+    const data = await response.json();
+    setBusy(false);
+    if (!response.ok) return setTimedToast(data.error ?? "清空数据库数据失败");
+    setHistory([]);
+    setHistoryPage(1);
+    setTimedToast("已清空数据库中的已导入运单数据");
+  };
+
   return (
     <main>
       <section className="shell">
@@ -312,7 +337,11 @@ export default function Page() {
         <div className="grid">
           <section className="panel">
             <div className="panel-title"><FileUp size={18} /> 文件导入</div>
-            <label className="dropzone">
+            <label
+              className="dropzone"
+              onDragOver={(event) => event.preventDefault()}
+              onDrop={handleDrop}
+            >
               <input type="file" accept=".xlsx,.xls,.docx,.pdf" onChange={(event) => event.target.files?.[0] && readFile(event.target.files[0])} />
               <strong>{fileName || "拖拽或点击上传文件"}</strong>
               <span>支持 Excel、Word、PDF；上传后手动选择规则或新建 AI 草案</span>
@@ -369,9 +398,20 @@ export default function Page() {
 
         <section className="panel wide">
           <div className="panel-title"><Database size={18} /> 已导入运单</div>
-          <input className="search" value={filter} onChange={(event) => { setFilter(event.target.value); setHistoryPage(1); }} placeholder="按外部编码、收件人、门店、提交时间筛选" />
-          <div className="history">
-            {pagedHistory.map((row) => <div key={row.id}><strong>{row.externalCode || row.storeName || "未命名运单"}</strong><span>{row.receiverName} {row.skuName} × {row.quantity}</span><span>{row.submittedAt ? new Date(row.submittedAt).toLocaleString("zh-CN") : "数据库记录"}</span></div>)}
+          <div className="history-filters">
+            <input className="search" value={historyFilters.externalCode} onChange={(event) => { setHistoryFilters((value) => ({ ...value, externalCode: event.target.value })); setHistoryPage(1); }} placeholder="外部编码" />
+            <input className="search" value={historyFilters.receiverName} onChange={(event) => { setHistoryFilters((value) => ({ ...value, receiverName: event.target.value })); setHistoryPage(1); }} placeholder="收件人" />
+            <input className="search" value={historyFilters.submittedDate} onChange={(event) => { setHistoryFilters((value) => ({ ...value, submittedDate: event.target.value })); setHistoryPage(1); }} placeholder="提交日期，如 2026/6/5" />
+            <button onClick={() => { setHistoryFilters({ externalCode: "", receiverName: "", submittedDate: "" }); setHistoryPage(1); }}>重置查询</button>
+            <button onClick={clearImportedOrders} disabled={!history.length || busy}><Trash2 size={16} /> 清空导入数据</button>
+          </div>
+          <div className="table-wrap history-table">
+            <table>
+              <thead><tr><th>外部编码</th><th>收货门店</th><th>收件人</th><th>电话</th><th>SKU编码</th><th>SKU名称</th><th>数量</th><th>提交时间</th></tr></thead>
+              <tbody>
+                {pagedHistory.map((row) => <tr key={row.id}><td>{row.externalCode}</td><td>{row.storeName}</td><td>{row.receiverName}</td><td>{row.receiverPhone}</td><td>{row.skuCode}</td><td>{row.skuName}</td><td>{row.quantity}</td><td>{row.submittedAt ? new Date(row.submittedAt).toLocaleString("zh-CN") : "数据库记录"}</td></tr>)}
+              </tbody>
+            </table>
             {!filteredHistory.length && <p className="empty">暂无历史记录</p>}
           </div>
           <div className="pager">

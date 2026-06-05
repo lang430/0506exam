@@ -51,6 +51,17 @@ export async function GET() {
   return NextResponse.json({ rows: rows.map((row) => ({ ...row.payload, submittedAt: row.created_at })), mode: "database" });
 }
 
+export async function DELETE() {
+  const sql = getSql();
+  if (!sql) return NextResponse.json({ error: "数据库未配置，无法清空已导入运单" }, { status: 503 });
+  await ensureTable(sql);
+  await sql.begin(async (transaction) => {
+    await transaction`delete from imported_orders`;
+    await transaction`delete from import_batches`;
+  });
+  return NextResponse.json({ cleared: true, mode: "database" });
+}
+
 export async function POST(request: Request) {
   const payload = await request.json() as OrderRow[] | { fileName?: string; ruleId?: string; rows?: OrderRow[] };
   const rows = Array.isArray(payload) ? payload : payload.rows ?? [];
