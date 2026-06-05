@@ -36,11 +36,22 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const { id } = await request.json() as { id: string };
+  const body = await request.json() as { id?: string; degraded?: boolean };
   const sql = getSql();
   if (!sql) return NextResponse.json({ error: "数据库未配置，解析规则未删除" }, { status: 503 });
   await ensureTable(sql);
-  await sql`delete from parse_rules where id = ${id}`;
+  if (body.degraded) {
+    await sql`
+      delete from parse_rules
+      where payload->>'name' like 'AI草案-%'
+        or (payload->'assumptions')::text like '%OPENROUTER_API_KEYS%'
+        or (payload->'assumptions')::text like '%大模型环境变量未完整配置%'
+        or (payload->'assumptions')::text like '%启发式规则%'
+        or (payload->'assumptions')::text like '%所有字段映射均需用户预览确认后再保存%'
+    `;
+  } else if (body.id) {
+    await sql`delete from parse_rules where id = ${body.id}`;
+  }
   const rows = await sql`select payload from parse_rules order by updated_at desc`;
   return NextResponse.json({ rules: rows.map((row) => row.payload), mode: "database" });
 }

@@ -23,6 +23,7 @@ const checks = {
   previewPagination: page.includes("previewPage") && page.includes("totalPreviewPages") && page.includes("每页 {previewPageSize} 行") && !page.includes("加载更多"),
   realtimeAiRuleGeneration: page.includes("generateRule(nextSheets") && page.includes("正在实时调用 AI 生成规则"),
   aiRuleParsesWithoutDatabase: page.includes("数据库暂不可用，已先在当前页面使用") && page.includes("parseByRule(sourceSheets, rule)"),
+  degradedAiRulesNotSaved: page.includes("isDegradedAiRule") && page.includes("aiData.degraded") && page.includes("degraded: true"),
   exportExcel: page.includes("万能导入预览结果.xlsx"),
   submitSummary: page.includes("成功 ${successCount} 条，失败 ${failureCount} 条"),
   databaseTables: ["parse_rules", "import_batches", "imported_orders", "ai_usage_events"].every((text) => db.includes(text)),

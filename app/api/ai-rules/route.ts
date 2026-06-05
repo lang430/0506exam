@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { consumeAiQuota } from "@/lib/ai-quota";
+import { parseByRule } from "@/lib/rule-engine";
 import { getAiConfig } from "@/lib/runtime-config";
 import { orderFields } from "@/lib/types";
 import type { ColumnMapping, ParseRule, SheetSnapshot } from "@/lib/types";
@@ -46,51 +47,6 @@ const classifyModelFailure = (content: string, status?: number): { category: str
     return { category: "model-unavailable", message: "候选模型不可用，请检查 AI_MODELS 配置" };
   }
   return { category: "invalid-response", message: "模型未返回可解析的规则 JSON" };
-};
-
-const fallbackRule = ({ fileName, sheets }: Payload, reason = "大模型不可用，已使用启发式分析生成"): ParseRule => {
-  const first = sheets[0];
-  const rows = first?.rows ?? [];
-  const headerIndex = rows.findIndex((row) => row.some((cell) => /物品编码|SKU|商品编码/.test(cell)));
-  const cardLike = rows.some((row) => row.join(" ").includes("调拨记录"));
-  const header = rows[Math.max(headerIndex, 0)] ?? [];
-  const indexOf = (pattern: RegExp): number | undefined => {
-    const index = header.findIndex((cell) => pattern.test(cell));
-    return index >= 0 ? index + 1 : undefined;
-  };
-  return {
-    id: crypto.randomUUID(),
-    name: `AI草案-${fileName.replace(/\.[^.]+$/, "")}`.slice(0, 50),
-    mode: cardLike ? "cards" : "table",
-    confidence: headerIndex >= 0 ? 0.72 : 0.45,
-    assumptions: [
-      reason,
-      "所有字段映射均需用户预览确认后再保存"
-    ],
-    sheetStrategy: sheets.length > 1 ? "all" : "first",
-    headerRow: Math.max(headerIndex + 1, 1),
-    dataStartRow: Math.max(headerIndex + 2, 2),
-    stopWhenContains: "合计",
-    boundaryPattern: "调拨记录",
-    itemHeaderPattern: "物品编码",
-    mappings: {
-      externalCode: { source: "header", header: "配送单号" },
-      storeName: { source: "header", header: "收货机构" },
-      receiverName: { source: "header", header: "收货人" },
-      receiverPhone: { source: "header", header: "电话" },
-      receiverAddress: { source: "header", header: "收货地址" },
-      skuCode: indexOf(/物品编码|SKU编码|商品编码/) ? { source: "index", index: indexOf(/物品编码|SKU编码|商品编码/) } : { source: "header", header: "物品编码" },
-      skuName: indexOf(/物品名称|SKU名称|商品名称/) ? { source: "index", index: indexOf(/物品名称|SKU名称|商品名称/) } : { source: "header", header: "物品名称" },
-      quantity: indexOf(/数量|应发|出库/) ? { source: "index", index: indexOf(/数量|应发|出库/) } : { source: "header", header: "数量" },
-      spec: indexOf(/规格/) ? { source: "index", index: indexOf(/规格/) } : { source: "header", header: "规格型号" },
-      remark: { source: "header", header: "备注" }
-    },
-    tailExtractions: [
-      { field: "receiverName", label: "收货人" },
-      { field: "receiverPhone", label: "电话" },
-      { field: "receiverAddress", label: "地址" }
-    ]
-  };
 };
 
 type RawMapping = Partial<ColumnMapping> & { column?: number; columnIndex?: number };
@@ -207,12 +163,7 @@ export async function POST(request: Request) {
       !candidateModels.length ? "AI_MODELS" : ""
     ].filter(Boolean).join("、");
     const error = `大模型环境变量未完整配置，缺少：${missing}`;
-    return NextResponse.json({
-      rule: fallbackRule(payload, error),
-      degraded: true,
-      error,
-      configStatus
-    });
+    return NextResponse.json({ degraded: true, error, configStatus }, { status: 503 });
   }
 
   const prompt = `你是物流导入规则设计助手。只输出一个 JSON 对象，不要输出 <think>、Markdown、解释文字或代码块。JSON 必须严格符合 ParseRule，用于把文件快照解析为出库单 SKU 行，不要直接解析数据。
@@ -321,8 +272,15 @@ export async function POST(request: Request) {
         attempts.push({ model, keyIndex, ok: false, error: failure.message, category: failure.category, status: response.status, contentPreview, quota });
         continue;
       }
-      logAiRules("model-success", { requestId, model, keyIndex, ruleName: parsedRule.name, mode: parsedRule.mode });
-      return NextResponse.json({ rule: { ...parsedRule, id: crypto.randomUUID() }, degraded: false, model, keyIndex, quota, attempts });
+      const rule = { ...parsedRule, id: crypto.randomUUID() } as ParseRule;
+      const parsedRows = parseByRule(payload.sheets, rule);
+      if (!parsedRows.length) {
+        logAiRules("model-rule-empty", { requestId, model, keyIndex, ruleName: rule.name, mode: rule.mode, mappings: Object.keys(rule.mappings ?? {}) });
+        attempts.push({ model, keyIndex, ok: false, error: "模型返回规则无法解析出 SKU 行", category: "invalid-rule", status: response.status, contentPreview, quota });
+        continue;
+      }
+      logAiRules("model-success", { requestId, model, keyIndex, ruleName: rule.name, mode: rule.mode, parsedRows: parsedRows.length });
+      return NextResponse.json({ rule, degraded: false, model, keyIndex, parsedRows: parsedRows.length, quota, attempts });
     } catch (error) {
       logAiRules("model-exception", { requestId, model, keyIndex, error: error instanceof Error ? error.message : "模型请求失败" });
       attempts.push({ model, keyIndex, ok: false, error: error instanceof Error ? error.message : "模型请求失败", quota });
@@ -335,5 +293,5 @@ export async function POST(request: Request) {
     ? `${preferredFailure.error}，已降级为启发式规则`
     : "所有候选模型均未返回可用规则，已降级为启发式规则";
   logAiRules("fallback", { requestId, reason: fallbackReason, attemptedCount, maxOpenRouterAttempts, attempts });
-  return NextResponse.json({ rule: fallbackRule(payload, fallbackReason), degraded: true, error: fallbackReason, configStatus, attempts }, { status: 200 });
+  return NextResponse.json({ degraded: true, error: fallbackReason, configStatus, attempts }, { status: 503 });
 }

@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const splitCsv = (value: string | undefined): string[] =>
-  value?.split(",").map((item) => item.trim()).filter(Boolean) ?? [];
+  value?.split(/[\s,]+/).map((item) => item.trim()).filter(Boolean) ?? [];
 
 const parseLocalEnv = (): Record<string, string> => {
   const envPath = join(process.cwd(), ".env.local");
@@ -34,10 +34,13 @@ const defaultAiModels = [
 ];
 
 const getAiApiKeys = (): { values: string[]; source?: string } => {
-  const openRouterKeys = splitCsv(getRuntimeValue("OPENROUTER_API_KEYS"));
-  const openRouterKey = getRuntimeValue("OPENROUTER_API_KEY");
+  const openRouterKeys = [
+    ...splitCsv(getRuntimeValue("OPENROUTER_API_KEYS")),
+    ...splitCsv(getRuntimeValue("OPENROUTER_API_KEY")),
+    ...splitCsv(getRuntimeValue("OPENROUTER_API_KEY_1")),
+    ...splitCsv(getRuntimeValue("OPENROUTER_API_KEY_2"))
+  ];
   if (openRouterKeys.length) return { values: openRouterKeys, source: "OPENROUTER_API_KEYS" };
-  if (openRouterKey) return { values: [openRouterKey], source: "OPENROUTER_API_KEY" };
   return { values: [] };
 };
 

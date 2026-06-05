@@ -55,6 +55,10 @@ const createBlankRule = (): ParseRule => ({
   }
 });
 
+const isDegradedAiRule = (rule: ParseRule): boolean =>
+  rule.name.startsWith("AI草案-") ||
+  (rule.assumptions ?? []).some((item) => item.includes("大模型环境变量未完整配置") || item.includes("OPENROUTER_API_KEYS") || item.includes("启发式规则") || item.includes("所有字段映射均需用户预览确认后再保存"));
+
 export default function Page() {
   const [rules, setRules] = useState<ParseRule[]>([]);
   const [selectedRuleId, setSelectedRuleId] = useState("");
@@ -124,8 +128,13 @@ export default function Page() {
   useEffect(() => {
     fetch("/api/rules").then((res) => res.json()).then((data) => {
       if (Array.isArray(data.rules) && data.rules.length) {
-        setRules(data.rules);
-        setSelectedRuleId(data.rules[0].id);
+        const usableRules = (data.rules as ParseRule[]).filter((rule) => !isDegradedAiRule(rule));
+        setRules(usableRules);
+        setSelectedRuleId(usableRules[0]?.id ?? "");
+        if (usableRules.length !== data.rules.length) {
+          void fetch("/api/rules", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ degraded: true }) });
+          setTimedToast("已忽略并清理历史降级规则，请重新调用 OpenRouter 生成规则");
+        }
       }
       if (data.error) setTimedToast(data.error);
       if (Array.isArray(data.rules) && !data.rules.length) setTimedToast("数据库暂无解析规则，请新建或使用 AI 生成规则");
@@ -212,7 +221,7 @@ export default function Page() {
         body: JSON.stringify({ fileName: sourceFileName, sheets: sourceSheets.map((sheet) => ({ ...sheet, rows: sheet.rows.slice(0, 30) })) })
       });
       const aiData = await response.json();
-      if (!response.ok || !aiData.rule) return setTimedToast(aiData.error ?? "AI 规则生成失败");
+      if (!response.ok || aiData.degraded || !aiData.rule) return setTimedToast(aiData.error ?? "AI 规则生成失败");
       const rule = aiData.rule as ParseRule;
       const savedData = await saveRuleRemote(rule);
       const nextRules = Array.isArray(savedData.rules) ? savedData.rules as ParseRule[] : [rule, ...rules.filter((item) => item.id !== rule.id)];
