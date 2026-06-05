@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AlertCircle, CheckCircle2, Copy, Database, Download, FileUp, Play, Plus, Save, Trash2, Wand2 } from "lucide-react";
-import { defaultRules } from "@/lib/default-rules";
 import { parseByRule, validateRows } from "@/lib/rule-engine";
 import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/lib/types";
 
@@ -35,10 +34,31 @@ const excelCellText = (value: unknown): string => {
   return String(value);
 };
 
+const createBlankRule = (): ParseRule => ({
+  id: crypto.randomUUID(),
+  name: "新建规则",
+  mode: "table",
+  sheetStrategy: "first",
+  headerRow: 1,
+  dataStartRow: 2,
+  mappings: {
+    externalCode: { source: "header", header: "外部编码" },
+    storeName: { source: "header", header: "收货门店" },
+    receiverName: { source: "header", header: "收件人" },
+    receiverPhone: { source: "header", header: "电话" },
+    receiverAddress: { source: "header", header: "地址" },
+    skuCode: { source: "header", header: "SKU编码" },
+    skuName: { source: "header", header: "SKU名称" },
+    quantity: { source: "header", header: "数量" },
+    spec: { source: "header", header: "规格" },
+    remark: { source: "header", header: "备注" }
+  }
+});
+
 export default function Page() {
-  const [rules, setRules] = useState<ParseRule[]>(defaultRules);
-  const [selectedRuleId, setSelectedRuleId] = useState(defaultRules[0].id);
-  const [ruleText, setRuleText] = useState(JSON.stringify(defaultRules[0], null, 2));
+  const [rules, setRules] = useState<ParseRule[]>([]);
+  const [selectedRuleId, setSelectedRuleId] = useState("");
+  const [ruleText, setRuleText] = useState("");
   const [sheets, setSheets] = useState<SheetSnapshot[]>([]);
   const [fileName, setFileName] = useState("");
   const [rows, setRows] = useState<OrderRow[]>([]);
@@ -51,7 +71,7 @@ export default function Page() {
   const [historyFilters, setHistoryFilters] = useState({ externalCode: "", receiverName: "", submittedDate: "" });
   const [previewLimit, setPreviewLimit] = useState(300);
   const [historyPage, setHistoryPage] = useState(1);
-  const selectedRule = rules.find((rule) => rule.id === selectedRuleId) ?? rules[0];
+  const selectedRule = rules.find((rule) => rule.id === selectedRuleId);
   const existingCodes = useMemo(() => new Set(history.map((row) => row.externalCode).filter(Boolean)), [history]);
   const visibleRows = rows.slice(0, previewLimit);
   const filteredHistory = history.filter((row) => {
@@ -70,7 +90,9 @@ export default function Page() {
         setRules(data.rules);
         setSelectedRuleId(data.rules[0].id);
       }
-    }).catch(() => setTimedToast("规则加载失败，已使用默认规则"));
+      if (data.error) setTimedToast(data.error);
+      if (Array.isArray(data.rules) && !data.rules.length) setTimedToast("数据库暂无解析规则，请新建或使用 AI 生成规则");
+    }).catch(() => setTimedToast("数据库解析规则读取失败"));
     fetch("/api/orders").then((res) => res.json()).then((data) => {
       if (Array.isArray(data.rows) && data.rows.length) setHistory(data.rows);
       if (data.error) setTimedToast(data.error);
@@ -150,6 +172,7 @@ export default function Page() {
     const aiData = await response.json();
     const rule = aiData.rule as ParseRule;
     const savedData = await saveRuleRemote(rule);
+    if (!savedData.rules) return setTimedToast("规则保存失败，请检查数据库配置");
     const nextRules = savedData.rules as ParseRule[];
     setRules(nextRules);
     setSelectedRuleId(rule.id);
@@ -163,6 +186,7 @@ export default function Page() {
       const rule = JSON.parse(ruleText) as ParseRule;
       void saveRuleRemote(rule).then((data) => {
         const nextRules = data.rules as ParseRule[];
+        if (!nextRules) return setTimedToast("规则保存失败，请检查数据库配置");
         setRules(nextRules);
         setSelectedRuleId(rule.id);
         setTimedToast(`规则已保存，存储模式：${data.mode}`);
@@ -182,27 +206,30 @@ export default function Page() {
   };
 
   const copyRule = (): void => {
+    if (!selectedRule) return setTimedToast("请先从数据库选择一条规则");
     const nextRule = { ...selectedRule, id: crypto.randomUUID(), name: `${selectedRule.name} 副本` };
     setRuleText(JSON.stringify(nextRule, null, 2));
     setTimedToast("已复制为新规则草案，请确认后保存");
   };
 
   const deleteRule = async (): Promise<void> => {
-    if (rules.length <= 1) return setTimedToast("至少保留一条解析规则");
+    if (!selectedRule) return setTimedToast("请先从数据库选择一条规则");
     const response = await fetch("/api/rules", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id: selectedRule.id })
     });
     const data = await response.json();
+    if (!data.rules) return setTimedToast(data.error ?? "规则删除失败");
     const nextRules = data.rules as ParseRule[];
     setRules(nextRules);
-    setSelectedRuleId(nextRules[0]?.id ?? defaultRules[0].id);
+    setSelectedRuleId(nextRules[0]?.id ?? "");
     setTimedToast(`规则已删除，存储模式：${data.mode}`);
   };
 
   const runParse = (): void => {
     if (!sheets.length) return setTimedToast("请先上传文件");
+    if (!selectedRule) return setTimedToast("请先从数据库选择解析规则");
     const parsed = parseByRule(sheets, selectedRule);
     const nextIssues = validateRows(parsed, existingCodes);
     setPreviewLimit(300);
@@ -291,7 +318,7 @@ export default function Page() {
     const response = await fetch("/api/orders", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ fileName, ruleId: selectedRule.id, rows })
+      body: JSON.stringify({ fileName, ruleId: selectedRule?.id, rows })
     });
     const data = await response.json();
     if (!response.ok) {
@@ -354,15 +381,16 @@ export default function Page() {
           <section className="panel">
             <div className="panel-title"><Wand2 size={18} /> 解析规则</div>
             <select value={selectedRuleId} onChange={(event) => setSelectedRuleId(event.target.value)}>
+              {!rules.length && <option value="">数据库暂无规则</option>}
               {rules.map((rule) => <option key={rule.id} value={rule.id}>{rule.name}</option>)}
             </select>
             <div className="actions">
               <button onClick={generateRule} disabled={busy}><Wand2 size={16} /> AI 生成规则</button>
-              <button onClick={() => setRuleText(JSON.stringify({ ...defaultRules[0], id: crypto.randomUUID(), name: "新建规则" }, null, 2))}><Plus size={16} /> 新建规则</button>
+              <button onClick={() => setRuleText(JSON.stringify(createBlankRule(), null, 2))}><Plus size={16} /> 新建规则</button>
               <button onClick={copyRule}><Copy size={16} /> 复制</button>
               <button onClick={saveRule}><Save size={16} /> 保存</button>
               <button onClick={deleteRule}><Trash2 size={16} /> 删除</button>
-              <button onClick={runParse}><Play size={16} /> 试解析</button>
+              <button onClick={runParse} disabled={!selectedRule}><Play size={16} /> 试解析</button>
             </div>
             <textarea value={ruleText} onChange={(event) => setRuleText(event.target.value)} spellCheck={false} />
           </section>

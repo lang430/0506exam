@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import postgres from "postgres";
-import { defaultRules } from "@/lib/default-rules";
 import { getSql } from "@/lib/db";
 import type { ParseRule } from "@/lib/types";
 
@@ -21,12 +20,6 @@ export async function GET() {
   if (!sql) return NextResponse.json({ error: "数据库未配置，无法读取解析规则" }, { status: 503 });
   await ensureTable(sql);
   const rows = await sql`select payload from parse_rules order by updated_at desc`;
-  if (!rows.length) {
-    for (const rule of defaultRules) {
-      await sql`insert into parse_rules (id, payload) values (${rule.id}, ${sql.json(JSON.parse(JSON.stringify(rule)))}) on conflict do nothing`;
-    }
-    return NextResponse.json({ rules: defaultRules, mode: "database" });
-  }
   return NextResponse.json({ rules: rows.map((row) => row.payload), mode: "database" });
 }
 
