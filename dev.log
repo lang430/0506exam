@@ -101,3 +101,577 @@
   routine: 'index_create'
 }
  POST /api/ai-rules 200 in 2.7min (next.js: 772ms, application-code: 2.7min)
+ GET / 200 in 223ms (next.js: 91ms, application-code: 133ms)
+ GET / 200 in 66ms (next.js: 5ms, application-code: 62ms)
+⚠ Blocked cross-origin request to Next.js dev resource /_next/webpack-hmr from "127.0.0.1".
+Cross-origin access to Next.js dev resources is blocked by default for safety.
+
+To allow this host in development, add it to "allowedDevOrigins" in next.config.js and restart the dev server:
+
+// next.config.js
+module.exports = {
+  allowedDevOrigins: ['127.0.0.1'],
+}
+
+Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+ GET / 200 in 34ms (next.js: 3ms, application-code: 31ms)
+ GET / 200 in 45ms (next.js: 3ms, application-code: 42ms)
+ GET / 200 in 49ms (next.js: 3ms, application-code: 46ms)
+ GET / 200 in 159ms (next.js: 52ms, application-code: 107ms)
+ GET / 200 in 160ms (next.js: 73ms, application-code: 87ms)
+ GET / 200 in 51ms (next.js: 4ms, application-code: 47ms)
+ GET / 200 in 54ms (next.js: 5ms, application-code: 50ms)
+ GET / 200 in 36ms (next.js: 2ms, application-code: 34ms)
+ GET / 200 in 333ms (next.js: 111ms, application-code: 221ms)
+ GET / 200 in 76ms (next.js: 5ms, application-code: 72ms)
+ GET / 200 in 41ms (next.js: 3ms, application-code: 38ms)
+ GET / 200 in 49ms (next.js: 3ms, application-code: 46ms)
+ GET / 200 in 67ms (next.js: 3ms, application-code: 64ms)
+ GET / 200 in 47ms (next.js: 3ms, application-code: 44ms)
+ GET / 200 in 68ms (next.js: 3ms, application-code: 65ms)
+ GET / 200 in 66ms (next.js: 4ms, application-code: 62ms)
+ GET / 200 in 160ms (next.js: 51ms, application-code: 109ms)
+ GET / 200 in 48ms (next.js: 3ms, application-code: 45ms)
+ GET / 200 in 34ms (next.js: 3ms, application-code: 31ms)
+ GET / 200 in 37ms (next.js: 3ms, application-code: 34ms)
+ GET / 200 in 49ms (next.js: 3ms, application-code: 46ms)
+ GET / 200 in 51ms (next.js: 3ms, application-code: 48ms)
+ GET / 200 in 53ms (next.js: 3ms, application-code: 50ms)
+ GET / 200 in 64ms (next.js: 3ms, application-code: 61ms)
+ GET / 200 in 48ms (next.js: 3ms, application-code: 45ms)
+ GET / 200 in 51ms (next.js: 3ms, application-code: 49ms)
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42710',
+  message: 'extension "pgcrypto" already exists, skipping',
+  file: 'extension.c',
+  line: '1791',
+  routine: 'CreateExtension'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "import_batches" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "imported_orders" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "batch_id" of relation "imported_orders" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7471',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "spec" of relation "imported_orders" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7471',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "remark" of relation "imported_orders" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7471',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "imported_orders_external_code_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "imported_orders_receiver_name_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "imported_orders_created_at_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "import_batches_created_at_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
+}
+ GET /api/orders 200 in 9.4s (next.js: 577ms, application-code: 8.8s)
+ GET / 200 in 54ms (next.js: 4ms, application-code: 50ms)
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42710',
+  message: 'extension "pgcrypto" already exists, skipping',
+  file: 'extension.c',
+  line: '1791',
+  routine: 'CreateExtension'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "parse_rules" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "parse_rules_updated_at_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "import_batches" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+ GET /api/rules 200 in 5.4s (next.js: 323ms, application-code: 5.1s)
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "imported_orders" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "batch_id" of relation "imported_orders" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7471',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "spec" of relation "imported_orders" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7471',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "remark" of relation "imported_orders" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7471',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "imported_orders_external_code_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "imported_orders_receiver_name_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "imported_orders_created_at_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "import_batches_created_at_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
+}
+ GET /api/orders 200 in 9.6s (next.js: 3ms, application-code: 9.6s)
+ GET / 200 in 58ms (next.js: 5ms, application-code: 54ms)
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42710',
+  message: 'extension "pgcrypto" already exists, skipping',
+  file: 'extension.c',
+  line: '1791',
+  routine: 'CreateExtension'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "parse_rules" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "import_batches" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "parse_rules_updated_at_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "imported_orders" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+ GET /api/rules 200 in 4.1s (next.js: 5ms, application-code: 4.1s)
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "batch_id" of relation "imported_orders" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7471',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "spec" of relation "imported_orders" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7471',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "remark" of relation "imported_orders" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7471',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "imported_orders_external_code_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "imported_orders_receiver_name_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "imported_orders_created_at_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "import_batches_created_at_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
+}
+ GET /api/orders 200 in 7.2s (next.js: 4ms, application-code: 7.2s)
+ GET / 200 in 102ms (next.js: 5ms, application-code: 97ms)
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "parse_rules" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "parse_rules_updated_at_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
+}
+ GET /api/rules 200 in 3.6s (next.js: 5ms, application-code: 3.6s)
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42710',
+  message: 'extension "pgcrypto" already exists, skipping',
+  file: 'extension.c',
+  line: '1791',
+  routine: 'CreateExtension'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "import_batches" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "imported_orders" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "batch_id" of relation "imported_orders" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7471',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "spec" of relation "imported_orders" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7471',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "remark" of relation "imported_orders" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7471',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "imported_orders_external_code_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "imported_orders_receiver_name_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "imported_orders_created_at_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "import_batches_created_at_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
+}
+ GET /api/orders 200 in 9.3s (next.js: 4ms, application-code: 9.3s)
+ GET / 200 in 76ms (next.js: 4ms, application-code: 72ms)
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42710',
+  message: 'extension "pgcrypto" already exists, skipping',
+  file: 'extension.c',
+  line: '1791',
+  routine: 'CreateExtension'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "import_batches" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "imported_orders" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "parse_rules" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "batch_id" of relation "imported_orders" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7471',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "spec" of relation "imported_orders" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7471',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "parse_rules_updated_at_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "remark" of relation "imported_orders" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7471',
+  routine: 'check_for_column_name_collision'
+}
+ GET /api/rules 200 in 5.1s (next.js: 6ms, application-code: 5.1s)
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "imported_orders_external_code_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "imported_orders_receiver_name_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "imported_orders_created_at_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "import_batches_created_at_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
+}
+ GET /api/orders 200 in 7.3s (next.js: 4ms, application-code: 7.3s)

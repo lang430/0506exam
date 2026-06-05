@@ -14,7 +14,7 @@ if (!databaseUrl) {
   process.exit(1);
 }
 
-const sql = postgres(databaseUrl, { ssl: "require", max: 1 });
+const sql = postgres(databaseUrl, { ssl: "require", max: 1, connect_timeout: 10, idle_timeout: 1 });
 const id = `verify-db-${Date.now()}`;
 
 try {
@@ -80,5 +80,7 @@ try {
   const batchRows = await sql`select batch_id from imported_orders where id = ${id}`;
   await sql`delete from imported_orders where id = ${id}`;
   if (batchRows[0]?.batch_id) await sql`delete from import_batches where id = ${batchRows[0].batch_id}`;
-  await sql.end();
+  await sql.end({ timeout: 1 });
 }
+
+process.exit(0);
