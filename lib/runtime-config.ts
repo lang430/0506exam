@@ -35,7 +35,7 @@ export const getAiConfig = () => {
   const aiBaseUrl = process.env.AI_BASE_URL;
   const model = process.env.AI_MODEL;
   return {
-    provider: process.env.AI_PROVIDER || "pomoai",
+    provider: "pomoai",
     apiKey,
     apiKeySource: apiKey ? "Vercel Environment:AI_API_KEY" : undefined,
     baseUrl: aiBaseUrl,

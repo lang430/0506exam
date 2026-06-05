@@ -165,19 +165,41 @@ export async function POST(request: Request) {
     return NextResponse.json({ degraded: true, error, configStatus }, { status: 503 });
   }
 
-  const prompt = `你是物流导入规则设计助手。只输出一个 JSON 对象，不要输出 <think>、Markdown、解释文字或代码块。JSON 必须严格符合 ParseRule，用于把文件快照解析为出库单 SKU 行，不要直接解析数据。
-必填字段：
-- name: 字符串
-- mode: "table" | "matrix" | "cards" | "text"，普通表格优先用 "table"
-- sheetStrategy: "first" | "all"
-- headerRow: 数字，行号从 1 开始
-- dataStartRow: 数字，行号从 1 开始
-- mappings: 对象，字段包括 externalCode,storeName,receiverName,receiverPhone,receiverAddress,skuCode,skuName,quantity,spec,remark
-- assumptions: 字符串数组
-每个 mappings 字段值必须是 ColumnMapping，禁止输出 column/columnIndex。按列号取值时必须写 {"source":"index","index":列号}；按表头取值时必须写 {"source":"header","header":"表头文本"}；固定值写 {"source":"static","value":"固定值"}；工作表名写 {"source":"sheet"}；正则写 {"source":"regex","pattern":"带捕获组的正则"}。
-示例：
-{"name":"AI规则","mode":"table","sheetStrategy":"first","headerRow":1,"dataStartRow":2,"mappings":{"skuCode":{"source":"index","index":6},"quantity":{"source":"index","index":9}},"assumptions":["第1行是表头"]}
-文件快照：${JSON.stringify(payload).slice(0, 18000)}`;
+  const systemPrompt = `你是出库单导入规则生成器。你的唯一任务是输出一个可被 JSON.parse 解析的 ParseRule JSON 对象。
+禁止输出 Markdown、代码块、解释、前后缀、思考过程、自然语言说明或 <think>。
+不要直接解析明细数据，只生成规则。`;
+  const userPrompt = `请根据文件快照生成 ParseRule。
+输出格式必须满足：
+{
+  "name": "简短规则名",
+  "mode": "table" | "matrix" | "cards" | "text",
+  "sheetStrategy": "first" | "all",
+  "headerRow": 数字,
+  "dataStartRow": 数字,
+  "mappings": {
+    "externalCode": ColumnMapping,
+    "storeName": ColumnMapping,
+    "receiverName": ColumnMapping,
+    "receiverPhone": ColumnMapping,
+    "receiverAddress": ColumnMapping,
+    "skuCode": ColumnMapping,
+    "skuName": ColumnMapping,
+    "quantity": ColumnMapping,
+    "spec": ColumnMapping,
+    "remark": ColumnMapping
+  },
+  "assumptions": ["判断依据"]
+}
+ColumnMapping 只能使用以下形式：
+- 按列号取值：{"source":"index","index":1}
+- 按表头取值：{"source":"header","header":"表头文本"}
+- 固定值：{"source":"static","value":"固定值"}
+- 工作表名：{"source":"sheet"}
+- 正则提取：{"source":"regex","pattern":"带捕获组的正则"}
+禁止使用 column、columnIndex、field、description。
+列号 index 从 1 开始。普通明细表优先使用 mode="table"。如果无法确定某个可选字段，可以省略该字段映射，但 skuName 和 quantity 必须尽量给出。
+文件快照 JSON：
+${JSON.stringify(payload).slice(0, 12000)}`;
   const attempts: AiAttempt[] = [];
   let attemptedCount = 0;
   for (let attemptIndex = 0; attemptIndex < maxAiAttempts; attemptIndex += 1) {
@@ -202,8 +224,12 @@ export async function POST(request: Request) {
         },
         body: JSON.stringify({
           model,
-          messages: [{ role: "user", content: prompt }],
-          temperature: 0.1
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt }
+          ],
+          temperature: 0,
+          response_format: { type: "json_object" }
         })
       }).finally(() => clearTimeout(timeout));
       logAiRules("model-response", {
@@ -287,7 +313,7 @@ export async function POST(request: Request) {
   const preferredFailure = attempts.find((attempt) => attempt.category === "provider-quota" || attempt.category === "auth" || attempt.category === "rate-limit") ?? attempts.at(-1);
   const fallbackReason = preferredFailure?.error
     ? `${preferredFailure.error}，未生成可保存规则`
-    : "所有候选模型均未返回可用规则，未生成可保存规则";
+    : "大模型未返回可用规则，未生成可保存规则";
   logAiRules("fallback", { requestId, reason: fallbackReason, attemptedCount, maxAiAttempts, attempts });
   return NextResponse.json({ degraded: true, error: fallbackReason, configStatus, attempts }, { status: 503 });
 }

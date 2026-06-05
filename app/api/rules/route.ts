@@ -44,7 +44,7 @@ export async function DELETE(request: Request) {
     await sql`
       delete from parse_rules
       where payload->>'name' like 'AI草案-%'
-        or (payload->'assumptions')::text like '%OPENROUTER_API_KEYS%'
+        or (payload->'assumptions')::text like '%AI_API_KEY%'
         or (payload->'assumptions')::text like '%大模型环境变量未完整配置%'
         or (payload->'assumptions')::text like '%启发式规则%'
         or (payload->'assumptions')::text like '%所有字段映射均需用户预览确认后再保存%'

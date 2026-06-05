@@ -57,7 +57,7 @@ const createBlankRule = (): ParseRule => ({
 
 const isDegradedAiRule = (rule: ParseRule): boolean =>
   rule.name.startsWith("AI草案-") ||
-  (rule.assumptions ?? []).some((item) => item.includes("大模型环境变量未完整配置") || item.includes("AI_API_KEY") || item.includes("OPENROUTER_API_KEYS") || item.includes("启发式规则") || item.includes("所有字段映射均需用户预览确认后再保存"));
+  (rule.assumptions ?? []).some((item) => item.includes("大模型环境变量未完整配置") || item.includes("AI_API_KEY") || item.includes("启发式规则") || item.includes("所有字段映射均需用户预览确认后再保存"));
 
 export default function Page() {
   const [rules, setRules] = useState<ParseRule[]>([]);
@@ -214,15 +214,23 @@ export default function Page() {
     if (!sourceSheets.length) return setTimedToast("请先上传文件");
     setBusy(true);
     setProgress(35);
+    setProgressText("AI生成中");
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000);
       const response = await fetch("/api/ai-rules", {
         method: "POST",
+        signal: controller.signal,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ fileName: sourceFileName, sheets: sourceSheets.map((sheet) => ({ ...sheet, rows: sheet.rows.slice(0, 30) })) })
-      });
-      const aiData = await response.json();
+      }).finally(() => clearTimeout(timeout));
+      setProgress(70);
+      const rawText = await response.text();
+      const aiData = rawText ? JSON.parse(rawText) : {};
       if (!response.ok || aiData.degraded || !aiData.rule) {
         if (auto && parseWithExistingRule(sourceSheets, aiData.error ?? "AI 规则生成失败")) return;
+        setProgress(100);
+        setProgressText("AI失败");
         return setTimedToast(aiData.error ?? "AI 规则生成失败");
       }
       const rule = aiData.rule as ParseRule;
@@ -239,8 +247,10 @@ export default function Page() {
       setProgress(100);
       const savedText = savedData.rules ? `已保存到${savedData.mode === "database" ? "数据库" : "服务端文件"}` : "数据库暂不可用，已先在当前页面使用";
       setTimedToast(aiData.degraded ? `已生成启发式规则草案：${aiData.error ?? "请人工确认"}，已解析 ${parsed.length} 行` : `${auto ? "已实时" : "AI 已"}生成规则草案，${savedText}，已解析 ${parsed.length} 行，${nextIssues.length} 个问题`);
-    } catch {
-      setTimedToast("AI 规则生成失败，请查看服务端调用日志");
+    } catch (error) {
+      setProgress(100);
+      setProgressText("AI失败");
+      setTimedToast(error instanceof Error && error.name === "AbortError" ? "AI 规则生成超时，请稍后重试或检查大模型配置" : "AI 规则生成失败，请查看服务端调用日志");
     } finally {
       setBusy(false);
     }
