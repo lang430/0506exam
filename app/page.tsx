@@ -60,8 +60,6 @@ export default function Page() {
   const pagedHistory = filteredHistory.slice((historyPage - 1) * historyPageSize, historyPage * historyPageSize);
 
   useEffect(() => {
-    const localHistory = localStorage.getItem("orders");
-    if (localHistory) setHistory(JSON.parse(localHistory));
     fetch("/api/rules").then((res) => res.json()).then((data) => {
       if (Array.isArray(data.rules) && data.rules.length) {
         setRules(data.rules);
@@ -70,7 +68,8 @@ export default function Page() {
     }).catch(() => setTimedToast("规则加载失败，已使用默认规则"));
     fetch("/api/orders").then((res) => res.json()).then((data) => {
       if (Array.isArray(data.rows) && data.rows.length) setHistory(data.rows);
-    }).catch(() => undefined);
+      if (data.error) setTimedToast(data.error);
+    }).catch(() => setTimedToast("数据库历史记录读取失败"));
   }, []);
 
   useEffect(() => {
@@ -277,13 +276,22 @@ export default function Page() {
       setProgressText(`${Math.min(done, total)}/${total}`);
       await new Promise((resolve) => setTimeout(resolve, 20));
     }
-    const response = await fetch("/api/orders", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(rows) });
+    const response = await fetch("/api/orders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fileName, ruleId: selectedRule.id, rows })
+    });
     const data = await response.json();
+    if (!response.ok) {
+      setBusy(false);
+      setTimedToast(data.error ?? "提交失败，数据库未写入");
+      return;
+    }
     const successCount = Number(data.saved ?? rows.length);
     const failureCount = Math.max(rows.length - successCount, 0);
-    const nextHistory = [...rows, ...history];
+    const savedRows = Array.isArray(data.rows) ? data.rows as OrderRow[] : rows;
+    const nextHistory = [...savedRows, ...history];
     setHistory(nextHistory);
-    localStorage.setItem("orders", JSON.stringify(nextHistory));
     setBusy(false);
     setProgress(100);
     setProgressText(`${rows.length}/${rows.length}`);
@@ -363,7 +371,7 @@ export default function Page() {
           <div className="panel-title"><Database size={18} /> 已导入运单</div>
           <input className="search" value={filter} onChange={(event) => { setFilter(event.target.value); setHistoryPage(1); }} placeholder="按外部编码、收件人、门店、提交时间筛选" />
           <div className="history">
-            {pagedHistory.map((row) => <div key={row.id}><strong>{row.externalCode || row.storeName || "未命名运单"}</strong><span>{row.receiverName} {row.skuName} × {row.quantity}</span><span>{row.submittedAt ? new Date(row.submittedAt).toLocaleString("zh-CN") : "本地暂存"}</span></div>)}
+            {pagedHistory.map((row) => <div key={row.id}><strong>{row.externalCode || row.storeName || "未命名运单"}</strong><span>{row.receiverName} {row.skuName} × {row.quantity}</span><span>{row.submittedAt ? new Date(row.submittedAt).toLocaleString("zh-CN") : "数据库记录"}</span></div>)}
             {!filteredHistory.length && <p className="empty">暂无历史记录</p>}
           </div>
           <div className="pager">
