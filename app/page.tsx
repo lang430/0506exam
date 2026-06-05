@@ -86,19 +86,13 @@ export default function Page() {
       const buffer = await file.arrayBuffer();
       const lower = file.name.toLowerCase();
       if (lower.endsWith(".xlsx") || lower.endsWith(".xls")) {
-        if (lower.endsWith(".xls")) throw new Error(".xls 二进制格式请先另存为 .xlsx 后导入");
-        const ExcelJS = await import("exceljs");
-        const workbook = new ExcelJS.Workbook();
-        await workbook.xlsx.load(buffer);
-        const nextSheets = workbook.worksheets.map((sheet) => {
-          const rows: string[][] = [];
-          sheet.eachRow({ includeEmpty: true }, (row, rowNumber) => {
-            rows[rowNumber - 1] = [];
-            row.eachCell({ includeEmpty: true }, (cell, columnNumber) => {
-              rows[rowNumber - 1][columnNumber - 1] = excelCellText(cell.value);
-            });
-          });
-          return { name: sheet.name, rows };
+        const XLSX = await import("@e965/xlsx");
+        const workbook = XLSX.read(buffer, { type: "array" });
+        const nextSheets = workbook.SheetNames.map((name) => {
+          const sheet = workbook.Sheets[name];
+          const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: "", raw: false })
+            .map((row) => row.map(excelCellText));
+          return { name, rows };
         });
         setSheets(nextSheets);
       } else if (lower.endsWith(".docx")) {

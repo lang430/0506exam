@@ -14,3 +14,5 @@
 - 最终复验通过：`npm run typecheck`、`npm run build`、`npx tsx scripts/verify-demos.mjs`、`http://127.0.0.1:3000` 返回 200。
 - 继续开发后补齐：服务端规则持久化 `/api/rules`、规则复制/删除、全量错误展示、历史分页、预览分批加载、1000 行性能验证脚本。
 - 复验通过：`npx tsx scripts/verify-performance.mjs` 解析 1000 行约 33 ms；浏览器 DOM 确认复制、删除、加载更多、分页控件存在。
+- 继续补齐 `.xls` 支持和 PDF 默认规则：`@e965/xlsx` 审计 0 漏洞，PDF demo 解析 41 行、0 校验错误。
+- 最新复验通过：`npm run typecheck`、`npm run build`、`npm audit --json`、`npx tsx scripts/verify-demos.mjs`、`npx tsx scripts/verify-performance.mjs`。

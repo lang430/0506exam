@@ -106,7 +106,7 @@ export const defaultRules: ParseRule[] = [
     name: "PDF 文本表格：明细正则 + 底部收货信息",
     mode: "text",
     sheetStrategy: "first",
-    itemPattern: "\\b\\d+\\s+(?<remark>[^\\s]+)\\s+(?<skuCode>[A-Z0-9-]{4,})\\s+(?<skuName>.+?)\\s+(?<spec>\\d[^\\s]*(?:\\s*[^\\s]*?)?)\\s+(?<unit>件|瓶|包|桶)\\s+(?<quantity>\\d+)\\b",
+    itemPattern: "\\b\\d+\\s+(?<remark>[^\\s]+)\\s+(?<skuCode>[A-Z0-9-]{4,})\\s+(?<skuName>.+?)\\s+(?<spec>(?:\\d[^\\s]*(?:\\s*/\\s*[^\\s]+)?|[A-Z0-9]+码|均码))\\s+(?<unit>件|瓶|包|桶)\\s+(?<quantity>\\d+)\\b",
     mappings: {
       externalCode: { source: "regex", pattern: "单据编号：\\s*([A-Z0-9]+)" },
       storeName: { source: "regex", pattern: "收货机构：\\s*([^\\s]+)" },

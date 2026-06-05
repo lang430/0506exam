@@ -16,7 +16,13 @@ const getSql = () => {
 
 const readFileRules = async (): Promise<ParseRule[]> => {
   try {
-    return JSON.parse(await readFile(filePath, "utf-8")) as ParseRule[];
+    const rules = JSON.parse(await readFile(filePath, "utf-8")) as ParseRule[];
+    const mergedRules = [
+      ...rules,
+      ...defaultRules.filter((defaultRule) => !rules.some((rule) => rule.id === defaultRule.id))
+    ];
+    if (mergedRules.length !== rules.length) await writeFileRules(mergedRules);
+    return mergedRules;
   } catch {
     await mkdir(dirname(filePath), { recursive: true });
     await writeFile(filePath, JSON.stringify(defaultRules, null, 2), "utf-8");

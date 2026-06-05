@@ -327,7 +327,7 @@ const defaultRules = [
         name: "PDF 文本表格：明细正则 + 底部收货信息",
         mode: "text",
         sheetStrategy: "first",
-        itemPattern: "\\b\\d+\\s+(?<remark>[^\\s]+)\\s+(?<skuCode>[A-Z0-9-]{4,})\\s+(?<skuName>.+?)\\s+(?<spec>\\d[^\\s]*(?:\\s*[^\\s]*?)?)\\s+(?<unit>件|瓶|包|桶)\\s+(?<quantity>\\d+)\\b",
+        itemPattern: "\\b\\d+\\s+(?<remark>[^\\s]+)\\s+(?<skuCode>[A-Z0-9-]{4,})\\s+(?<skuName>.+?)\\s+(?<spec>(?:\\d[^\\s]*(?:\\s*/\\s*[^\\s]+)?|[A-Z0-9]+码|均码))\\s+(?<unit>件|瓶|包|桶)\\s+(?<quantity>\\d+)\\b",
         mappings: {
             externalCode: {
                 source: "regex",
@@ -391,7 +391,13 @@ const getSql = ()=>{
 };
 const readFileRules = async ()=>{
     try {
-        return JSON.parse(await (0, __TURBOPACK__imported__module__$5b$externals$5d2f$node$3a$fs$2f$promises__$5b$external$5d$__$28$node$3a$fs$2f$promises$2c$__cjs$29$__["readFile"])(filePath, "utf-8"));
+        const rules = JSON.parse(await (0, __TURBOPACK__imported__module__$5b$externals$5d2f$node$3a$fs$2f$promises__$5b$external$5d$__$28$node$3a$fs$2f$promises$2c$__cjs$29$__["readFile"])(filePath, "utf-8"));
+        const mergedRules = [
+            ...rules,
+            ...__TURBOPACK__imported__module__$5b$project$5d2f$lib$2f$default$2d$rules$2e$ts__$5b$app$2d$route$5d$__$28$ecmascript$29$__["defaultRules"].filter((defaultRule)=>!rules.some((rule)=>rule.id === defaultRule.id))
+        ];
+        if (mergedRules.length !== rules.length) await writeFileRules(mergedRules);
+        return mergedRules;
     } catch  {
         await (0, __TURBOPACK__imported__module__$5b$externals$5d2f$node$3a$fs$2f$promises__$5b$external$5d$__$28$node$3a$fs$2f$promises$2c$__cjs$29$__["mkdir"])((0, __TURBOPACK__imported__module__$5b$externals$5d2f$node$3a$path__$5b$external$5d$__$28$node$3a$path$2c$__cjs$29$__["dirname"])(filePath), {
             recursive: true
