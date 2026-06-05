@@ -31,8 +31,7 @@ const getLocalValue = (name: string): string | undefined => localEnv[name];
 const defaultAiBaseUrl = "https://openrouter.ai/api/v1/chat/completions";
 
 const defaultAiModels = [
-  "nvidia/nemotron-3-super-120b-a12b:free",
-  "moonshotai/kimi-k2.6:free"
+  "nvidia/nemotron-3.5-content-safety:free"
 ];
 
 const getAiApiKeys = (): { values: string[]; source?: string } => {

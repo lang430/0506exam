@@ -2525,3 +2525,7 @@ Import traces:
  GET / 200 in 27ms (next.js: 4ms, application-code: 23ms)
 [ai-rules] config-check {"provider":"openrouter","hasApiKey":true,"apiKeyCount":2,"apiKeySource":"OPENROUTER_API_KEYS","apiKeyLength":73,"hasBaseUrl":true,"modelCount":2,"usingDefaultBaseUrl":false,"usingDefaultModels":false,"ready":true}
  GET /api/ai-rules 200 in 125ms (next.js: 104ms, application-code: 21ms)
+ GET / 200 in 319ms (next.js: 146ms, application-code: 173ms)
+ GET / 200 in 127ms (next.js: 5ms, application-code: 122ms)
+ GET / 200 in 41ms (next.js: 8ms, application-code: 33ms)
+ GET / 200 in 115ms (next.js: 83ms, application-code: 31ms)
