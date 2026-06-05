@@ -2473,3 +2473,35 @@ Import traces:
 ✓ Compiled in 19ms
 ✓ Compiled in 55ms
  GET / 200 in 115ms (next.js: 77ms, application-code: 38ms)
+  Reload env: .env.local
+ GET / 200 in 169ms (next.js: 117ms, application-code: 52ms)
+ GET / 200 in 208ms (next.js: 82ms, application-code: 126ms)
+ GET / 200 in 60ms (next.js: 4ms, application-code: 57ms)
+ GET / 200 in 33ms (next.js: 5ms, application-code: 28ms)
+ GET / 200 in 116ms (next.js: 76ms, application-code: 40ms)
+ GET / 200 in 181ms (next.js: 131ms, application-code: 50ms)
+ GET / 200 in 402ms (next.js: 101ms, application-code: 301ms)
+ GET / 200 in 165ms (next.js: 22ms, application-code: 142ms)
+ GET / 200 in 33ms (next.js: 4ms, application-code: 30ms)
+ GET / 200 in 184ms (next.js: 99ms, application-code: 85ms)
+ GET / 200 in 59ms (next.js: 4ms, application-code: 54ms)
+ GET / 200 in 31ms (next.js: 7ms, application-code: 25ms)
+ GET / 200 in 137ms (next.js: 95ms, application-code: 42ms)
+[ai-rules] config-check {"provider":"openrouter","hasApiKey":true,"apiKeyCount":2,"apiKeySource":"OPENROUTER_API_KEYS","apiKeyLength":73,"hasBaseUrl":true,"modelCount":2,"usingDefaultBaseUrl":false,"usingDefaultModels":false,"ready":true}
+ GET /api/ai-rules 200 in 85ms (next.js: 70ms, application-code: 15ms)
+[ai-rules] request-start {"requestId":"9e38af61-70ff-4ace-a4b5-140714bd9400","fileName":"openrouter-ui-check.xlsx","sheetCount":1,"sampledRows":2,"provider":"openrouter","hasApiKey":true,"apiKeyCount":2,"apiKeySource":"OPENROUTER_API_KEYS","apiKeyLengths":[73,73],"hasBaseUrl":true,"modelCount":2,"ready":true,"usingDefaultBaseUrl":false,"usingDefaultModels":false,"baseUrl":"https://openrouter.ai/api/v1/chat/completions","models":["nvidia/nemotron-3-super-120b-a12b:free","moonshotai/kimi-k2.6:free"]}
+[ai-rules] model-attempt {"requestId":"9e38af61-70ff-4ace-a4b5-140714bd9400","model":"nvidia/nemotron-3-super-120b-a12b:free","keyIndex":0,"quota":{"allowed":true,"mode":"memory","minuteUsed":1,"dayUsed":1,"minuteLimit":5,"dailyLimit":500}}
+[ai-rules] model-response {"requestId":"9e38af61-70ff-4ace-a4b5-140714bd9400","model":"nvidia/nemotron-3-super-120b-a12b:free","keyIndex":0,"status":200,"ok":true,"elapsedMs":10927,"headers":{"contentType":"application/json","requestId":null}}
+[ai-rules] model-body {"requestId":"9e38af61-70ff-4ace-a4b5-140714bd9400","model":"nvidia/nemotron-3-super-120b-a12b:free","keyIndex":0,"choiceCount":1,"finishReason":"stop","contentLength":611,"contentPreview":"{\"name\":\"导入出库单规则\",\"mode\":\"table\",\"sheetStrategy\":\"first\",\"headerRow\":1,\"dataStartRow\":2,\"mappings\":{\"externalCode\":{\"source\":\"header\",\"header\":\"配送单号\"},\"storeName\":{\"source\":\"header\",\"header\":\"收货机构\"},\"receiverName\":{\"source\":\"header\",\"header","usage":{"prompt_tokens":529,"completion_tokens":509,"total_tokens":1038,"cost":0,"is_byok":false,"prompt_tokens_details":{"cached_tokens":0,"cache_write_tokens":0,"audio_tokens":0,"video_tokens":0},"cost_details":{"upstream_inference_cost":0,"upstream_inference_prompt_cost":0,"upstream_inference_completions_cost":0},"completion_tokens_details":{"reasoning_tokens":296,"image_tokens":0,"audio_tokens":0}}}
+[ai-rules] model-success {"requestId":"9e38af61-70ff-4ace-a4b5-140714bd9400","model":"nvidia/nemotron-3-super-120b-a12b:free","keyIndex":0,"ruleName":"导入出库单规则","mode":"table"}
+ POST /api/ai-rules 200 in 20.8s (next.js: 3ms, application-code: 20.8s)
+[ai-rules] request-start {"requestId":"58a7786c-0c0c-48b3-8676-b97e1fee2b3f","fileName":"openrouter-utf8-check.xlsx","sheetCount":1,"sampledRows":2,"provider":"openrouter","hasApiKey":true,"apiKeyCount":2,"apiKeySource":"OPENROUTER_API_KEYS","apiKeyLengths":[73,73],"hasBaseUrl":true,"modelCount":2,"ready":true,"usingDefaultBaseUrl":false,"usingDefaultModels":false,"baseUrl":"https://openrouter.ai/api/v1/chat/completions","models":["nvidia/nemotron-3-super-120b-a12b:free","moonshotai/kimi-k2.6:free"]}
+[ai-rules] model-attempt {"requestId":"58a7786c-0c0c-48b3-8676-b97e1fee2b3f","model":"nvidia/nemotron-3-super-120b-a12b:free","keyIndex":0,"quota":{"allowed":true,"mode":"memory","minuteUsed":2,"dayUsed":2,"minuteLimit":5,"dailyLimit":500}}
+[ai-rules] model-response {"requestId":"58a7786c-0c0c-48b3-8676-b97e1fee2b3f","model":"nvidia/nemotron-3-super-120b-a12b:free","keyIndex":0,"status":200,"ok":true,"elapsedMs":13780,"headers":{"contentType":"application/json","requestId":null}}
+[ai-rules] model-body {"requestId":"58a7786c-0c0c-48b3-8676-b97e1fee2b3f","model":"nvidia/nemotron-3-super-120b-a12b:free","keyIndex":0,"choiceCount":1,"finishReason":"stop","contentLength":563,"contentPreview":"{\"name\":\"LogisticsImportRule\",\"mode\":\"table\",\"sheetStrategy\":\"first\",\"headerRow\":1,\"dataStartRow\":2,\"mappings\":{\"externalCode\":{\"source\":\"index\",\"index\":1},\"storeName\":{\"source\":\"index\",\"index\":2},\"receiverName\":{\"source\":\"index\",\"index\":3}","usage":{"prompt_tokens":530,"completion_tokens":866,"total_tokens":1396,"cost":0,"is_byok":false,"prompt_tokens_details":{"cached_tokens":0,"cache_write_tokens":0,"audio_tokens":0,"video_tokens":0},"cost_details":{"upstream_inference_cost":0,"upstream_inference_prompt_cost":0,"upstream_inference_completions_cost":0},"completion_tokens_details":{"reasoning_tokens":661,"image_tokens":0,"audio_tokens":0}}}
+[ai-rules] model-success {"requestId":"58a7786c-0c0c-48b3-8676-b97e1fee2b3f","model":"nvidia/nemotron-3-super-120b-a12b:free","keyIndex":0,"ruleName":"LogisticsImportRule","mode":"table"}
+ POST /api/ai-rules 200 in 36.8s (next.js: 3ms, application-code: 36.8s)
+✓ Compiled in 194ms
+ GET / 200 in 136ms (next.js: 90ms, application-code: 46ms)
+[ai-rules] config-check {"provider":"openrouter","hasApiKey":true,"apiKeyCount":2,"apiKeySource":"OPENROUTER_API_KEYS","apiKeyLength":73,"hasBaseUrl":true,"modelCount":2,"usingDefaultBaseUrl":false,"usingDefaultModels":false,"ready":true}
+ GET /api/ai-rules 200 in 76ms (next.js: 61ms, application-code: 15ms)

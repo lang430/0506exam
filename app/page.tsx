@@ -215,12 +215,18 @@ export default function Page() {
       if (!response.ok || !aiData.rule) return setTimedToast(aiData.error ?? "AI 规则生成失败");
       const rule = aiData.rule as ParseRule;
       const savedData = await saveRuleRemote(rule);
-      if (!savedData.rules) return setTimedToast("规则保存失败，请检查数据库配置");
-      const nextRules = savedData.rules as ParseRule[];
+      const nextRules = Array.isArray(savedData.rules) ? savedData.rules as ParseRule[] : [rule, ...rules.filter((item) => item.id !== rule.id)];
       setRules(nextRules);
       setSelectedRuleId(rule.id);
+      const parsed = parseByRule(sourceSheets, rule);
+      const nextIssues = validateRows(parsed, existingCodes);
+      setRows(parsed.map((row) => ({ ...row, errors: nextIssues.filter((issue) => issue.rowId === row.id).map((issue) => issue.message) })));
+      setIssues(nextIssues);
+      setPreviewPage(1);
+      setProgressText(`${parsed.length}/${parsed.length}`);
       setProgress(100);
-      setTimedToast(aiData.degraded ? `已生成启发式规则草案：${aiData.error ?? "请人工确认"}` : `${auto ? "已实时" : "AI 已"}生成规则草案，已保存到${savedData.mode === "database" ? "数据库" : "服务端文件"}`);
+      const savedText = savedData.rules ? `已保存到${savedData.mode === "database" ? "数据库" : "服务端文件"}` : "数据库暂不可用，已先在当前页面使用";
+      setTimedToast(aiData.degraded ? `已生成启发式规则草案：${aiData.error ?? "请人工确认"}，已解析 ${parsed.length} 行` : `${auto ? "已实时" : "AI 已"}生成规则草案，${savedText}，已解析 ${parsed.length} 行，${nextIssues.length} 个问题`);
     } catch {
       setTimedToast("AI 规则生成失败，请查看服务端调用日志");
     } finally {
