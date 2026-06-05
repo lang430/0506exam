@@ -26,25 +26,23 @@ const localEnv = parseLocalEnv();
 const getRuntimeValue = (name: string): string | undefined =>
   process.env[name] || localEnv[name];
 
-const defaultAiBaseUrl = "https://aihubmix.com/v1/chat/completions";
+const defaultAiBaseUrl = "https://openrouter.ai/api/v1/chat/completions";
 
 const defaultAiModels = [
-  "xiaomi-mimo-v2.5-pro-free",
-  "xiaomi-mimo-v2.5-free",
-  "coding-glm-5.1-free",
-  "coding-minimax-m2.7-free",
-  "coding-minimax-m3-free",
-  "coding-glm-5-free",
-  "coding-step-3.7-flash-free",
-  "coding-minimax-m2.5-free"
+  "nvidia/nemotron-3-super-120b-a12b:free",
+  "moonshotai/kimi-k2.6:free"
 ];
 
-const getAiApiKey = (): { value?: string; source?: string } => {
+const getAiApiKeys = (): { values: string[]; source?: string } => {
+  const openRouterKeys = splitCsv(getRuntimeValue("OPENROUTER_API_KEYS"));
+  const openRouterKey = getRuntimeValue("OPENROUTER_API_KEY");
   const aihubmixKey = getRuntimeValue("AIHUBMIX_API_KEY");
   const aiKey = getRuntimeValue("AI_API_KEY");
-  if (aihubmixKey) return { value: aihubmixKey, source: "AIHUBMIX_API_KEY" };
-  if (aiKey) return { value: aiKey, source: "AI_API_KEY" };
-  return {};
+  if (openRouterKeys.length) return { values: openRouterKeys, source: "OPENROUTER_API_KEYS" };
+  if (openRouterKey) return { values: [openRouterKey], source: "OPENROUTER_API_KEY" };
+  if (aihubmixKey) return { values: [aihubmixKey], source: "AIHUBMIX_API_KEY" };
+  if (aiKey) return { values: [aiKey], source: "AI_API_KEY" };
+  return { values: [] };
 };
 
 export const getDatabaseConfig = (): { url?: string } => ({
@@ -55,12 +53,15 @@ export const getDatabaseConfig = (): { url?: string } => ({
 });
 
 export const getAiConfig = () => {
-  const apiKey = getAiApiKey();
+  const apiKeys = getAiApiKeys();
   const aiBaseUrl = getRuntimeValue("AI_BASE_URL");
   const models = splitCsv(getRuntimeValue("AI_MODELS") || getRuntimeValue("AI_MODEL"));
+  const provider = getRuntimeValue("AI_PROVIDER") || "openrouter";
   return {
-    apiKey: apiKey.value,
-    apiKeySource: apiKey.source,
+    provider,
+    apiKey: apiKeys.values[0],
+    apiKeys: apiKeys.values,
+    apiKeySource: apiKeys.source,
     baseUrl: aiBaseUrl || defaultAiBaseUrl,
     models: models.length ? models : defaultAiModels,
     usingDefaultBaseUrl: !aiBaseUrl,
