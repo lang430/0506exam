@@ -48,6 +48,11 @@ const excelCellText = (value: unknown): string => {
   return String(value);
 };
 
+const sampleSheetRowsForAi = (rows: string[][]): string[][] => {
+  if (rows.length <= 50) return rows;
+  return [...rows.slice(0, 35), ...rows.slice(-15)];
+};
+
 const createBlankRule = (): ParseRule => ({
   id: crypto.randomUUID(),
   name: "新建规则",
@@ -233,12 +238,12 @@ export default function Page() {
     setProgressText("AI生成中");
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 90000);
+      const timeout = setTimeout(() => controller.abort(), 120000);
       const response = await fetch("/api/ai-rules", {
         method: "POST",
         signal: controller.signal,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fileName: sourceFileName, auto, sheets: sourceSheets.map((sheet) => ({ ...sheet, rows: sheet.rows.slice(0, 30) })) })
+        body: JSON.stringify({ fileName: sourceFileName, auto, sheets: sourceSheets.map((sheet) => ({ ...sheet, rows: sampleSheetRowsForAi(sheet.rows) })) })
       }).finally(() => clearTimeout(timeout));
       setProgress(70);
       const rawText = await response.text();

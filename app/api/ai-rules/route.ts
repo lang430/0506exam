@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { consumeAiQuota } from "@/lib/ai-quota";
-import { parseByRule } from "@/lib/rule-engine";
+import { parseByRule, validateRows } from "@/lib/rule-engine";
 import { getAiConfig } from "@/lib/runtime-config";
 import { orderFields } from "@/lib/types";
 import type { ColumnMapping, ParseRule, SheetSnapshot } from "@/lib/types";
@@ -29,7 +29,7 @@ const logAiRules = (event: string, details: Record<string, unknown>): void => {
 };
 
 const maxAiAttempts = 3;
-const aiRequestTimeoutMs = 25000;
+const aiRequestTimeoutMs = 30000;
 
 const previewText = (value: unknown, maxLength = 240): string =>
   String(value ?? "").replace(/\s+/g, " ").trim().slice(0, maxLength);
@@ -133,6 +133,27 @@ const findHeaderMapping = (field: keyof ParseRule["mappings"], payload: Payload,
   return undefined;
 };
 
+const scoreHeaderRow = (row: string[]): number => {
+  const normalizedCells = row.map((cell) => String(cell ?? "").trim().toLowerCase().replace(/[\s_*＊（()）-]/g, ""));
+  return orderFields.reduce((score, field) => {
+    const aliases = fieldAliasEntries
+      .filter(([, target]) => target === field)
+      .map(([alias]) => alias.trim().toLowerCase().replace(/[\s_*＊（()）-]/g, ""));
+    return score + (normalizedCells.some((cell) => cell && aliases.some((alias) => cell.includes(alias) || alias.includes(cell))) ? 1 : 0);
+  }, 0);
+};
+
+const inferHeaderRow = (payload: Payload, fallback: number): number => {
+  let best = { rowNumber: fallback, score: 0 };
+  for (const sheet of payload.sheets) {
+    sheet.rows.slice(0, 20).forEach((row, index) => {
+      const score = scoreHeaderRow(row);
+      if (score > best.score) best = { rowNumber: index + 1, score };
+    });
+  }
+  return best.score >= 3 ? best.rowNumber : fallback;
+};
+
 const inferTailExtractions = (payload: Payload): ParseRule["tailExtractions"] => {
   const labels = [
     { field: "receiverName", label: "收货人" },
@@ -150,6 +171,11 @@ const inferTailExtractions = (payload: Payload): ParseRule["tailExtractions"] =>
   }
   return found;
 };
+
+const inferStopWhenContains = (payload: Payload): string | undefined =>
+  payload.sheets.some((sheet) => sheet.rows.some((row) => row.some((cell) => String(cell ?? "").trim() === "合计")))
+    ? "合计"
+    : undefined;
 
 const normalizeMapping = (mapping: unknown): ColumnMapping | undefined => {
   if (!mapping || typeof mapping !== "object") return undefined;
@@ -178,7 +204,7 @@ const normalizeModelRule = (rule: Partial<ParseRule>, payload: Payload): Partial
   if (!Object.keys(mappings).length) return null;
   const rawSheetStrategy = rule.sheetStrategy as unknown;
   const sheetStrategy = rawSheetStrategy === "all" || (typeof rawSheetStrategy === "object" && rawSheetStrategy && (rawSheetStrategy as { type?: unknown }).type === "all") ? "all" : "first";
-  const headerRow = Number(rule.headerRow || 1);
+  const headerRow = inferHeaderRow(payload, Number(rule.headerRow || 1));
   const dataStartRow = Number(rule.dataStartRow || Math.max(headerRow + 1, 2));
   for (const field of orderFields) {
     if (!mappings[field]) {
@@ -193,6 +219,7 @@ const normalizeModelRule = (rule: Partial<ParseRule>, payload: Payload): Partial
     sheetStrategy,
     headerRow,
     dataStartRow,
+    stopWhenContains: rule.stopWhenContains ?? inferStopWhenContains(payload),
     assumptions: Array.isArray(rule.assumptions) ? rule.assumptions.map((item) => typeof item === "string" ? item : JSON.stringify(item)) : ["大模型生成规则，已由服务端归一化字段映射"],
     mappings,
     tailExtractions: rule.tailExtractions?.length ? rule.tailExtractions : inferTailExtractions(payload)
@@ -435,6 +462,19 @@ ${JSON.stringify(payload).slice(0, 12000)}`;
       if (!parsedRows.length) {
         logAiRules("model-rule-empty", { requestId, model, attemptIndex, ruleName: rule.name, mode: rule.mode, mappings: Object.keys(rule.mappings ?? {}) });
         attempts.push({ model, attemptIndex, ok: false, error: "模型返回规则无法解析出 SKU 行", category: "invalid-rule", status: response.status, contentPreview, quota });
+        continue;
+      }
+      const validationIssues = validateRows(parsedRows, new Set());
+      if (validationIssues.length) {
+        logAiRules("model-rule-invalid-for-order", {
+          requestId,
+          model,
+          attemptIndex,
+          parsedRows: parsedRows.length,
+          issueCount: validationIssues.length,
+          issuePreview: validationIssues.slice(0, 5).map((issue) => ({ rowNumber: issue.rowNumber, field: issue.field, message: issue.message }))
+        });
+        attempts.push({ model, attemptIndex, ok: false, error: `模型返回规则可解析但不满足下单字段要求：${validationIssues[0]?.message ?? "字段缺失"}`, category: "invalid-rule", status: response.status, contentPreview, quota });
         continue;
       }
       logAiRules("model-success", { requestId, model, attemptIndex, ruleName: rule.name, mode: rule.mode, parsedRows: parsedRows.length });

@@ -33,11 +33,11 @@ const checks = {
     !runtimeConfig.includes("OPENROUTER_API_KEYS") &&
     !runtimeConfig.includes("AI_MODELS"),
   aiSingleProviderConfigured: docs.includes("https://www.pomoai.xyz/v1/chat/completions") && docs.includes("gpt-5.5"),
-  aiSingleModelOnly: aiRoute.includes("maxAiAttempts = 3") && aiRoute.includes("const maxAttempts = payload.auto ? 1 : maxAiAttempts") && aiRoute.includes("for (let attemptIndex = 0; attemptIndex < maxAttempts") && !aiRoute.includes("keyIndex"),
+  aiSingleModelOnly: aiRoute.includes("maxAiAttempts = 3") && aiRoute.includes("const maxAttempts = maxAiAttempts") && aiRoute.includes("for (let attemptIndex = 0; attemptIndex < maxAttempts") && !aiRoute.includes("keyIndex"),
   noHardcodedAiSecrets: ![runtimeConfig, aiRoute].some((content) => /sk-(or-v1-)?[A-Za-z0-9_-]{20,}/.test(content)),
   noLegacyAiProviders: ![runtimeConfig, aiRoute, page, docs].some((content) => content.includes("AIHUBMIX") || content.includes("aihubmix") || content.includes("OpenRouter") || content.includes("openrouter")),
   aiRuleNormalization: aiRoute.includes("normalizeModelRule") && aiRoute.includes("normalizeMapping") && aiRoute.includes("columnIndex"),
-  aiRuleMustParseRows: aiRoute.includes("parseByRule(payload.sheets, rule)") && aiRoute.includes("model-rule-empty"),
+  aiRuleMustParseRows: aiRoute.includes("parseByRule(payload.sheets, rule)") && aiRoute.includes("model-rule-empty") && aiRoute.includes("validateRows(parsedRows, new Set())"),
   aiDoesNotReturnFallbackRule: !aiRoute.includes("fallbackRule(") && aiRoute.includes("degraded: true") && aiRoute.includes("status: 503"),
   aiEnvironmentConfigSupported: runtimeConfig.includes("process.env.AI_API_KEY") && runtimeConfig.includes("process.env.AI_BASE_URL") && runtimeConfig.includes("process.env.AI_MODEL"),
   aiQuotaUsesRuntimeConfig: readFileSync("lib/ai-quota.ts", "utf-8").includes("getAiQuotaConfig"),
