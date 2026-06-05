@@ -21,12 +21,12 @@ const parseLocalEnv = (): Record<string, string> => {
   );
 };
 
-const localEnv = parseLocalEnv();
+const getLocalEnv = (): Record<string, string> => parseLocalEnv();
 
 const getRuntimeValue = (name: string): string | undefined =>
-  process.env[name] || localEnv[name];
+  process.env[name] || getLocalEnv()[name];
 
-const getLocalValue = (name: string): string | undefined => localEnv[name];
+const getLocalValue = (name: string): string | undefined => getLocalEnv()[name];
 
 const defaultAiBaseUrl = "https://openrouter.ai/api/v1/chat/completions";
 

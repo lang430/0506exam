@@ -221,7 +221,10 @@ export default function Page() {
         body: JSON.stringify({ fileName: sourceFileName, sheets: sourceSheets.map((sheet) => ({ ...sheet, rows: sheet.rows.slice(0, 30) })) })
       });
       const aiData = await response.json();
-      if (!response.ok || aiData.degraded || !aiData.rule) return setTimedToast(aiData.error ?? "AI 规则生成失败");
+      if (!response.ok || aiData.degraded || !aiData.rule) {
+        if (auto && parseWithExistingRule(sourceSheets, aiData.error ?? "AI 规则生成失败")) return;
+        return setTimedToast(aiData.error ?? "AI 规则生成失败");
+      }
       const rule = aiData.rule as ParseRule;
       const savedData = await saveRuleRemote(rule);
       const nextRules = Array.isArray(savedData.rules) ? savedData.rules as ParseRule[] : [rule, ...rules.filter((item) => item.id !== rule.id)];
@@ -241,6 +244,20 @@ export default function Page() {
     } finally {
       setBusy(false);
     }
+  };
+
+  const parseWithExistingRule = (sourceSheets: SheetSnapshot[], reason: string): boolean => {
+    const rule = selectedRule ?? rules[0];
+    if (!rule) return false;
+    const parsed = parseByRule(sourceSheets, rule);
+    const nextIssues = validateRows(parsed, existingCodes);
+    setRows(parsed.map((row) => ({ ...row, errors: nextIssues.filter((issue) => issue.rowId === row.id).map((issue) => issue.message) })));
+    setIssues(nextIssues);
+    setPreviewPage(1);
+    setProgressText(`${parsed.length}/${parsed.length}`);
+    setProgress(100);
+    setTimedToast(`AI 规则生成失败，已使用「${rule.name}」解析 ${parsed.length} 行：${reason}`);
+    return true;
   };
 
   const saveRule = (): void => {

@@ -28,6 +28,7 @@ const logAiRules = (event: string, details: Record<string, unknown>): void => {
 };
 
 const maxOpenRouterAttempts = 3;
+const openRouterTimeoutMs = 20000;
 
 const previewText = (value: unknown, maxLength = 240): string =>
   String(value ?? "").replace(/\s+/g, " ").trim().slice(0, maxLength);
@@ -194,8 +195,11 @@ export async function POST(request: Request) {
       try {
       logAiRules("model-attempt", { requestId, model, keyIndex, quota });
       const startedAt = Date.now();
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), openRouterTimeoutMs);
       const response = await fetch(baseUrl, {
         method: "POST",
+        signal: controller.signal,
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${apiKey}`,
@@ -207,7 +211,7 @@ export async function POST(request: Request) {
           messages: [{ role: "user", content: prompt }],
           temperature: 0.1
         })
-      });
+      }).finally(() => clearTimeout(timeout));
       logAiRules("model-response", {
         requestId,
         model,

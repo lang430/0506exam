@@ -2529,3 +2529,46 @@ Import traces:
  GET / 200 in 127ms (next.js: 5ms, application-code: 122ms)
  GET / 200 in 41ms (next.js: 8ms, application-code: 33ms)
  GET / 200 in 115ms (next.js: 83ms, application-code: 31ms)
+  Reload env: .env.local
+ GET / 200 in 373ms (next.js: 154ms, application-code: 220ms)
+ GET / 200 in 153ms (next.js: 8ms, application-code: 145ms)
+ GET / 200 in 90ms (next.js: 8ms, application-code: 82ms)
+ GET / 200 in 88ms (next.js: 49ms, application-code: 40ms)
+  Reload env: .env.local
+ GET / 200 in 135ms (next.js: 106ms, application-code: 29ms)
+ GET / 200 in 196ms (next.js: 130ms, application-code: 66ms)
+ GET / 200 in 130ms (next.js: 84ms, application-code: 46ms)
+ GET / 200 in 169ms (next.js: 139ms, application-code: 30ms)
+ GET / 200 in 192ms (next.js: 118ms, application-code: 74ms)
+ GET / 200 in 62ms (next.js: 4ms, application-code: 58ms)
+ GET / 200 in 35ms (next.js: 7ms, application-code: 28ms)
+  Reload env: .env.local
+ GET / 200 in 446ms (next.js: 155ms, application-code: 290ms)
+ GET / 200 in 226ms (next.js: 106ms, application-code: 120ms)
+ GET / 200 in 70ms (next.js: 6ms, application-code: 63ms)
+ GET / 200 in 69ms (next.js: 34ms, application-code: 35ms)
+ GET / 200 in 252ms (next.js: 186ms, application-code: 66ms)
+[ai-rules] config-check {"provider":"openrouter","hasApiKey":true,"apiKeyCount":2,"apiKeySource":".env.local:OPENROUTER_API_KEYS","apiKeyLength":73,"hasBaseUrl":true,"modelCount":1,"usingDefaultBaseUrl":false,"usingDefaultModels":false,"ready":true}
+ GET /api/ai-rules 200 in 121ms (next.js: 102ms, application-code: 19ms)
+[ai-rules] request-start {"requestId":"db7c7a6c-c5ae-42ea-8c5b-b4c5670a18de","fileName":"12.25海口龙湖天街-配送发货单PS2512220005001(1).xlsx","sheetCount":1,"sampledRows":10,"provider":"openrouter","hasApiKey":true,"apiKeyCount":2,"apiKeySource":".env.local:OPENROUTER_API_KEYS","apiKeyLengths":[73,73],"hasBaseUrl":true,"modelCount":1,"ready":true,"usingDefaultBaseUrl":false,"usingDefaultModels":false,"baseUrl":"https://openrouter.ai/api/v1/chat/completions","models":["qwen/qwen3-coder:free"]}
+[ai-rules] model-attempt {"requestId":"db7c7a6c-c5ae-42ea-8c5b-b4c5670a18de","model":"qwen/qwen3-coder:free","keyIndex":0,"quota":{"allowed":true,"mode":"memory","minuteUsed":1,"dayUsed":1,"minuteLimit":5,"dailyLimit":500}}
+[ai-rules] model-response {"requestId":"db7c7a6c-c5ae-42ea-8c5b-b4c5670a18de","model":"qwen/qwen3-coder:free","keyIndex":0,"status":429,"ok":false,"elapsedMs":1190,"headers":{"contentType":"application/json","requestId":null}}
+[ai-rules] model-http-error {"requestId":"db7c7a6c-c5ae-42ea-8c5b-b4c5670a18de","model":"qwen/qwen3-coder:free","keyIndex":0,"status":429,"category":"rate-limit","error":"{\"error\":{\"message\":\"Provider returned error\",\"code\":429,\"metadata\":{\"raw\":\"qwen/qwen3-coder:free is temporarily rate-limited upstream. Please retry shortly, or add your own key to accumulate your rate limits: https://openrouter.ai/settings"}
+[ai-rules] model-attempt {"requestId":"db7c7a6c-c5ae-42ea-8c5b-b4c5670a18de","model":"qwen/qwen3-coder:free","keyIndex":1,"quota":{"allowed":true,"mode":"memory","minuteUsed":2,"dayUsed":2,"minuteLimit":5,"dailyLimit":500}}
+[ai-rules] model-response {"requestId":"db7c7a6c-c5ae-42ea-8c5b-b4c5670a18de","model":"qwen/qwen3-coder:free","keyIndex":1,"status":429,"ok":false,"elapsedMs":1863,"headers":{"contentType":"application/json","requestId":null}}
+[ai-rules] model-http-error {"requestId":"db7c7a6c-c5ae-42ea-8c5b-b4c5670a18de","model":"qwen/qwen3-coder:free","keyIndex":1,"status":429,"category":"rate-limit","error":"{\"error\":{\"message\":\"Provider returned error\",\"code\":429,\"metadata\":{\"raw\":\"qwen/qwen3-coder:free is temporarily rate-limited upstream. Please retry shortly, or add your own key to accumulate your rate limits: https://openrouter.ai/settings"}
+[ai-rules] fallback {"requestId":"db7c7a6c-c5ae-42ea-8c5b-b4c5670a18de","reason":"大模型服务触发限流，请稍后重试或调整候选模型：HTTP 429，未生成可保存规则","attemptedCount":2,"maxOpenRouterAttempts":3,"attempts":[{"model":"qwen/qwen3-coder:free","keyIndex":0,"ok":false,"error":"大模型服务触发限流，请稍后重试或调整候选模型：HTTP 429","category":"rate-limit","status":429,"contentPreview":"{\"error\":{\"message\":\"Provider returned error\",\"code\":429,\"metadata\":{\"raw\":\"qwen/qwen3-coder:free is temporarily rate-limited upstream. Please retry shortly, or add your own key to accumulate your rate limits: https://openrouter.ai/settings","quota":{"allowed":true,"mode":"memory","minuteUsed":1,"dayUsed":1,"minuteLimit":5,"dailyLimit":500}},{"model":"qwen/qwen3-coder:free","keyIndex":1,"ok":false,"error":"大模型服务触发限流，请稍后重试或调整候选模型：HTTP 429","category":"rate-limit","status":429,"contentPreview":"{\"error\":{\"message\":\"Provider returned error\",\"code\":429,\"metadata\":{\"raw\":\"qwen/qwen3-coder:free is temporarily rate-limited upstream. Please retry shortly, or add your own key to accumulate your rate limits: https://openrouter.ai/settings","quota":{"allowed":true,"mode":"memory","minuteUsed":2,"dayUsed":2,"minuteLimit":5,"dailyLimit":500}}]}
+ POST /api/ai-rules 503 in 3.1s (next.js: 4ms, application-code: 3.1s)
+✓ Compiled in 300ms
+ GET / 200 in 171ms (next.js: 120ms, application-code: 51ms)
+[ai-rules] config-check {"provider":"openrouter","hasApiKey":true,"apiKeyCount":2,"apiKeySource":".env.local:OPENROUTER_API_KEYS","apiKeyLength":73,"hasBaseUrl":true,"modelCount":1,"usingDefaultBaseUrl":false,"usingDefaultModels":false,"ready":true}
+ GET /api/ai-rules 200 in 129ms (next.js: 104ms, application-code: 26ms)
+[ai-rules] request-start {"requestId":"31876eb0-a37b-4fba-84be-c3edeca9cb63","fileName":"12.25海口龙湖天街-配送发货单PS2512220005001(1).xlsx","sheetCount":1,"sampledRows":10,"provider":"openrouter","hasApiKey":true,"apiKeyCount":2,"apiKeySource":".env.local:OPENROUTER_API_KEYS","apiKeyLengths":[73,73],"hasBaseUrl":true,"modelCount":1,"ready":true,"usingDefaultBaseUrl":false,"usingDefaultModels":false,"baseUrl":"https://openrouter.ai/api/v1/chat/completions","models":["qwen/qwen3-coder:free"]}
+[ai-rules] model-attempt {"requestId":"31876eb0-a37b-4fba-84be-c3edeca9cb63","model":"qwen/qwen3-coder:free","keyIndex":0,"quota":{"allowed":true,"mode":"memory","minuteUsed":1,"dayUsed":1,"minuteLimit":5,"dailyLimit":500}}
+[ai-rules] model-response {"requestId":"31876eb0-a37b-4fba-84be-c3edeca9cb63","model":"qwen/qwen3-coder:free","keyIndex":0,"status":429,"ok":false,"elapsedMs":1169,"headers":{"contentType":"application/json","requestId":null}}
+[ai-rules] model-http-error {"requestId":"31876eb0-a37b-4fba-84be-c3edeca9cb63","model":"qwen/qwen3-coder:free","keyIndex":0,"status":429,"category":"rate-limit","error":"{\"error\":{\"message\":\"Provider returned error\",\"code\":429,\"metadata\":{\"raw\":\"qwen/qwen3-coder:free is temporarily rate-limited upstream. Please retry shortly, or add your own key to accumulate your rate limits: https://openrouter.ai/settings"}
+[ai-rules] model-attempt {"requestId":"31876eb0-a37b-4fba-84be-c3edeca9cb63","model":"qwen/qwen3-coder:free","keyIndex":1,"quota":{"allowed":true,"mode":"memory","minuteUsed":2,"dayUsed":2,"minuteLimit":5,"dailyLimit":500}}
+[ai-rules] model-response {"requestId":"31876eb0-a37b-4fba-84be-c3edeca9cb63","model":"qwen/qwen3-coder:free","keyIndex":1,"status":429,"ok":false,"elapsedMs":1063,"headers":{"contentType":"application/json","requestId":null}}
+[ai-rules] model-http-error {"requestId":"31876eb0-a37b-4fba-84be-c3edeca9cb63","model":"qwen/qwen3-coder:free","keyIndex":1,"status":429,"category":"rate-limit","error":"{\"error\":{\"message\":\"Provider returned error\",\"code\":429,\"metadata\":{\"raw\":\"qwen/qwen3-coder:free is temporarily rate-limited upstream. Please retry shortly, or add your own key to accumulate your rate limits: https://openrouter.ai/settings"}
+[ai-rules] fallback {"requestId":"31876eb0-a37b-4fba-84be-c3edeca9cb63","reason":"大模型服务触发限流，请稍后重试或调整候选模型：HTTP 429，未生成可保存规则","attemptedCount":2,"maxOpenRouterAttempts":3,"attempts":[{"model":"qwen/qwen3-coder:free","keyIndex":0,"ok":false,"error":"大模型服务触发限流，请稍后重试或调整候选模型：HTTP 429","category":"rate-limit","status":429,"contentPreview":"{\"error\":{\"message\":\"Provider returned error\",\"code\":429,\"metadata\":{\"raw\":\"qwen/qwen3-coder:free is temporarily rate-limited upstream. Please retry shortly, or add your own key to accumulate your rate limits: https://openrouter.ai/settings","quota":{"allowed":true,"mode":"memory","minuteUsed":1,"dayUsed":1,"minuteLimit":5,"dailyLimit":500}},{"model":"qwen/qwen3-coder:free","keyIndex":1,"ok":false,"error":"大模型服务触发限流，请稍后重试或调整候选模型：HTTP 429","category":"rate-limit","status":429,"contentPreview":"{\"error\":{\"message\":\"Provider returned error\",\"code\":429,\"metadata\":{\"raw\":\"qwen/qwen3-coder:free is temporarily rate-limited upstream. Please retry shortly, or add your own key to accumulate your rate limits: https://openrouter.ai/settings","quota":{"allowed":true,"mode":"memory","minuteUsed":2,"dayUsed":2,"minuteLimit":5,"dailyLimit":500}}]}
+ POST /api/ai-rules 503 in 2.3s (next.js: 4ms, application-code: 2.3s)
