@@ -214,22 +214,15 @@ export const parseByRule = (sheets: SheetSnapshot[], rule: ParseRule): OrderRow[
 
 export const validateRows = (rows: OrderRow[], existingCodes: Set<string>): ValidationIssue[] => {
   const issues: ValidationIssue[] = [];
-  const seenSkuLine = new Map<string, number>();
   rows.forEach((row, index) => {
     const rowNumber = index + 1;
     const add = (field: ValidationIssue["field"], message: string): void => {
       issues.push({ rowId: row.id, rowNumber, field, message });
     };
-    if (!text(row.skuCode) && !text(row.skuName)) add("skuName", "SKU编码或名称至少填写一项");
+    if (!text(row.skuCode)) add("skuCode", "SKU物品编码必填");
+    if (!text(row.skuName)) add("skuName", "SKU物品名称必填");
+    if (!(Number(row.quantity) > 0)) add("quantity", "SKU发货数量必须为正数");
     if (!text(row.storeName) && !(text(row.receiverName) && text(row.receiverPhone) && text(row.receiverAddress))) add("row", "收货门店或收件人姓名、电话、地址二选一必填");
-    if (text(row.receiverPhone) && !/^1[3-9]\d{9}$|^0\d{2,3}-?\d{7,8}$/.test(text(row.receiverPhone))) add("receiverPhone", "电话格式不正确");
-    if (row.externalCode) {
-      const skuIdentity = text(row.skuCode) || text(row.skuName);
-      const skuLineKey = `${row.externalCode}::${skuIdentity}`;
-      if (skuIdentity && seenSkuLine.has(skuLineKey)) add("externalCode", `与第 ${seenSkuLine.get(skuLineKey)} 行外部编码和 SKU 重复`);
-      else if (skuIdentity) seenSkuLine.set(skuLineKey, rowNumber);
-      if (existingCodes.has(row.externalCode)) add("externalCode", "与历史已导入外部编码重复");
-    }
   });
   return issues;
 };

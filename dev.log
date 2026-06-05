@@ -2671,3 +2671,11 @@ Import traces:
 ✓ Compiled in 101ms
  GET / 200 in 390ms (next.js: 157ms, application-code: 232ms)
  GET / 200 in 170ms (next.js: 113ms, application-code: 57ms)
+✓ Compiled in 65ms
+ GET / 200 in 235ms (next.js: 165ms, application-code: 69ms)
+ GET / 200 in 26ms (next.js: 3ms, application-code: 24ms)
+✓ Compiled in 54ms
+ GET / 200 in 222ms (next.js: 160ms, application-code: 62ms)
+ GET / 200 in 24ms (next.js: 3ms, application-code: 20ms)
+ GET / 200 in 195ms (next.js: 141ms, application-code: 55ms)
+ GET / 200 in 156ms (next.js: 118ms, application-code: 39ms)

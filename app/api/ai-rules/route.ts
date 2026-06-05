@@ -55,6 +55,7 @@ type RawMapping = Partial<ColumnMapping> & { column?: number; columnIndex?: numb
 
 const fieldAliasEntries: Array<[string, keyof ParseRule["mappings"]]> = [
   ["externalCode", "externalCode"],
+  ["外部编码", "externalCode"],
   ["单号", "externalCode"],
   ["订单号", "externalCode"],
   ["出库单号", "externalCode"],
@@ -66,30 +67,45 @@ const fieldAliasEntries: Array<[string, keyof ParseRule["mappings"]]> = [
   ["订货方", "storeName"],
   ["receiverName", "receiverName"],
   ["收件人", "receiverName"],
+  ["收件人姓名", "receiverName"],
+  ["收货人姓名", "receiverName"],
   ["联系人", "receiverName"],
   ["receiverPhone", "receiverPhone"],
   ["电话", "receiverPhone"],
+  ["收件人电话", "receiverPhone"],
+  ["收货人电话", "receiverPhone"],
   ["手机号", "receiverPhone"],
   ["receiverAddress", "receiverAddress"],
   ["地址", "receiverAddress"],
+  ["收件人地址", "receiverAddress"],
+  ["收货人地址", "receiverAddress"],
   ["收货地址", "receiverAddress"],
   ["skuCode", "skuCode"],
   ["productCode", "skuCode"],
+  ["SKU物品编码", "skuCode"],
+  ["SKU编码", "skuCode"],
   ["物品编码", "skuCode"],
   ["商品编码", "skuCode"],
   ["产品编码", "skuCode"],
   ["skuName", "skuName"],
   ["productName", "skuName"],
+  ["SKU物品名称", "skuName"],
+  ["SKU名称", "skuName"],
   ["物品名称", "skuName"],
   ["商品名称", "skuName"],
   ["产品名称", "skuName"],
   ["quantity", "quantity"],
   ["数量", "quantity"],
+  ["SKU发货数量", "quantity"],
+  ["发货数量", "quantity"],
   ["订货数量", "quantity"],
   ["原订货数量", "quantity"],
+  ["应发数量", "quantity"],
+  ["出库数量", "quantity"],
   ["实发数量", "quantity"],
   ["配送数量", "quantity"],
   ["spec", "spec"],
+  ["SKU规格型号", "spec"],
   ["规格", "spec"],
   ["规格型号", "spec"],
   ["remark", "remark"],
@@ -100,6 +116,21 @@ const normalizeFieldName = (field: string): keyof ParseRule["mappings"] | undefi
   const key = field.trim().toLowerCase().replace(/[\s_（()）-]/g, "");
   const found = fieldAliasEntries.find(([alias]) => alias.trim().toLowerCase().replace(/[\s_（()）-]/g, "") === key);
   return found?.[1];
+};
+
+const findHeaderMapping = (field: keyof ParseRule["mappings"], payload: Payload, headerRow: number): ColumnMapping | undefined => {
+  const aliases = fieldAliasEntries.filter(([, target]) => target === field).map(([alias]) => alias);
+  const normalizedAliases = aliases.map((alias) => alias.trim().toLowerCase().replace(/[\s_*＊（()）-]/g, ""));
+  for (const sheet of payload.sheets) {
+    const header = sheet.rows[Math.max(headerRow - 1, 0)] ?? [];
+    for (const cell of header) {
+      const normalizedCell = String(cell ?? "").trim().toLowerCase().replace(/[\s_*＊（()）-]/g, "");
+      if (normalizedCell && normalizedAliases.some((alias) => normalizedCell.includes(alias) || alias.includes(normalizedCell))) {
+        return { source: "header", header: String(cell) };
+      }
+    }
+  }
+  return undefined;
 };
 
 const normalizeMapping = (mapping: unknown): ColumnMapping | undefined => {
@@ -129,13 +160,21 @@ const normalizeModelRule = (rule: Partial<ParseRule>, payload: Payload): Partial
   if (!Object.keys(mappings).length) return null;
   const rawSheetStrategy = rule.sheetStrategy as unknown;
   const sheetStrategy = rawSheetStrategy === "all" || (typeof rawSheetStrategy === "object" && rawSheetStrategy && (rawSheetStrategy as { type?: unknown }).type === "all") ? "all" : "first";
+  const headerRow = Number(rule.headerRow || 1);
+  const dataStartRow = Number(rule.dataStartRow || Math.max(headerRow + 1, 2));
+  for (const field of orderFields) {
+    if (!mappings[field]) {
+      const mapping = findHeaderMapping(field, payload, headerRow);
+      if (mapping) mappings[field] = mapping;
+    }
+  }
   return {
     ...rule,
     name: String(rule.name ?? `AI规则-${payload.fileName.replace(/\.[^.]+$/, "")}`).slice(0, 50),
     mode: rule.mode && ["table", "matrix", "cards", "text"].includes(rule.mode) ? rule.mode : "table",
     sheetStrategy,
-    headerRow: Number(rule.headerRow || 1),
-    dataStartRow: Number(rule.dataStartRow || Math.max(Number(rule.headerRow || 1) + 1, 2)),
+    headerRow,
+    dataStartRow,
     assumptions: Array.isArray(rule.assumptions) ? rule.assumptions.map((item) => typeof item === "string" ? item : JSON.stringify(item)) : ["大模型生成规则，已由服务端归一化字段映射"],
     mappings
   };
