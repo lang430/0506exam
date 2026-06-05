@@ -10,7 +10,7 @@ interface Payload {
   sheets: SheetSnapshot[];
 }
 
-const fallbackRule = ({ fileName, sheets }: Payload): ParseRule => {
+const fallbackRule = ({ fileName, sheets }: Payload, reason = "大模型不可用，已使用启发式分析生成"): ParseRule => {
   const first = sheets[0];
   const rows = first?.rows ?? [];
   const headerIndex = rows.findIndex((row) => row.some((cell) => /物品编码|SKU|商品编码/.test(cell)));
@@ -26,7 +26,7 @@ const fallbackRule = ({ fileName, sheets }: Payload): ParseRule => {
     mode: cardLike ? "cards" : "table",
     confidence: headerIndex >= 0 ? 0.72 : 0.45,
     assumptions: [
-      "当前环境未配置大模型 API Key，此规则由启发式分析生成",
+      reason,
       "所有字段映射均需用户预览确认后再保存"
     ],
     sheetStrategy: sheets.length > 1 ? "all" : "first",
@@ -74,15 +74,37 @@ const getCandidateModels = (): string[] => {
   return Array.from(new Set(getAiConfig().models));
 };
 
+const aiConfigStatus = () => {
+  const { apiKey, baseUrl, models } = getAiConfig();
+  return {
+    hasApiKey: Boolean(apiKey),
+    hasBaseUrl: Boolean(baseUrl),
+    modelCount: models.length,
+    ready: Boolean(apiKey && baseUrl && models.length)
+  };
+};
+
+export async function GET() {
+  return NextResponse.json(aiConfigStatus());
+}
+
 export async function POST(request: Request) {
   const payload = await request.json() as Payload;
   const { apiKey, baseUrl } = getAiConfig();
   const candidateModels = getCandidateModels();
+  const configStatus = aiConfigStatus();
   if (!apiKey || !baseUrl || !candidateModels.length) {
+    const missing = [
+      !apiKey ? "AIHUBMIX_API_KEY" : "",
+      !baseUrl ? "AI_BASE_URL" : "",
+      !candidateModels.length ? "AI_MODELS" : ""
+    ].filter(Boolean).join("、");
+    const error = `大模型环境变量未完整配置，缺少：${missing}`;
     return NextResponse.json({
-      rule: fallbackRule(payload),
+      rule: fallbackRule(payload, error),
       degraded: true,
-      error: "大模型环境变量未完整配置，请在 Vercel 后台配置 AIHUBMIX_API_KEY、AI_BASE_URL、AI_MODELS"
+      error,
+      configStatus
     });
   }
 
@@ -121,5 +143,5 @@ export async function POST(request: Request) {
       attempts.push({ model, ok: false, error: error instanceof Error ? error.message : "模型请求失败", quota });
     }
   }
-  return NextResponse.json({ rule: fallbackRule(payload), degraded: true, error: "所有候选模型均未返回可用规则，已降级为启发式规则", attempts }, { status: 200 });
+  return NextResponse.json({ rule: fallbackRule(payload, "所有候选模型均未返回可用规则，已降级为启发式规则"), degraded: true, error: "所有候选模型均未返回可用规则，已降级为启发式规则", configStatus, attempts }, { status: 200 });
 }

@@ -178,7 +178,7 @@ export default function Page() {
     setSelectedRuleId(rule.id);
     setProgress(100);
     setBusy(false);
-    setTimedToast(aiData.degraded ? "已生成启发式规则草案，请人工确认" : `AI 已生成规则草案，已保存到${savedData.mode === "database" ? "数据库" : "服务端文件"}`);
+    setTimedToast(aiData.degraded ? `已生成启发式规则草案：${aiData.error ?? "请人工确认"}` : `AI 已生成规则草案，已保存到${savedData.mode === "database" ? "数据库" : "服务端文件"}`);
   };
 
   const saveRule = (): void => {

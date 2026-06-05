@@ -26,6 +26,7 @@ const checks = {
   noLocalEnvFileDependency: ![runtimeConfig, db, aiRoute, rulesApi, page].some((content) => content.includes(".env.local") || content.includes("dotenv")),
   rulesPersistToDatabase: !rulesApi.includes(".data") && !rulesApi.includes("mode: \"file\"") && rulesApi.includes("parse_rules"),
   rulesReadOnlyFromDatabase: !rulesApi.includes("defaultRules") && !page.includes("useState<ParseRule[]>(defaultRules)") && !page.includes("defaultRules[0]"),
+  aiConfigDiagnosticSafe: aiRoute.includes("export async function GET") && aiRoute.includes("hasApiKey") && aiRoute.includes("modelCount") && !aiRoute.includes("apiKey: apiKey"),
   noPublicSecretEnv: ![runtimeConfig, db, aiRoute, page].some((content) => /NEXT_PUBLIC_.*(KEY|SECRET|TOKEN|URL)/.test(content)),
   documentsVercelVars: requiredServerVars.every((name) => docs.includes(name)),
   noHardcodedAiRuntimeValues: !runtimeConfig.includes("https://aihubmix.com") && !runtimeConfig.includes("coding-glm-5.1-free")
