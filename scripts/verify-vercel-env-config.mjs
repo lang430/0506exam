@@ -14,10 +14,10 @@ const requiredDatabaseVars = [
   "POSTGRES_URL_NON_POOLING"
 ];
 
-const requiredLocalAiVars = [
-  "OPENROUTER_API_KEYS",
+const requiredAiVars = [
+  "AI_API_KEY",
   "AI_BASE_URL",
-  "AI_MODELS",
+  "AI_MODEL",
   "AI_RATE_LIMIT_PER_MINUTE",
   "AI_DAILY_LIMIT"
 ];
@@ -25,26 +25,21 @@ const requiredLocalAiVars = [
 const checks = {
   centralizedRuntimeConfig: runtimeConfig.includes("getDatabaseConfig") && runtimeConfig.includes("getAiConfig"),
   databaseUsesRuntimeConfig: db.includes("getDatabaseConfig") && !db.includes("process.env.POSTGRES_URL"),
-  aiUsesRuntimeConfig: aiRoute.includes("getAiConfig") && !aiRoute.includes("process.env.OPENROUTER_API_KEYS"),
-  aiUsesLocalOnlyConfig: runtimeConfig.includes("getLocalValue") &&
-    runtimeConfig.includes("getLocalValue(\"OPENROUTER_API_KEYS\")") &&
-    runtimeConfig.includes("getLocalValue(\"AI_BASE_URL\")") &&
-    runtimeConfig.includes("getLocalValue(\"AI_MODELS\")") &&
-    runtimeConfig.includes("getLocalValue(\"AI_RATE_LIMIT_PER_MINUTE\")") &&
-    !runtimeConfig.includes("getRuntimeValue(\"OPENROUTER_API_KEYS\")") &&
-    !runtimeConfig.includes("getRuntimeValue(\"AI_BASE_URL\")") &&
-    !runtimeConfig.includes("getRuntimeValue(\"AI_MODELS\")") &&
-    !runtimeConfig.includes("getRuntimeValue(\"AI_RATE_LIMIT_PER_MINUTE\")"),
-  openRouterConfigured: runtimeConfig.includes("OPENROUTER_API_KEYS") && runtimeConfig.includes("openrouter") && runtimeConfig.includes("https://openrouter.ai/api/v1/chat/completions"),
-  aiKeyPoolConfigured: runtimeConfig.includes("apiKeys") && aiRoute.includes("apiKeyCount") && aiRoute.includes("keyIndex"),
-  aiEnvKeyFallbackConfigured: runtimeConfig.includes("OPENROUTER_API_KEY_1") && runtimeConfig.includes("OPENROUTER_API_KEY_2"),
-  noHardcodedOpenRouterSecrets: ![runtimeConfig, aiRoute].some((content) => /sk-or-v1-[A-Za-z0-9]+/.test(content)),
-  openRouterOnly: ![runtimeConfig, aiRoute].some((content) => content.includes("AIHUBMIX") || content.includes("aihubmix")),
-  openRouterAttemptLimit: aiRoute.includes("maxOpenRouterAttempts = 3") && aiRoute.includes("attemptedCount >= maxOpenRouterAttempts"),
+  aiUsesRuntimeConfig: aiRoute.includes("getAiConfig") && runtimeConfig.includes("process.env.AI_API_KEY"),
+  aiUsesVercelEnvironment: runtimeConfig.includes("process.env.AI_API_KEY") &&
+    runtimeConfig.includes("process.env.AI_BASE_URL") &&
+    runtimeConfig.includes("process.env.AI_MODEL") &&
+    !runtimeConfig.includes("getLocalValue") &&
+    !runtimeConfig.includes("OPENROUTER_API_KEYS") &&
+    !runtimeConfig.includes("AI_MODELS"),
+  aiSingleProviderConfigured: runtimeConfig.includes("https://www.pomoai.xyz//v1/chat/completions") && runtimeConfig.includes("gpt-5.5"),
+  aiSingleModelOnly: aiRoute.includes("maxAiAttempts = 3") && aiRoute.includes("for (let attemptIndex = 0; attemptIndex < maxAiAttempts") && !aiRoute.includes("keyIndex"),
+  noHardcodedAiSecrets: ![runtimeConfig, aiRoute].some((content) => /sk-(or-v1-)?[A-Za-z0-9_-]{20,}/.test(content)),
+  noLegacyAiProviders: ![runtimeConfig, aiRoute, page, docs].some((content) => content.includes("AIHUBMIX") || content.includes("aihubmix") || content.includes("OpenRouter") || content.includes("openrouter")),
   aiRuleNormalization: aiRoute.includes("normalizeModelRule") && aiRoute.includes("normalizeMapping") && aiRoute.includes("columnIndex"),
   aiRuleMustParseRows: aiRoute.includes("parseByRule(payload.sheets, rule)") && aiRoute.includes("model-rule-empty"),
   aiDoesNotReturnFallbackRule: !aiRoute.includes("fallbackRule(") && aiRoute.includes("degraded: true") && aiRoute.includes("status: 503"),
-  aiLocalConfigSupported: runtimeConfig.includes(".env.local") && runtimeConfig.includes("readFileSync") && runtimeConfig.includes("encoding: \"utf-8\""),
+  aiEnvironmentConfigSupported: runtimeConfig.includes("process.env.AI_API_KEY") && runtimeConfig.includes("process.env.AI_BASE_URL") && runtimeConfig.includes("process.env.AI_MODEL"),
   aiQuotaUsesRuntimeConfig: readFileSync("lib/ai-quota.ts", "utf-8").includes("getAiQuotaConfig"),
   noDotenvDependency: ![db, aiRoute, rulesApi, page].some((content) => content.includes("dotenv")),
   rulesPersistToDatabase: !rulesApi.includes(".data") && !rulesApi.includes("mode: \"file\"") && rulesApi.includes("parse_rules"),
@@ -52,8 +47,8 @@ const checks = {
   aiConfigDiagnosticSafe: aiRoute.includes("export async function GET") && aiRoute.includes("hasApiKey") && aiRoute.includes("modelCount") && !aiRoute.includes("apiKey: apiKey"),
   noPublicSecretEnv: ![runtimeConfig, db, aiRoute, page].some((content) => /NEXT_PUBLIC_.*(KEY|SECRET|TOKEN|URL)/.test(content)),
   documentsDatabaseVars: requiredDatabaseVars.every((name) => docs.includes(name)),
-  documentsLocalAiVars: requiredLocalAiVars.every((name) => docs.includes(name)) && docs.includes(".env.local"),
-  aiFallbackConfigured: runtimeConfig.includes("defaultAiBaseUrl") && runtimeConfig.includes("defaultAiModels") && runtimeConfig.includes("usingDefaultModels"),
+  documentsAiVars: requiredAiVars.every((name) => docs.includes(name)) && docs.includes("Vercel Environment Variables"),
+  aiFallbackConfigured: runtimeConfig.includes("defaultAiBaseUrl") && runtimeConfig.includes("defaultAiModel") && runtimeConfig.includes("usingDefaultModels"),
   aiCallLogsConfigured: [
     "request-start",
     "model-attempt",
@@ -65,5 +60,5 @@ const checks = {
 };
 
 const failed = Object.entries(checks).filter(([, value]) => !value);
-console.log(JSON.stringify({ checks, failed: failed.map(([name]) => name), requiredDatabaseVars, requiredLocalAiVars }, null, 2));
+console.log(JSON.stringify({ checks, failed: failed.map(([name]) => name), requiredDatabaseVars, requiredAiVars }, null, 2));
 if (failed.length) process.exit(1);

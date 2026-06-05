@@ -14,7 +14,7 @@ interface Payload {
 
 interface AiAttempt {
   model: string;
-  keyIndex?: number;
+  attemptIndex?: number;
   ok: boolean;
   error?: string;
   category?: string;
@@ -27,8 +27,8 @@ const logAiRules = (event: string, details: Record<string, unknown>): void => {
   console.info(`[ai-rules] ${event}`, JSON.stringify(details));
 };
 
-const maxOpenRouterAttempts = 3;
-const openRouterTimeoutMs = 20000;
+const maxAiAttempts = 3;
+const aiRequestTimeoutMs = 20000;
 
 const previewText = (value: unknown, maxLength = 240): string =>
   String(value ?? "").replace(/\s+/g, " ").trim().slice(0, maxLength);
@@ -36,16 +36,16 @@ const previewText = (value: unknown, maxLength = 240): string =>
 const classifyModelFailure = (content: string, status?: number): { category: string; message: string } => {
   const lower = content.toLowerCase();
   if (status === 401 || status === 403 || lower.includes("invalid api key") || lower.includes("unauthorized")) {
-    return { category: "auth", message: "大模型鉴权失败，请检查 OpenRouter API Key 配置" };
+    return { category: "auth", message: "大模型鉴权失败，请检查 AI_API_KEY 配置" };
   }
   if (status === 429 || lower.includes("rate limit") || lower.includes("too many requests")) {
     return { category: "rate-limit", message: "大模型服务触发限流，请稍后重试或调整候选模型" };
   }
   if (lower.includes("prevent abuse of free resources") || lower.includes("topup") || lower.includes("recharg")) {
-    return { category: "provider-quota", message: "OpenRouter 免费额度受限，请切换 Key、稍后重试或检查账号额度" };
+    return { category: "provider-quota", message: "大模型服务额度受限，请稍后重试或检查账号额度" };
   }
   if (lower.includes("model") && (lower.includes("not found") || lower.includes("not exist") || lower.includes("unsupported"))) {
-    return { category: "model-unavailable", message: "候选模型不可用，请检查 AI_MODELS 配置" };
+    return { category: "model-unavailable", message: "模型不可用，请检查 AI_MODEL 配置" };
   }
   return { category: "invalid-response", message: "模型未返回可解析的规则 JSON" };
 };
@@ -82,7 +82,7 @@ const normalizeModelRule = (rule: Partial<ParseRule>, payload: Payload): Partial
     sheetStrategy: rule.sheetStrategy === "all" ? "all" : "first",
     headerRow: Number(rule.headerRow || 1),
     dataStartRow: Number(rule.dataStartRow || Math.max(Number(rule.headerRow || 1) + 1, 2)),
-    assumptions: Array.isArray(rule.assumptions) ? rule.assumptions.map((item) => typeof item === "string" ? item : JSON.stringify(item)) : ["OpenRouter 生成规则，已由服务端归一化字段映射"],
+    assumptions: Array.isArray(rule.assumptions) ? rule.assumptions.map((item) => typeof item === "string" ? item : JSON.stringify(item)) : ["大模型生成规则，已由服务端归一化字段映射"],
     mappings
   };
 };
@@ -104,7 +104,7 @@ const parseModelRule = (content: string, payload: Payload): Partial<ParseRule> |
 
 const redactHeaders = (headers: Headers): Record<string, string | null> => ({
   contentType: headers.get("content-type"),
-  requestId: headers.get("x-request-id") || headers.get("x-openrouter-request-id")
+  requestId: headers.get("x-request-id")
 });
 
 const getCandidateModels = (): string[] => {
@@ -112,11 +112,10 @@ const getCandidateModels = (): string[] => {
 };
 
 const aiConfigStatus = () => {
-  const { provider, apiKey, apiKeys, apiKeySource, baseUrl, models, usingDefaultBaseUrl, usingDefaultModels } = getAiConfig();
+  const { provider, apiKey, apiKeySource, baseUrl, models, usingDefaultBaseUrl, usingDefaultModels } = getAiConfig();
   return {
     provider,
     hasApiKey: Boolean(apiKey),
-    apiKeyCount: apiKeys.length,
     apiKeySource: apiKeySource ?? null,
     apiKeyLength: apiKey?.length ?? 0,
     hasBaseUrl: Boolean(baseUrl),
@@ -136,7 +135,7 @@ export async function GET() {
 export async function POST(request: Request) {
   const requestId = crypto.randomUUID();
   const payload = await request.json() as Payload;
-  const { provider, apiKeys, apiKeySource, baseUrl, usingDefaultBaseUrl, usingDefaultModels } = getAiConfig();
+  const { provider, apiKey, apiKeySource, baseUrl, model, usingDefaultBaseUrl, usingDefaultModels } = getAiConfig();
   const candidateModels = getCandidateModels();
   const configStatus = aiConfigStatus();
   logAiRules("request-start", {
@@ -146,9 +145,8 @@ export async function POST(request: Request) {
     sampledRows: payload.sheets.reduce((sum, sheet) => sum + sheet.rows.length, 0),
     provider,
     hasApiKey: configStatus.hasApiKey,
-    apiKeyCount: configStatus.apiKeyCount,
     apiKeySource,
-    apiKeyLengths: apiKeys.map((key) => key.length),
+    apiKeyLength: apiKey?.length ?? 0,
     hasBaseUrl: configStatus.hasBaseUrl,
     modelCount: configStatus.modelCount,
     ready: configStatus.ready,
@@ -157,13 +155,13 @@ export async function POST(request: Request) {
     baseUrl,
     models: candidateModels
   });
-  if (!apiKeys.length || !baseUrl || !candidateModels.length) {
+  if (!apiKey || !baseUrl || !model) {
     const missing = [
-      !apiKeys.length ? "OPENROUTER_API_KEYS" : "",
+      !apiKey ? "AI_API_KEY" : "",
       !baseUrl ? "AI_BASE_URL" : "",
-      !candidateModels.length ? "AI_MODELS" : ""
+      !model ? "AI_MODEL" : ""
     ].filter(Boolean).join("、");
-    const error = `本地大模型配置未完整配置，缺少：${missing}，请检查项目根目录 .env.local`;
+    const error = `大模型环境变量未完整配置，缺少：${missing}，请检查 Vercel Environment Variables`;
     return NextResponse.json({ degraded: true, error, configStatus }, { status: 503 });
   }
 
@@ -182,29 +180,25 @@ export async function POST(request: Request) {
 文件快照：${JSON.stringify(payload).slice(0, 18000)}`;
   const attempts: AiAttempt[] = [];
   let attemptedCount = 0;
-  for (const [keyIndex, apiKey] of apiKeys.entries()) {
-    for (const model of candidateModels) {
-      if (attemptedCount >= maxOpenRouterAttempts) break;
-      const quota = await consumeAiQuota(`${provider}:${keyIndex}:${model}`);
+  for (let attemptIndex = 0; attemptIndex < maxAiAttempts; attemptIndex += 1) {
+      const quota = await consumeAiQuota(`${provider}:${model}`);
       if (!quota.allowed) {
-        logAiRules("quota-blocked", { requestId, model, keyIndex, quota });
-        attempts.push({ model, keyIndex, ok: false, error: quota.reason, category: "local-quota", quota });
+        logAiRules("quota-blocked", { requestId, model, attemptIndex, quota });
+        attempts.push({ model, attemptIndex, ok: false, error: quota.reason, category: "local-quota", quota });
         break;
       }
       attemptedCount += 1;
       try {
-      logAiRules("model-attempt", { requestId, model, keyIndex, quota });
+      logAiRules("model-attempt", { requestId, model, attemptIndex, quota });
       const startedAt = Date.now();
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), openRouterTimeoutMs);
+      const timeout = setTimeout(() => controller.abort(), aiRequestTimeoutMs);
       const response = await fetch(baseUrl, {
         method: "POST",
         signal: controller.signal,
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-          "HTTP-Referer": "http://localhost:3000",
-          "X-OpenRouter-Title": "Universal Order Import"
+          Authorization: `Bearer ${apiKey}`
         },
         body: JSON.stringify({
           model,
@@ -215,7 +209,7 @@ export async function POST(request: Request) {
       logAiRules("model-response", {
         requestId,
         model,
-        keyIndex,
+        attemptIndex,
         status: response.status,
         ok: response.ok,
         elapsedMs: Date.now() - startedAt,
@@ -224,8 +218,8 @@ export async function POST(request: Request) {
       if (!response.ok) {
         const errorText = previewText(await response.text());
         const failure = classifyModelFailure(errorText, response.status);
-        logAiRules("model-http-error", { requestId, model, keyIndex, status: response.status, category: failure.category, error: errorText });
-        attempts.push({ model, keyIndex, ok: false, error: `${failure.message}：HTTP ${response.status}`, category: failure.category, status: response.status, contentPreview: errorText, quota });
+        logAiRules("model-http-error", { requestId, model, attemptIndex, status: response.status, category: failure.category, error: errorText });
+        attempts.push({ model, attemptIndex, ok: false, error: `${failure.message}：HTTP ${response.status}`, category: failure.category, status: response.status, contentPreview: errorText, quota });
         continue;
       }
       const rawBody = await response.text();
@@ -238,13 +232,13 @@ export async function POST(request: Request) {
         logAiRules("model-response-invalid-json", {
           requestId,
           model,
-          keyIndex,
+          attemptIndex,
           status: response.status,
           category: failure.category,
           bodyLength: rawBody.length,
           bodyPreview: rawPreview
         });
-        attempts.push({ model, keyIndex, ok: false, error: failure.message, category: failure.category, status: response.status, contentPreview: rawPreview, quota });
+        attempts.push({ model, attemptIndex, ok: false, error: failure.message, category: failure.category, status: response.status, contentPreview: rawPreview, quota });
         continue;
       }
       const content = data.choices?.[0]?.message?.content ?? "{}";
@@ -252,7 +246,7 @@ export async function POST(request: Request) {
       logAiRules("model-body", {
         requestId,
         model,
-        keyIndex,
+        attemptIndex,
         choiceCount: Array.isArray(data.choices) ? data.choices.length : 0,
         finishReason: data.choices?.[0]?.finish_reason,
         contentLength: String(content).length,
@@ -265,7 +259,7 @@ export async function POST(request: Request) {
         logAiRules("model-invalid-json", {
           requestId,
           model,
-          keyIndex,
+          attemptIndex,
           category: failure.category,
           message: failure.message,
           startsWith: String(content).slice(0, 40),
@@ -273,29 +267,27 @@ export async function POST(request: Request) {
           hasJsonEnd: String(content).includes("}"),
           contentPreview
         });
-        attempts.push({ model, keyIndex, ok: false, error: failure.message, category: failure.category, status: response.status, contentPreview, quota });
+        attempts.push({ model, attemptIndex, ok: false, error: failure.message, category: failure.category, status: response.status, contentPreview, quota });
         continue;
       }
       const rule = { ...parsedRule, id: crypto.randomUUID() } as ParseRule;
       const parsedRows = parseByRule(payload.sheets, rule);
       if (!parsedRows.length) {
-        logAiRules("model-rule-empty", { requestId, model, keyIndex, ruleName: rule.name, mode: rule.mode, mappings: Object.keys(rule.mappings ?? {}) });
-        attempts.push({ model, keyIndex, ok: false, error: "模型返回规则无法解析出 SKU 行", category: "invalid-rule", status: response.status, contentPreview, quota });
+        logAiRules("model-rule-empty", { requestId, model, attemptIndex, ruleName: rule.name, mode: rule.mode, mappings: Object.keys(rule.mappings ?? {}) });
+        attempts.push({ model, attemptIndex, ok: false, error: "模型返回规则无法解析出 SKU 行", category: "invalid-rule", status: response.status, contentPreview, quota });
         continue;
       }
-      logAiRules("model-success", { requestId, model, keyIndex, ruleName: rule.name, mode: rule.mode, parsedRows: parsedRows.length });
-      return NextResponse.json({ rule, degraded: false, model, keyIndex, parsedRows: parsedRows.length, quota, attempts });
+      logAiRules("model-success", { requestId, model, attemptIndex, ruleName: rule.name, mode: rule.mode, parsedRows: parsedRows.length });
+      return NextResponse.json({ rule, degraded: false, model, attemptIndex, parsedRows: parsedRows.length, quota, attempts });
     } catch (error) {
-      logAiRules("model-exception", { requestId, model, keyIndex, error: error instanceof Error ? error.message : "模型请求失败" });
-      attempts.push({ model, keyIndex, ok: false, error: error instanceof Error ? error.message : "模型请求失败", quota });
+      logAiRules("model-exception", { requestId, model, attemptIndex, error: error instanceof Error ? error.message : "模型请求失败" });
+      attempts.push({ model, attemptIndex, ok: false, error: error instanceof Error ? error.message : "模型请求失败", quota });
       }
-    }
-    if (attemptedCount >= maxOpenRouterAttempts) break;
   }
   const preferredFailure = attempts.find((attempt) => attempt.category === "provider-quota" || attempt.category === "auth" || attempt.category === "rate-limit") ?? attempts.at(-1);
   const fallbackReason = preferredFailure?.error
     ? `${preferredFailure.error}，未生成可保存规则`
     : "所有候选模型均未返回可用规则，未生成可保存规则";
-  logAiRules("fallback", { requestId, reason: fallbackReason, attemptedCount, maxOpenRouterAttempts, attempts });
+  logAiRules("fallback", { requestId, reason: fallbackReason, attemptedCount, maxAiAttempts, attempts });
   return NextResponse.json({ degraded: true, error: fallbackReason, configStatus, attempts }, { status: 503 });
 }

@@ -2577,3 +2577,78 @@ Import traces:
  GET / 200 in 81ms (next.js: 4ms, application-code: 77ms)
  GET / 200 in 49ms (next.js: 6ms, application-code: 44ms)
  GET / 200 in 49ms (next.js: 27ms, application-code: 22ms)
+ GET / 200 in 336ms (next.js: 138ms, application-code: 197ms)
+ GET / 200 in 156ms (next.js: 4ms, application-code: 152ms)
+ GET / 200 in 121ms (next.js: 61ms, application-code: 60ms)
+ GET / 200 in 124ms (next.js: 12ms, application-code: 112ms)
+✓ Compiled in 206ms
+ GET /api/rules 503 in 93ms (next.js: 78ms, application-code: 15ms)
+ GET /api/orders 503 in 202ms (next.js: 186ms, application-code: 16ms)
+ GET / 200 in 460ms (next.js: 202ms, application-code: 257ms)
+✓ Compiled in 118ms
+ GET / 200 in 237ms (next.js: 181ms, application-code: 56ms)
+✓ Compiled in 133ms
+ GET / 200 in 202ms (next.js: 155ms, application-code: 48ms)
+✓ Compiled in 101ms
+ GET / 200 in 185ms (next.js: 144ms, application-code: 41ms)
+✓ Compiled in 129ms
+ GET / 200 in 224ms (next.js: 176ms, application-code: 48ms)
+✓ Compiled in 98ms
+ GET / 200 in 191ms (next.js: 144ms, application-code: 48ms)
+✓ Compiled in 97ms
+⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ GET /api/rules 503 in 77ms (next.js: 64ms, application-code: 13ms)
+ GET /api/orders 503 in 124ms (next.js: 118ms, application-code: 7ms)
+ GET / 200 in 306ms (next.js: 101ms, application-code: 204ms)
+ GET /api/rules 503 in 10ms (next.js: 3ms, application-code: 7ms)
+ GET /api/orders 503 in 18ms (next.js: 11ms, application-code: 7ms)
+✓ Compiled in 54ms
+ GET / 200 in 194ms (next.js: 149ms, application-code: 45ms)
+✓ Compiled in 75ms
+ GET /api/rules 503 in 50ms (next.js: 42ms, application-code: 8ms)
+ GET /api/orders 503 in 91ms (next.js: 82ms, application-code: 9ms)
+ GET / 200 in 295ms (next.js: 155ms, application-code: 140ms)
+✓ Compiled in 83ms
+ GET / 200 in 175ms (next.js: 137ms, application-code: 38ms)
+  Reload env: .env.local
+ GET / 200 in 147ms (next.js: 111ms, application-code: 36ms)
+ GET / 200 in 316ms (next.js: 174ms, application-code: 142ms)
+ GET / 200 in 101ms (next.js: 4ms, application-code: 96ms)
+ GET / 200 in 64ms (next.js: 5ms, application-code: 60ms)
+✓ Compiled in 58ms
+ GET / 200 in 278ms (next.js: 191ms, application-code: 87ms)
+ GET / 200 in 154ms (next.js: 109ms, application-code: 45ms)
+[ai-rules] config-check {"provider":"openrouter","hasApiKey":true,"apiKeyCount":2,"apiKeySource":".env.local:OPENROUTER_API_KEYS","apiKeyLength":73,"hasBaseUrl":true,"modelCount":1,"usingDefaultBaseUrl":false,"usingDefaultModels":false,"ready":true}
+ GET /api/ai-rules 200 in 60ms (next.js: 47ms, application-code: 13ms)
+[ai-rules] local-start {"requestId":"62aa6866-9b07-4c50-807b-9f7694448461","fileName":"test.xlsx","sheetCount":1,"sampledRows":3}
+[ai-rules] local-result {"requestId":"62aa6866-9b07-4c50-807b-9f7694448461","strategy":"table","confidence":0.85,"headers":["配送单号","收货机构","收货人","联系电话","收货地址","物品编码","物品名称","数量","规格型号","备注"],"reason":"识别到 10 个表头字段"}
+ POST /api/ai-rules 200 in 18ms (next.js: 2ms, application-code: 16ms)
+ GET / 200 in 156ms (next.js: 114ms, application-code: 42ms)
+ GET / 200 in 103ms (next.js: 73ms, application-code: 29ms)
+ GET / 200 in 172ms (next.js: 128ms, application-code: 44ms)
+[ai-rules] local-start {"requestId":"d1cb4ec6-c422-4963-8256-e56580ff1bc5","fileName":"test.xlsx","sheetCount":1,"sampledRows":3}
+[ai-rules] local-result {"requestId":"d1cb4ec6-c422-4963-8256-e56580ff1bc5","strategy":"table","confidence":0.85,"headers":["配送单号","收货机构","收货人","联系电话","收货地址","物品编码","物品名称","数量","规格型号","备注"],"reason":"识别到 10 个表头字段"}
+ POST /api/ai-rules 200 in 52ms (next.js: 38ms, application-code: 14ms)
+ GET / 200 in 324ms (next.js: 169ms, application-code: 155ms)
+ GET / 200 in 79ms (next.js: 5ms, application-code: 74ms)
+ GET / 200 in 46ms (next.js: 6ms, application-code: 39ms)
+✓ Compiled in 436ms
+ GET / 200 in 1088ms (next.js: 697ms, application-code: 390ms)
+ GET / 200 in 368ms (next.js: 6ms, application-code: 362ms)
+ GET / 200 in 308ms (next.js: 16ms, application-code: 292ms)
+ GET / 200 in 308ms (next.js: 68ms, application-code: 239ms)
+ GET / 200 in 304ms (next.js: 154ms, application-code: 151ms)
+ GET / 200 in 308ms (next.js: 111ms, application-code: 197ms)
+ GET /api/rules 503 in 160ms (next.js: 148ms, application-code: 12ms)
+ GET /api/orders 503 in 235ms (next.js: 224ms, application-code: 11ms)
+ GET / 200 in 378ms (next.js: 12ms, application-code: 366ms)
+ GET / 200 in 309ms (next.js: 12ms, application-code: 297ms)
+ GET / 200 in 247ms (next.js: 8ms, application-code: 239ms)
+ GET / 200 in 566ms (next.js: 307ms, application-code: 258ms)
+ GET / 200 in 146ms (next.js: 12ms, application-code: 134ms)
+ GET / 200 in 56ms (next.js: 8ms, application-code: 48ms)
+ GET / 200 in 182ms (next.js: 133ms, application-code: 50ms)
+  Reload env: .env.local
+ GET / 200 in 205ms (next.js: 150ms, application-code: 56ms)
+✓ Compiled in 85ms
+ GET / 200 in 180ms (next.js: 139ms, application-code: 40ms)

@@ -57,7 +57,7 @@ const createBlankRule = (): ParseRule => ({
 
 const isDegradedAiRule = (rule: ParseRule): boolean =>
   rule.name.startsWith("AI草案-") ||
-  (rule.assumptions ?? []).some((item) => item.includes("大模型环境变量未完整配置") || item.includes("OPENROUTER_API_KEYS") || item.includes("启发式规则") || item.includes("所有字段映射均需用户预览确认后再保存"));
+  (rule.assumptions ?? []).some((item) => item.includes("大模型环境变量未完整配置") || item.includes("AI_API_KEY") || item.includes("OPENROUTER_API_KEYS") || item.includes("启发式规则") || item.includes("所有字段映射均需用户预览确认后再保存"));
 
 export default function Page() {
   const [rules, setRules] = useState<ParseRule[]>([]);
@@ -133,7 +133,7 @@ export default function Page() {
         setSelectedRuleId(usableRules[0]?.id ?? "");
         if (usableRules.length !== data.rules.length) {
           void fetch("/api/rules", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ degraded: true }) });
-          setTimedToast("已忽略并清理历史降级规则，请重新调用 OpenRouter 生成规则");
+          setTimedToast("已忽略并清理历史降级规则，请重新调用大模型生成规则");
         }
       }
       if (data.error) setTimedToast(data.error);

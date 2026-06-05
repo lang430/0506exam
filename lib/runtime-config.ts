@@ -26,24 +26,8 @@ const getLocalEnv = (): Record<string, string> => parseLocalEnv();
 const getRuntimeValue = (name: string): string | undefined =>
   process.env[name] || getLocalEnv()[name];
 
-const getLocalValue = (name: string): string | undefined => getLocalEnv()[name];
-
-const defaultAiBaseUrl = "https://openrouter.ai/api/v1/chat/completions";
-
-const defaultAiModels = [
-  "nvidia/nemotron-3.5-content-safety:free"
-];
-
-const getAiApiKeys = (): { values: string[]; source?: string } => {
-  const openRouterKeys = [
-    ...splitCsv(getLocalValue("OPENROUTER_API_KEYS")),
-    ...splitCsv(getLocalValue("OPENROUTER_API_KEY")),
-    ...splitCsv(getLocalValue("OPENROUTER_API_KEY_1")),
-    ...splitCsv(getLocalValue("OPENROUTER_API_KEY_2"))
-  ];
-  if (openRouterKeys.length) return { values: openRouterKeys, source: ".env.local:OPENROUTER_API_KEYS" };
-  return { values: [] };
-};
+const defaultAiBaseUrl = "https://www.pomoai.xyz//v1/chat/completions";
+const defaultAiModel = "gpt-5.5";
 
 export const getDatabaseConfig = (): { url?: string } => ({
   url: getRuntimeValue("DATABASE_URL") ||
@@ -53,23 +37,22 @@ export const getDatabaseConfig = (): { url?: string } => ({
 });
 
 export const getAiConfig = () => {
-  const apiKeys = getAiApiKeys();
-  const aiBaseUrl = getLocalValue("AI_BASE_URL");
-  const models = splitCsv(getLocalValue("AI_MODELS") || getLocalValue("AI_MODEL"));
-  const provider = getLocalValue("AI_PROVIDER") || "openrouter";
+  const apiKey = process.env.AI_API_KEY;
+  const aiBaseUrl = process.env.AI_BASE_URL;
+  const model = process.env.AI_MODEL;
   return {
-    provider,
-    apiKey: apiKeys.values[0],
-    apiKeys: apiKeys.values,
-    apiKeySource: apiKeys.source,
+    provider: process.env.AI_PROVIDER || "pomoai",
+    apiKey,
+    apiKeySource: apiKey ? "Vercel Environment:AI_API_KEY" : undefined,
     baseUrl: aiBaseUrl || defaultAiBaseUrl,
-    models: models.length ? models : defaultAiModels,
+    model: model || defaultAiModel,
+    models: [model || defaultAiModel],
     usingDefaultBaseUrl: !aiBaseUrl,
-    usingDefaultModels: !models.length
+    usingDefaultModels: !model
   };
 };
 
 export const getAiQuotaConfig = () => ({
-  minuteLimit: Number(getLocalValue("AI_RATE_LIMIT_PER_MINUTE") || 5),
-  dailyLimit: Number(getLocalValue("AI_DAILY_LIMIT") || 500)
+  minuteLimit: Number(process.env.AI_RATE_LIMIT_PER_MINUTE || 5),
+  dailyLimit: Number(process.env.AI_DAILY_LIMIT || 500)
 });
