@@ -2679,3 +2679,16 @@ Import traces:
  GET / 200 in 24ms (next.js: 3ms, application-code: 20ms)
  GET / 200 in 195ms (next.js: 141ms, application-code: 55ms)
  GET / 200 in 156ms (next.js: 118ms, application-code: 39ms)
+✓ Compiled in 214ms
+ GET / 200 in 294ms (next.js: 180ms, application-code: 113ms)
+ GET /api/rules 503 in 175ms (next.js: 136ms, application-code: 39ms)
+ GET /api/orders 503 in 425ms (next.js: 396ms, application-code: 29ms)
+✓ Compiled in 453ms
+ GET / 200 in 321ms (next.js: 243ms, application-code: 78ms)
+✓ Compiled in 180ms
+ GET / 200 in 258ms (next.js: 184ms, application-code: 74ms)
+✓ Compiled in 52ms
+✓ Compiled in 67ms
+ GET / 200 in 175ms (next.js: 141ms, application-code: 35ms)
+✓ Compiled in 95ms
+ GET / 200 in 190ms (next.js: 144ms, application-code: 46ms)

@@ -539,7 +539,7 @@ export default function Page() {
             <button onClick={() => setPreviewPage((page) => Math.min(totalPreviewPages, page + 1))} disabled={previewPage >= totalPreviewPages}>下一页</button>
             <button onClick={exportExcel} disabled={!rows.length}><Download size={16} /> 导出 Excel</button>
             <button onClick={submitOrders} disabled={!rows.length || busy}><Database size={16} /> 提交下单</button>
-            <span>当前第 {previewPage} 页，每页 {previewPageSize} 个 SKU 行，显示 {previewOrderGroups.length} 个出库单 / {visibleRows.length} 个 SKU 行，共 {rows.length} 行</span>
+            <span>当前第 {previewPage} 页，显示 {previewOrderGroups.length} 个出库单 / {visibleRows.length} 个 SKU 行，共 {rows.length} 行，每页 {previewPageSize} 行</span>
           </div>
         </section>
 
