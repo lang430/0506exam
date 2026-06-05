@@ -177,6 +177,24 @@ const inferStopWhenContains = (payload: Payload): string | undefined =>
     ? "合计"
     : undefined;
 
+const payloadText = (payload: Payload): string =>
+  payload.sheets.flatMap((sheet) => sheet.rows.map((row) => row.join(" "))).join("\n");
+
+const looksLikePdfTextItems = (payload: Payload): boolean => {
+  const content = payloadText(payload);
+  return /\.pdf$/i.test(payload.fileName) &&
+    /物品编码/.test(content) &&
+    /物品名称/.test(content) &&
+    /规格型号/.test(content) &&
+    /(发货数量|数量)/.test(content) &&
+    /\b[A-Z]{2,}[A-Z0-9-]{2,}\b/.test(content);
+};
+
+const inferTextItemPattern = (payload: Payload): string | undefined =>
+  looksLikePdfTextItems(payload)
+    ? "\\b\\d+\\s+(?<remark>[^\\s]+)\\s+(?<skuCode>[A-Z0-9-]{4,})\\s+(?<skuName>.+?)\\s+(?<spec>(?:\\d[^\\s]*(?:\\s*/\\s*[^\\s]+)?|[A-Z0-9]+码|均码))\\s+(?<unit>件|瓶|包|桶|袋|盒|箱)\\s+(?<quantity>\\d+)\\b"
+    : undefined;
+
 const normalizeMapping = (mapping: unknown): ColumnMapping | undefined => {
   if (!mapping || typeof mapping !== "object") return undefined;
   const raw = mapping as RawMapping;
@@ -206,6 +224,15 @@ const normalizeModelRule = (rule: Partial<ParseRule>, payload: Payload): Partial
   const sheetStrategy = rawSheetStrategy === "all" || (typeof rawSheetStrategy === "object" && rawSheetStrategy && (rawSheetStrategy as { type?: unknown }).type === "all") ? "all" : "first";
   const headerRow = inferHeaderRow(payload, Number(rule.headerRow || 1));
   const dataStartRow = Number(rule.dataStartRow || Math.max(headerRow + 1, 2));
+  const itemPattern = rule.itemPattern ?? inferTextItemPattern(payload);
+  const mode = itemPattern ? "text" : rule.mode && ["table", "matrix", "cards", "text"].includes(rule.mode) ? rule.mode : "table";
+  if (itemPattern) {
+    mappings.externalCode ??= { source: "regex", pattern: "单据编号：\\s*([A-Z0-9]+)" };
+    mappings.storeName ??= { source: "regex", pattern: "收货机构：\\s*([^\\s]+)" };
+    mappings.receiverName ??= { source: "regex", pattern: "收货人：\\s*([^\\s]+)" };
+    mappings.receiverPhone ??= { source: "regex", pattern: "收货电话：\\s*([0-9-]+)" };
+    mappings.receiverAddress ??= { source: "regex", pattern: "收货地址：\\s*(.+?)\\s+打印次数" };
+  }
   for (const field of orderFields) {
     if (!mappings[field]) {
       const mapping = findHeaderMapping(field, payload, headerRow);
@@ -215,10 +242,11 @@ const normalizeModelRule = (rule: Partial<ParseRule>, payload: Payload): Partial
   return {
     ...rule,
     name: String(rule.name ?? `AI规则-${payload.fileName.replace(/\.[^.]+$/, "")}`).slice(0, 50),
-    mode: rule.mode && ["table", "matrix", "cards", "text"].includes(rule.mode) ? rule.mode : "table",
+    mode,
     sheetStrategy,
     headerRow,
     dataStartRow,
+    itemPattern,
     stopWhenContains: rule.stopWhenContains ?? inferStopWhenContains(payload),
     assumptions: Array.isArray(rule.assumptions) ? rule.assumptions.map((item) => typeof item === "string" ? item : JSON.stringify(item)) : ["大模型生成规则，已由服务端归一化字段映射"],
     mappings,
@@ -350,7 +378,12 @@ ColumnMapping 只能使用以下形式：
 - 工作表名：{"source":"sheet"}
 - 正则提取：{"source":"regex","pattern":"带捕获组的正则"}
 禁止使用 column、columnIndex、field、description。
-列号 index 从 1 开始。普通明细表优先使用 mode="table"。如果无法确定某个可选字段，可以省略该字段映射，但 skuName 和 quantity 必须尽量给出。
+列号 index 从 1 开始。普通 Excel 明细表优先使用 mode="table"。
+如果文件是 PDF/Word 抽取出的连续文本，不要使用 header 表头映射；应使用 mode="text" 并输出 itemPattern，用命名捕获组提取 skuCode、skuName、spec、quantity。
+连续文本表格式 PDF 常见 itemPattern 形态示例：
+"\\b\\d+\\s+(?<remark>[^\\s]+)\\s+(?<skuCode>[A-Z0-9-]{4,})\\s+(?<skuName>.+?)\\s+(?<spec>(?:\\d[^\\s]*(?:\\s*/\\s*[^\\s]+)?|[A-Z0-9]+码|均码))\\s+(?<unit>件|瓶|包|桶|袋|盒|箱)\\s+(?<quantity>\\d+)\\b"
+收货机构、收货人、电话、地址、单据编号可用 mappings 中的 regex 从整块文本提取。
+如果无法确定某个可选字段，可以省略该字段映射，但 skuName 和 quantity 必须尽量给出。
 文件快照 JSON：
 ${JSON.stringify(payload).slice(0, 12000)}`;
   const attempts: AiAttempt[] = [];
