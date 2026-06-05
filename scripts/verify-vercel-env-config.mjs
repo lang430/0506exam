@@ -7,11 +7,14 @@ const rulesApi = readFileSync("app/api/rules/route.ts", "utf-8");
 const page = readFileSync("app/page.tsx", "utf-8");
 const docs = readFileSync("提交说明.md", "utf-8");
 
-const requiredServerVars = [
+const requiredDatabaseVars = [
   "DATABASE_URL",
   "POSTGRES_URL",
   "POSTGRES_PRISMA_URL",
-  "POSTGRES_URL_NON_POOLING",
+  "POSTGRES_URL_NON_POOLING"
+];
+
+const requiredLocalAiVars = [
   "OPENROUTER_API_KEYS",
   "AI_BASE_URL",
   "AI_MODELS",
@@ -23,6 +26,15 @@ const checks = {
   centralizedRuntimeConfig: runtimeConfig.includes("getDatabaseConfig") && runtimeConfig.includes("getAiConfig"),
   databaseUsesRuntimeConfig: db.includes("getDatabaseConfig") && !db.includes("process.env.POSTGRES_URL"),
   aiUsesRuntimeConfig: aiRoute.includes("getAiConfig") && !aiRoute.includes("process.env.OPENROUTER_API_KEYS"),
+  aiUsesLocalOnlyConfig: runtimeConfig.includes("getLocalValue") &&
+    runtimeConfig.includes("getLocalValue(\"OPENROUTER_API_KEYS\")") &&
+    runtimeConfig.includes("getLocalValue(\"AI_BASE_URL\")") &&
+    runtimeConfig.includes("getLocalValue(\"AI_MODELS\")") &&
+    runtimeConfig.includes("getLocalValue(\"AI_RATE_LIMIT_PER_MINUTE\")") &&
+    !runtimeConfig.includes("getRuntimeValue(\"OPENROUTER_API_KEYS\")") &&
+    !runtimeConfig.includes("getRuntimeValue(\"AI_BASE_URL\")") &&
+    !runtimeConfig.includes("getRuntimeValue(\"AI_MODELS\")") &&
+    !runtimeConfig.includes("getRuntimeValue(\"AI_RATE_LIMIT_PER_MINUTE\")"),
   openRouterConfigured: runtimeConfig.includes("OPENROUTER_API_KEYS") && runtimeConfig.includes("openrouter") && runtimeConfig.includes("https://openrouter.ai/api/v1/chat/completions"),
   aiKeyPoolConfigured: runtimeConfig.includes("apiKeys") && aiRoute.includes("apiKeyCount") && aiRoute.includes("keyIndex"),
   aiEnvKeyFallbackConfigured: runtimeConfig.includes("OPENROUTER_API_KEY_1") && runtimeConfig.includes("OPENROUTER_API_KEY_2"),
@@ -39,7 +51,8 @@ const checks = {
   rulesReadOnlyFromDatabase: !rulesApi.includes("defaultRules") && !page.includes("useState<ParseRule[]>(defaultRules)") && !page.includes("defaultRules[0]"),
   aiConfigDiagnosticSafe: aiRoute.includes("export async function GET") && aiRoute.includes("hasApiKey") && aiRoute.includes("modelCount") && !aiRoute.includes("apiKey: apiKey"),
   noPublicSecretEnv: ![runtimeConfig, db, aiRoute, page].some((content) => /NEXT_PUBLIC_.*(KEY|SECRET|TOKEN|URL)/.test(content)),
-  documentsVercelVars: requiredServerVars.every((name) => docs.includes(name)),
+  documentsDatabaseVars: requiredDatabaseVars.every((name) => docs.includes(name)),
+  documentsLocalAiVars: requiredLocalAiVars.every((name) => docs.includes(name)) && docs.includes(".env.local"),
   aiFallbackConfigured: runtimeConfig.includes("defaultAiBaseUrl") && runtimeConfig.includes("defaultAiModels") && runtimeConfig.includes("usingDefaultModels"),
   aiCallLogsConfigured: [
     "request-start",
@@ -52,5 +65,5 @@ const checks = {
 };
 
 const failed = Object.entries(checks).filter(([, value]) => !value);
-console.log(JSON.stringify({ checks, failed: failed.map(([name]) => name), requiredServerVars }, null, 2));
+console.log(JSON.stringify({ checks, failed: failed.map(([name]) => name), requiredDatabaseVars, requiredLocalAiVars }, null, 2));
 if (failed.length) process.exit(1);

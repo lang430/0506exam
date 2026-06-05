@@ -162,7 +162,7 @@ export async function POST(request: Request) {
       !baseUrl ? "AI_BASE_URL" : "",
       !candidateModels.length ? "AI_MODELS" : ""
     ].filter(Boolean).join("、");
-    const error = `大模型环境变量未完整配置，缺少：${missing}`;
+    const error = `本地大模型配置未完整配置，缺少：${missing}，请检查项目根目录 .env.local`;
     return NextResponse.json({ degraded: true, error, configStatus }, { status: 503 });
   }
 
@@ -290,8 +290,8 @@ export async function POST(request: Request) {
   }
   const preferredFailure = attempts.find((attempt) => attempt.category === "provider-quota" || attempt.category === "auth" || attempt.category === "rate-limit") ?? attempts.at(-1);
   const fallbackReason = preferredFailure?.error
-    ? `${preferredFailure.error}，已降级为启发式规则`
-    : "所有候选模型均未返回可用规则，已降级为启发式规则";
+    ? `${preferredFailure.error}，未生成可保存规则`
+    : "所有候选模型均未返回可用规则，未生成可保存规则";
   logAiRules("fallback", { requestId, reason: fallbackReason, attemptedCount, maxOpenRouterAttempts, attempts });
   return NextResponse.json({ degraded: true, error: fallbackReason, configStatus, attempts }, { status: 503 });
 }

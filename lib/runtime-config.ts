@@ -26,6 +26,8 @@ const localEnv = parseLocalEnv();
 const getRuntimeValue = (name: string): string | undefined =>
   process.env[name] || localEnv[name];
 
+const getLocalValue = (name: string): string | undefined => localEnv[name];
+
 const defaultAiBaseUrl = "https://openrouter.ai/api/v1/chat/completions";
 
 const defaultAiModels = [
@@ -35,12 +37,12 @@ const defaultAiModels = [
 
 const getAiApiKeys = (): { values: string[]; source?: string } => {
   const openRouterKeys = [
-    ...splitCsv(getRuntimeValue("OPENROUTER_API_KEYS")),
-    ...splitCsv(getRuntimeValue("OPENROUTER_API_KEY")),
-    ...splitCsv(getRuntimeValue("OPENROUTER_API_KEY_1")),
-    ...splitCsv(getRuntimeValue("OPENROUTER_API_KEY_2"))
+    ...splitCsv(getLocalValue("OPENROUTER_API_KEYS")),
+    ...splitCsv(getLocalValue("OPENROUTER_API_KEY")),
+    ...splitCsv(getLocalValue("OPENROUTER_API_KEY_1")),
+    ...splitCsv(getLocalValue("OPENROUTER_API_KEY_2"))
   ];
-  if (openRouterKeys.length) return { values: openRouterKeys, source: "OPENROUTER_API_KEYS" };
+  if (openRouterKeys.length) return { values: openRouterKeys, source: ".env.local:OPENROUTER_API_KEYS" };
   return { values: [] };
 };
 
@@ -53,9 +55,9 @@ export const getDatabaseConfig = (): { url?: string } => ({
 
 export const getAiConfig = () => {
   const apiKeys = getAiApiKeys();
-  const aiBaseUrl = getRuntimeValue("AI_BASE_URL");
-  const models = splitCsv(getRuntimeValue("AI_MODELS") || getRuntimeValue("AI_MODEL"));
-  const provider = getRuntimeValue("AI_PROVIDER") || "openrouter";
+  const aiBaseUrl = getLocalValue("AI_BASE_URL");
+  const models = splitCsv(getLocalValue("AI_MODELS") || getLocalValue("AI_MODEL"));
+  const provider = getLocalValue("AI_PROVIDER") || "openrouter";
   return {
     provider,
     apiKey: apiKeys.values[0],
@@ -69,6 +71,6 @@ export const getAiConfig = () => {
 };
 
 export const getAiQuotaConfig = () => ({
-  minuteLimit: Number(getRuntimeValue("AI_RATE_LIMIT_PER_MINUTE") || 5),
-  dailyLimit: Number(getRuntimeValue("AI_DAILY_LIMIT") || 500)
+  minuteLimit: Number(getLocalValue("AI_RATE_LIMIT_PER_MINUTE") || 5),
+  dailyLimit: Number(getLocalValue("AI_DAILY_LIMIT") || 500)
 });
