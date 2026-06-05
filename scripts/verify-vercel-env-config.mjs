@@ -29,7 +29,15 @@ const checks = {
   aiConfigDiagnosticSafe: aiRoute.includes("export async function GET") && aiRoute.includes("hasApiKey") && aiRoute.includes("modelCount") && !aiRoute.includes("apiKey: apiKey"),
   noPublicSecretEnv: ![runtimeConfig, db, aiRoute, page].some((content) => /NEXT_PUBLIC_.*(KEY|SECRET|TOKEN|URL)/.test(content)),
   documentsVercelVars: requiredServerVars.every((name) => docs.includes(name)),
-  noHardcodedAiRuntimeValues: !runtimeConfig.includes("https://aihubmix.com") && !runtimeConfig.includes("coding-glm-5.1-free")
+  aiFallbackConfigured: runtimeConfig.includes("defaultAiBaseUrl") && runtimeConfig.includes("defaultAiModels") && runtimeConfig.includes("usingDefaultModels"),
+  aiCallLogsConfigured: [
+    "request-start",
+    "model-attempt",
+    "model-response",
+    "model-response-invalid-json",
+    "model-invalid-json",
+    "fallback"
+  ].every((event) => aiRoute.includes(event))
 };
 
 const failed = Object.entries(checks).filter(([, value]) => !value);

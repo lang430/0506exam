@@ -10,6 +10,40 @@ interface Payload {
   sheets: SheetSnapshot[];
 }
 
+interface AiAttempt {
+  model: string;
+  ok: boolean;
+  error?: string;
+  category?: string;
+  status?: number;
+  contentPreview?: string;
+  quota?: unknown;
+}
+
+const logAiRules = (event: string, details: Record<string, unknown>): void => {
+  console.info(`[ai-rules] ${event}`, JSON.stringify(details));
+};
+
+const previewText = (value: unknown, maxLength = 240): string =>
+  String(value ?? "").replace(/\s+/g, " ").trim().slice(0, maxLength);
+
+const classifyModelFailure = (content: string, status?: number): { category: string; message: string } => {
+  const lower = content.toLowerCase();
+  if (status === 401 || status === 403 || lower.includes("invalid api key") || lower.includes("unauthorized")) {
+    return { category: "auth", message: "大模型鉴权失败，请检查 Vercel 中的 AIHUBMIX_API_KEY" };
+  }
+  if (status === 429 || lower.includes("rate limit") || lower.includes("too many requests")) {
+    return { category: "rate-limit", message: "大模型服务触发限流，请稍后重试或调整候选模型" };
+  }
+  if (lower.includes("prevent abuse of free resources") || lower.includes("topup") || lower.includes("recharg")) {
+    return { category: "provider-quota", message: "AIHUBMIX 免费额度受限，请检查账号额度或充值后重试" };
+  }
+  if (lower.includes("model") && (lower.includes("not found") || lower.includes("not exist") || lower.includes("unsupported"))) {
+    return { category: "model-unavailable", message: "候选模型不可用，请检查 AI_MODELS 配置" };
+  }
+  return { category: "invalid-response", message: "模型未返回可解析的规则 JSON" };
+};
+
 const fallbackRule = ({ fileName, sheets }: Payload, reason = "大模型不可用，已使用启发式分析生成"): ParseRule => {
   const first = sheets[0];
   const rows = first?.rows ?? [];
@@ -70,29 +104,57 @@ const parseModelRule = (content: string): Partial<ParseRule> | null => {
   }
 };
 
+const redactHeaders = (headers: Headers): Record<string, string | null> => ({
+  contentType: headers.get("content-type"),
+  requestId: headers.get("x-request-id") || headers.get("x-aihubmix-request-id")
+});
+
 const getCandidateModels = (): string[] => {
   return Array.from(new Set(getAiConfig().models));
 };
 
 const aiConfigStatus = () => {
-  const { apiKey, baseUrl, models } = getAiConfig();
+  const { apiKey, apiKeySource, baseUrl, models, usingDefaultBaseUrl, usingDefaultModels } = getAiConfig();
   return {
     hasApiKey: Boolean(apiKey),
+    apiKeySource: apiKeySource ?? null,
+    apiKeyLength: apiKey?.length ?? 0,
     hasBaseUrl: Boolean(baseUrl),
     modelCount: models.length,
+    usingDefaultBaseUrl,
+    usingDefaultModels,
     ready: Boolean(apiKey && baseUrl && models.length)
   };
 };
 
 export async function GET() {
-  return NextResponse.json(aiConfigStatus());
+  const status = aiConfigStatus();
+  logAiRules("config-check", status);
+  return NextResponse.json(status);
 }
 
 export async function POST(request: Request) {
+  const requestId = crypto.randomUUID();
   const payload = await request.json() as Payload;
-  const { apiKey, baseUrl } = getAiConfig();
+  const { apiKey, apiKeySource, baseUrl, usingDefaultBaseUrl, usingDefaultModels } = getAiConfig();
   const candidateModels = getCandidateModels();
   const configStatus = aiConfigStatus();
+  logAiRules("request-start", {
+    requestId,
+    fileName: payload.fileName,
+    sheetCount: payload.sheets.length,
+    sampledRows: payload.sheets.reduce((sum, sheet) => sum + sheet.rows.length, 0),
+    hasApiKey: configStatus.hasApiKey,
+    apiKeySource,
+    apiKeyLength: apiKey?.length ?? 0,
+    hasBaseUrl: configStatus.hasBaseUrl,
+    modelCount: configStatus.modelCount,
+    ready: configStatus.ready,
+    usingDefaultBaseUrl,
+    usingDefaultModels,
+    baseUrl,
+    models: candidateModels
+  });
   if (!apiKey || !baseUrl || !candidateModels.length) {
     const missing = [
       !apiKey ? "AIHUBMIX_API_KEY" : "",
@@ -109,39 +171,97 @@ export async function POST(request: Request) {
   }
 
   const prompt = `你是物流导入规则设计助手。只输出一个 JSON 对象，不要输出 <think>、Markdown、解释文字或代码块。JSON 必须是 ParseRule，规则用于把文件快照解析为出库单 SKU 行，不要直接解析数据。字段包括 externalCode,storeName,receiverName,receiverPhone,receiverAddress,skuCode,skuName,quantity,spec,remark。行号和列号从 1 开始。必须给出 assumptions 标注推测项。文件快照：${JSON.stringify(payload).slice(0, 18000)}`;
-  const attempts: Array<{ model: string; ok: boolean; error?: string; quota?: unknown }> = [];
+  const attempts: AiAttempt[] = [];
   for (const model of candidateModels) {
     const quota = await consumeAiQuota(model);
     if (!quota.allowed) {
-      attempts.push({ model, ok: false, error: quota.reason, quota });
+      logAiRules("quota-blocked", { requestId, model, quota });
+      attempts.push({ model, ok: false, error: quota.reason, category: "local-quota", quota });
       break;
     }
     try {
+      logAiRules("model-attempt", { requestId, model, quota });
+      const startedAt = Date.now();
       const response = await fetch(baseUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
         body: JSON.stringify({
           model,
           messages: [{ role: "user", content: prompt }],
-          temperature: 0.1,
-          response_format: { type: "json_object" }
+          temperature: 0.1
         })
       });
+      logAiRules("model-response", {
+        requestId,
+        model,
+        status: response.status,
+        ok: response.ok,
+        elapsedMs: Date.now() - startedAt,
+        headers: redactHeaders(response.headers)
+      });
       if (!response.ok) {
-        attempts.push({ model, ok: false, error: `HTTP ${response.status}: ${(await response.text()).slice(0, 160)}`, quota });
+        const errorText = previewText(await response.text());
+        const failure = classifyModelFailure(errorText, response.status);
+        logAiRules("model-http-error", { requestId, model, status: response.status, category: failure.category, error: errorText });
+        attempts.push({ model, ok: false, error: `${failure.message}：HTTP ${response.status}`, category: failure.category, status: response.status, contentPreview: errorText, quota });
         continue;
       }
-      const data = await response.json();
+      const rawBody = await response.text();
+      let data: { choices?: Array<{ message?: { content?: string }; finish_reason?: string }>; usage?: unknown };
+      try {
+        data = JSON.parse(rawBody) as typeof data;
+      } catch {
+        const rawPreview = previewText(rawBody);
+        const failure = classifyModelFailure(rawPreview, response.status);
+        logAiRules("model-response-invalid-json", {
+          requestId,
+          model,
+          status: response.status,
+          category: failure.category,
+          bodyLength: rawBody.length,
+          bodyPreview: rawPreview
+        });
+        attempts.push({ model, ok: false, error: failure.message, category: failure.category, status: response.status, contentPreview: rawPreview, quota });
+        continue;
+      }
       const content = data.choices?.[0]?.message?.content ?? "{}";
+      const contentPreview = previewText(content);
+      logAiRules("model-body", {
+        requestId,
+        model,
+        choiceCount: Array.isArray(data.choices) ? data.choices.length : 0,
+        finishReason: data.choices?.[0]?.finish_reason,
+        contentLength: String(content).length,
+        contentPreview,
+        usage: data.usage
+      });
       const parsedRule = parseModelRule(content);
       if (!parsedRule) {
-        attempts.push({ model, ok: false, error: "模型未返回可解析的规则 JSON", quota });
+        const failure = classifyModelFailure(contentPreview);
+        logAiRules("model-invalid-json", {
+          requestId,
+          model,
+          category: failure.category,
+          message: failure.message,
+          startsWith: String(content).slice(0, 40),
+          hasJsonStart: String(content).includes("{"),
+          hasJsonEnd: String(content).includes("}"),
+          contentPreview
+        });
+        attempts.push({ model, ok: false, error: failure.message, category: failure.category, status: response.status, contentPreview, quota });
         continue;
       }
+      logAiRules("model-success", { requestId, model, ruleName: parsedRule.name, mode: parsedRule.mode });
       return NextResponse.json({ rule: { ...parsedRule, id: crypto.randomUUID() }, degraded: false, model, quota, attempts });
     } catch (error) {
+      logAiRules("model-exception", { requestId, model, error: error instanceof Error ? error.message : "模型请求失败" });
       attempts.push({ model, ok: false, error: error instanceof Error ? error.message : "模型请求失败", quota });
     }
   }
-  return NextResponse.json({ rule: fallbackRule(payload, "所有候选模型均未返回可用规则，已降级为启发式规则"), degraded: true, error: "所有候选模型均未返回可用规则，已降级为启发式规则", configStatus, attempts }, { status: 200 });
+  const preferredFailure = attempts.find((attempt) => attempt.category === "provider-quota" || attempt.category === "auth" || attempt.category === "rate-limit") ?? attempts.at(-1);
+  const fallbackReason = preferredFailure?.error
+    ? `${preferredFailure.error}，已降级为启发式规则`
+    : "所有候选模型均未返回可用规则，已降级为启发式规则";
+  logAiRules("fallback", { requestId, reason: fallbackReason, attempts });
+  return NextResponse.json({ rule: fallbackRule(payload, fallbackReason), degraded: true, error: fallbackReason, configStatus, attempts }, { status: 200 });
 }
