@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { consumeAiQuota } from "@/lib/ai-quota";
 import { getAiConfig } from "@/lib/runtime-config";
-import type { ParseRule, SheetSnapshot } from "@/lib/types";
+import { orderFields } from "@/lib/types";
+import type { ColumnMapping, ParseRule, SheetSnapshot } from "@/lib/types";
 
 export const runtime = "nodejs";
 
@@ -90,15 +91,52 @@ const fallbackRule = ({ fileName, sheets }: Payload, reason = "大模型不可�
   };
 };
 
-const parseModelRule = (content: string): Partial<ParseRule> | null => {
+type RawMapping = Partial<ColumnMapping> & { column?: number; columnIndex?: number };
+
+const normalizeMapping = (mapping: unknown): ColumnMapping | undefined => {
+  if (!mapping || typeof mapping !== "object") return undefined;
+  const raw = mapping as RawMapping;
+  if (raw.source === "header" && raw.header) return { source: "header", header: String(raw.header) };
+  if (raw.source === "index" && raw.index) return { source: "index", index: Number(raw.index) };
+  if (raw.source === "static") return { source: "static", value: String(raw.value ?? "") };
+  if (raw.source === "sheet") return { source: "sheet" };
+  if (raw.source === "regex" && raw.pattern) return { source: "regex", pattern: String(raw.pattern) };
+  const index = raw.index ?? raw.column ?? raw.columnIndex;
+  if (index) return { source: "index", index: Number(index) };
+  if (raw.header) return { source: "header", header: String(raw.header) };
+  return undefined;
+};
+
+const normalizeModelRule = (rule: Partial<ParseRule>, payload: Payload): Partial<ParseRule> | null => {
+  if (!rule || typeof rule !== "object") return null;
+  const mappings: ParseRule["mappings"] = {};
+  const rawMappings = rule.mappings && typeof rule.mappings === "object" ? rule.mappings as Record<string, unknown> : {};
+  for (const field of orderFields) {
+    const mapping = normalizeMapping(rawMappings[field]);
+    if (mapping) mappings[field] = mapping;
+  }
+  if (!Object.keys(mappings).length) return null;
+  return {
+    ...rule,
+    name: String(rule.name ?? `AI规则-${payload.fileName.replace(/\.[^.]+$/, "")}`).slice(0, 50),
+    mode: rule.mode && ["table", "matrix", "cards", "text"].includes(rule.mode) ? rule.mode : "table",
+    sheetStrategy: rule.sheetStrategy === "all" ? "all" : "first",
+    headerRow: Number(rule.headerRow || 1),
+    dataStartRow: Number(rule.dataStartRow || Math.max(Number(rule.headerRow || 1) + 1, 2)),
+    assumptions: Array.isArray(rule.assumptions) ? rule.assumptions.map((item) => typeof item === "string" ? item : JSON.stringify(item)) : ["OpenRouter 生成规则，已由服务端归一化字段映射"],
+    mappings
+  };
+};
+
+const parseModelRule = (content: string, payload: Payload): Partial<ParseRule> | null => {
   try {
-    return JSON.parse(content) as Partial<ParseRule>;
+    return normalizeModelRule(JSON.parse(content) as Partial<ParseRule>, payload);
   } catch {
     const start = content.indexOf("{");
     const end = content.lastIndexOf("}");
     if (start < 0 || end <= start) return null;
     try {
-      return JSON.parse(content.slice(start, end + 1)) as Partial<ParseRule>;
+      return normalizeModelRule(JSON.parse(content.slice(start, end + 1)) as Partial<ParseRule>, payload);
     } catch {
       return null;
     }
@@ -107,7 +145,7 @@ const parseModelRule = (content: string): Partial<ParseRule> | null => {
 
 const redactHeaders = (headers: Headers): Record<string, string | null> => ({
   contentType: headers.get("content-type"),
-  requestId: headers.get("x-request-id") || headers.get("x-openrouter-request-id") || headers.get("x-aihubmix-request-id")
+  requestId: headers.get("x-request-id") || headers.get("x-openrouter-request-id")
 });
 
 const getCandidateModels = (): string[] => {
@@ -175,7 +213,19 @@ export async function POST(request: Request) {
     });
   }
 
-  const prompt = `你是物流导入规则设计助手。只输出一个 JSON 对象，不要输出 <think>、Markdown、解释文字或代码块。JSON 必须是 ParseRule，规则用于把文件快照解析为出库单 SKU 行，不要直接解析数据。字段包括 externalCode,storeName,receiverName,receiverPhone,receiverAddress,skuCode,skuName,quantity,spec,remark。行号和列号从 1 开始。必须给出 assumptions 标注推测项。文件快照：${JSON.stringify(payload).slice(0, 18000)}`;
+  const prompt = `你是物流导入规则设计助手。只输出一个 JSON 对象，不要输出 <think>、Markdown、解释文字或代码块。JSON 必须严格符合 ParseRule，用于把文件快照解析为出库单 SKU 行，不要直接解析数据。
+必填字段：
+- name: 字符串
+- mode: "table" | "matrix" | "cards" | "text"，普通表格优先用 "table"
+- sheetStrategy: "first" | "all"
+- headerRow: 数字，行号从 1 开始
+- dataStartRow: 数字，行号从 1 开始
+- mappings: 对象，字段包括 externalCode,storeName,receiverName,receiverPhone,receiverAddress,skuCode,skuName,quantity,spec,remark
+- assumptions: 字符串数组
+每个 mappings 字段值必须是 ColumnMapping，禁止输出 column/columnIndex。按列号取值时必须写 {"source":"index","index":列号}；按表头取值时必须写 {"source":"header","header":"表头文本"}；固定值写 {"source":"static","value":"固定值"}；工作表名写 {"source":"sheet"}；正则写 {"source":"regex","pattern":"带捕获组的正则"}。
+示例：
+{"name":"AI规则","mode":"table","sheetStrategy":"first","headerRow":1,"dataStartRow":2,"mappings":{"skuCode":{"source":"index","index":6},"quantity":{"source":"index","index":9}},"assumptions":["第1行是表头"]}
+文件快照：${JSON.stringify(payload).slice(0, 18000)}`;
   const attempts: AiAttempt[] = [];
   for (const [keyIndex, apiKey] of apiKeys.entries()) {
     for (const model of candidateModels) {
@@ -249,7 +299,7 @@ export async function POST(request: Request) {
         contentPreview,
         usage: data.usage
       });
-      const parsedRule = parseModelRule(content);
+      const parsedRule = parseModelRule(content, payload);
       if (!parsedRule) {
         const failure = classifyModelFailure(contentPreview);
         logAiRules("model-invalid-json", {

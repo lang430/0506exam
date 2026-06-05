@@ -36,12 +36,8 @@ const defaultAiModels = [
 const getAiApiKeys = (): { values: string[]; source?: string } => {
   const openRouterKeys = splitCsv(getRuntimeValue("OPENROUTER_API_KEYS"));
   const openRouterKey = getRuntimeValue("OPENROUTER_API_KEY");
-  const aihubmixKey = getRuntimeValue("AIHUBMIX_API_KEY");
-  const aiKey = getRuntimeValue("AI_API_KEY");
   if (openRouterKeys.length) return { values: openRouterKeys, source: "OPENROUTER_API_KEYS" };
   if (openRouterKey) return { values: [openRouterKey], source: "OPENROUTER_API_KEY" };
-  if (aihubmixKey) return { values: [aihubmixKey], source: "AIHUBMIX_API_KEY" };
-  if (aiKey) return { values: [aiKey], source: "AI_API_KEY" };
   return { values: [] };
 };
 
