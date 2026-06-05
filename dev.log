@@ -692,3 +692,1492 @@ Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allow
  GET / 200 in 266ms (next.js: 147ms, application-code: 119ms)
  GET / 200 in 61ms (next.js: 6ms, application-code: 55ms)
  GET / 200 in 31ms (next.js: 4ms, application-code: 28ms)
+ GET / 200 in 158ms (next.js: 98ms, application-code: 59ms)
+✓ Compiled in 1943ms
+⨯ ./app/page.tsx:8:1
+Export default doesn't exist in target module
+  [90m 6 |[0m [36mimport[0m { parseByRule, validateRows } [36mfrom[0m [32m"@/lib/rule-engine"[0m;
+  [90m 7 |[0m [36mimport[0m [36mtype[0m { [33mOrderField[0m, [33mOrderRow[0m, [33mParseRule[0m, [33mSheetSnapshot[0m, [33mValidationIssue[0m } [36mfrom[0m [32m"@/li...[0m
+[31m[1m>[0m [90m 8 |[0m [36mimport[0m pdfWorkerUrl [36mfrom[0m [32m"pdfjs-dist/legacy/build/pdf.worker.mjs?url"[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m 9 |[0m
+  [90m10 |[0m [36mconst[0m fields: { key: [33mOrderField[0m; label: string }[] = [
+  [90m11 |[0m   { key: [32m"externalCode"[0m, label: [32m"外部编码"[0m },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-client] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component]
+
+
+
+./app/page.tsx:8:1
+Export default doesn't exist in target module
+  [90m 6 |[0m [36mimport[0m { parseByRule, validateRows } [36mfrom[0m [32m"@/lib/rule-engine"[0m;
+  [90m 7 |[0m [36mimport[0m [36mtype[0m { [33mOrderField[0m, [33mOrderRow[0m, [33mParseRule[0m, [33mSheetSnapshot[0m, [33mValidationIssue[0m } [36mfrom[0m [32m"@/li...[0m
+[31m[1m>[0m [90m 8 |[0m [36mimport[0m pdfWorkerUrl [36mfrom[0m [32m"pdfjs-dist/legacy/build/pdf.worker.mjs?url"[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m 9 |[0m
+  [90m10 |[0m [36mconst[0m fields: { key: [33mOrderField[0m; label: string }[] = [
+  [90m11 |[0m   { key: [32m"externalCode"[0m, label: [32m"外部编码"[0m },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-ssr] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component]
+
+
+[browser] ./app/page.tsx:8:1
+Export default doesn't exist in target module
+   6 | import { parseByRule, validateRows } from "@/lib/rule-engine";
+   7 | import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/li...
+>  8 | import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | const fields: { key: OrderField; label: string }[] = [
+  11 |   { key: "externalCode", label: "外部编码" },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-client] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component] 
+[browser] ./app/page.tsx:8:1
+Export default doesn't exist in target module
+   6 | import { parseByRule, validateRows } from "@/lib/rule-engine";
+   7 | import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/li...
+>  8 | import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | const fields: { key: OrderField; label: string }[] = [
+  11 |   { key: "externalCode", label: "外部编码" },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-ssr] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component] 
+[browser] ./app/page.tsx:8:1
+Export default doesn't exist in target module
+   6 | import { parseByRule, validateRows } from "@/lib/rule-engine";
+   7 | import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/li...
+>  8 | import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | const fields: { key: OrderField; label: string }[] = [
+  11 |   { key: "externalCode", label: "外部编码" },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-client] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component] 
+[browser] ./app/page.tsx:8:1
+Export default doesn't exist in target module
+   6 | import { parseByRule, validateRows } from "@/lib/rule-engine";
+   7 | import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/li...
+>  8 | import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | const fields: { key: OrderField; label: string }[] = [
+  11 |   { key: "externalCode", label: "外部编码" },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-ssr] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component] 
+[browser] ./app/page.tsx:8:1
+Export default doesn't exist in target module
+   6 | import { parseByRule, validateRows } from "@/lib/rule-engine";
+   7 | import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/li...
+>  8 | import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | const fields: { key: OrderField; label: string }[] = [
+  11 |   { key: "externalCode", label: "外部编码" },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-client] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component] 
+[browser] ./app/page.tsx:8:1
+Export default doesn't exist in target module
+   6 | import { parseByRule, validateRows } from "@/lib/rule-engine";
+   7 | import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/li...
+>  8 | import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | const fields: { key: OrderField; label: string }[] = [
+  11 |   { key: "externalCode", label: "外部编码" },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-ssr] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component] 
+[browser] ./app/page.tsx:8:1
+Export default doesn't exist in target module
+   6 | import { parseByRule, validateRows } from "@/lib/rule-engine";
+   7 | import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/li...
+>  8 | import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | const fields: { key: OrderField; label: string }[] = [
+  11 |   { key: "externalCode", label: "外部编码" },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-client] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component] 
+[browser] ./app/page.tsx:8:1
+Export default doesn't exist in target module
+   6 | import { parseByRule, validateRows } from "@/lib/rule-engine";
+   7 | import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/li...
+>  8 | import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | const fields: { key: OrderField; label: string }[] = [
+  11 |   { key: "externalCode", label: "外部编码" },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-ssr] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component] 
+ GET / 500 in 3.1s (next.js: 2.9s, application-code: 211ms)
+⨯ ./app/page.tsx:8:1
+Export default doesn't exist in target module
+  [90m 6 |[0m [36mimport[0m { parseByRule, validateRows } [36mfrom[0m [32m"@/lib/rule-engine"[0m;
+  [90m 7 |[0m [36mimport[0m [36mtype[0m { [33mOrderField[0m, [33mOrderRow[0m, [33mParseRule[0m, [33mSheetSnapshot[0m, [33mValidationIssue[0m } [36mfrom[0m [32m"@/li...[0m
+[31m[1m>[0m [90m 8 |[0m [36mimport[0m pdfWorkerUrl [36mfrom[0m [32m"pdfjs-dist/legacy/build/pdf.worker.mjs?url"[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m 9 |[0m
+  [90m10 |[0m [36mconst[0m fields: { key: [33mOrderField[0m; label: string }[] = [
+  [90m11 |[0m   { key: [32m"externalCode"[0m, label: [32m"外部编码"[0m },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-client] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component]
+
+
+
+./app/page.tsx:8:1
+Export default doesn't exist in target module
+  [90m 6 |[0m [36mimport[0m { parseByRule, validateRows } [36mfrom[0m [32m"@/lib/rule-engine"[0m;
+  [90m 7 |[0m [36mimport[0m [36mtype[0m { [33mOrderField[0m, [33mOrderRow[0m, [33mParseRule[0m, [33mSheetSnapshot[0m, [33mValidationIssue[0m } [36mfrom[0m [32m"@/li...[0m
+[31m[1m>[0m [90m 8 |[0m [36mimport[0m pdfWorkerUrl [36mfrom[0m [32m"pdfjs-dist/legacy/build/pdf.worker.mjs?url"[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m 9 |[0m
+  [90m10 |[0m [36mconst[0m fields: { key: [33mOrderField[0m; label: string }[] = [
+  [90m11 |[0m   { key: [32m"externalCode"[0m, label: [32m"外部编码"[0m },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-ssr] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component]
+
+
+[browser] ./app/page.tsx:8:1
+Export default doesn't exist in target module
+   6 | import { parseByRule, validateRows } from "@/lib/rule-engine";
+   7 | import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/li...
+>  8 | import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | const fields: { key: OrderField; label: string }[] = [
+  11 |   { key: "externalCode", label: "外部编码" },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-client] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component] 
+[browser] ./app/page.tsx:8:1
+Export default doesn't exist in target module
+   6 | import { parseByRule, validateRows } from "@/lib/rule-engine";
+   7 | import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/li...
+>  8 | import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | const fields: { key: OrderField; label: string }[] = [
+  11 |   { key: "externalCode", label: "外部编码" },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-ssr] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component] 
+ GET / 500 in 49ms (next.js: 17ms, application-code: 32ms)
+⨯ ./app/page.tsx:8:1
+Export default doesn't exist in target module
+  [90m 6 |[0m [36mimport[0m { parseByRule, validateRows } [36mfrom[0m [32m"@/lib/rule-engine"[0m;
+  [90m 7 |[0m [36mimport[0m [36mtype[0m { [33mOrderField[0m, [33mOrderRow[0m, [33mParseRule[0m, [33mSheetSnapshot[0m, [33mValidationIssue[0m } [36mfrom[0m [32m"@/li...[0m
+[31m[1m>[0m [90m 8 |[0m [36mimport[0m pdfWorkerUrl [36mfrom[0m [32m"pdfjs-dist/legacy/build/pdf.worker.mjs?url"[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m 9 |[0m
+  [90m10 |[0m [36mconst[0m fields: { key: [33mOrderField[0m; label: string }[] = [
+  [90m11 |[0m   { key: [32m"externalCode"[0m, label: [32m"外部编码"[0m },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-client] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component]
+
+
+
+./app/page.tsx:8:1
+Export default doesn't exist in target module
+  [90m 6 |[0m [36mimport[0m { parseByRule, validateRows } [36mfrom[0m [32m"@/lib/rule-engine"[0m;
+  [90m 7 |[0m [36mimport[0m [36mtype[0m { [33mOrderField[0m, [33mOrderRow[0m, [33mParseRule[0m, [33mSheetSnapshot[0m, [33mValidationIssue[0m } [36mfrom[0m [32m"@/li...[0m
+[31m[1m>[0m [90m 8 |[0m [36mimport[0m pdfWorkerUrl [36mfrom[0m [32m"pdfjs-dist/legacy/build/pdf.worker.mjs?url"[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m 9 |[0m
+  [90m10 |[0m [36mconst[0m fields: { key: [33mOrderField[0m; label: string }[] = [
+  [90m11 |[0m   { key: [32m"externalCode"[0m, label: [32m"外部编码"[0m },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-ssr] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component]
+
+
+[browser] ./app/page.tsx:8:1
+Export default doesn't exist in target module
+   6 | import { parseByRule, validateRows } from "@/lib/rule-engine";
+   7 | import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/li...
+>  8 | import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | const fields: { key: OrderField; label: string }[] = [
+  11 |   { key: "externalCode", label: "外部编码" },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-client] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component] 
+[browser] ./app/page.tsx:8:1
+Export default doesn't exist in target module
+   6 | import { parseByRule, validateRows } from "@/lib/rule-engine";
+   7 | import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/li...
+>  8 | import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | const fields: { key: OrderField; label: string }[] = [
+  11 |   { key: "externalCode", label: "外部编码" },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-ssr] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component] 
+⨯ ./app/page.tsx:8:1
+Export default doesn't exist in target module
+  [90m 6 |[0m [36mimport[0m { parseByRule, validateRows } [36mfrom[0m [32m"@/lib/rule-engine"[0m;
+  [90m 7 |[0m [36mimport[0m [36mtype[0m { [33mOrderField[0m, [33mOrderRow[0m, [33mParseRule[0m, [33mSheetSnapshot[0m, [33mValidationIssue[0m } [36mfrom[0m [32m"@/li...[0m
+[31m[1m>[0m [90m 8 |[0m [36mimport[0m pdfWorkerUrl [36mfrom[0m [32m"pdfjs-dist/legacy/build/pdf.worker.mjs?url"[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m 9 |[0m
+  [90m10 |[0m [36mconst[0m fields: { key: [33mOrderField[0m; label: string }[] = [
+  [90m11 |[0m   { key: [32m"externalCode"[0m, label: [32m"外部编码"[0m },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-client] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component]
+
+
+
+./app/page.tsx:8:1
+Export default doesn't exist in target module
+  [90m 6 |[0m [36mimport[0m { parseByRule, validateRows } [36mfrom[0m [32m"@/lib/rule-engine"[0m;
+  [90m 7 |[0m [36mimport[0m [36mtype[0m { [33mOrderField[0m, [33mOrderRow[0m, [33mParseRule[0m, [33mSheetSnapshot[0m, [33mValidationIssue[0m } [36mfrom[0m [32m"@/li...[0m
+[31m[1m>[0m [90m 8 |[0m [36mimport[0m pdfWorkerUrl [36mfrom[0m [32m"pdfjs-dist/legacy/build/pdf.worker.mjs?url"[0m;
+  [90m   |[0m [31m[1m^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^[0m
+  [90m 9 |[0m
+  [90m10 |[0m [36mconst[0m fields: { key: [33mOrderField[0m; label: string }[] = [
+  [90m11 |[0m   { key: [32m"externalCode"[0m, label: [32m"外部编码"[0m },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-ssr] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component]
+
+
+ GET / 500 in 46ms (next.js: 22ms, application-code: 24ms)
+ GET / 500 in 44ms (next.js: 34ms, application-code: 10ms)
+[browser] ./app/page.tsx:8:1
+Export default doesn't exist in target module
+   6 | import { parseByRule, validateRows } from "@/lib/rule-engine";
+   7 | import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/li...
+>  8 | import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | const fields: { key: OrderField; label: string }[] = [
+  11 |   { key: "externalCode", label: "外部编码" },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-client] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component] 
+[browser] ./app/page.tsx:8:1
+Export default doesn't exist in target module
+   6 | import { parseByRule, validateRows } from "@/lib/rule-engine";
+   7 | import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/li...
+>  8 | import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | const fields: { key: OrderField; label: string }[] = [
+  11 |   { key: "externalCode", label: "外部编码" },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-ssr] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component] 
+[browser] Uncaught Error: ./app/page.tsx:8:1
+Export default doesn't exist in target module
+   6 | import { parseByRule, validateRows } from "@/lib/rule-engine";
+   7 | import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/li...
+>  8 | import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | const fields: { key: OrderField; label: string }[] = [
+  11 |   { key: "externalCode", label: "外部编码" },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-client] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component]
+
+
+    at <unknown> (Error: ./app/page.tsx:8:1)
+    at <unknown> (Error: (./app/page.tsx:8:1)
+[browser] ./app/page.tsx:8:1
+Export default doesn't exist in target module
+   6 | import { parseByRule, validateRows } from "@/lib/rule-engine";
+   7 | import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/li...
+>  8 | import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | const fields: { key: OrderField; label: string }[] = [
+  11 |   { key: "externalCode", label: "外部编码" },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-client] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component] 
+[browser] ./app/page.tsx:8:1
+Export default doesn't exist in target module
+   6 | import { parseByRule, validateRows } from "@/lib/rule-engine";
+   7 | import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/li...
+>  8 | import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | const fields: { key: OrderField; label: string }[] = [
+  11 |   { key: "externalCode", label: "外部编码" },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-ssr] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component] 
+[browser] ./app/page.tsx:8:1
+Export default doesn't exist in target module
+   6 | import { parseByRule, validateRows } from "@/lib/rule-engine";
+   7 | import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/li...
+>  8 | import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | const fields: { key: OrderField; label: string }[] = [
+  11 |   { key: "externalCode", label: "外部编码" },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-client] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component] 
+[browser] ./app/page.tsx:8:1
+Export default doesn't exist in target module
+   6 | import { parseByRule, validateRows } from "@/lib/rule-engine";
+   7 | import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/li...
+>  8 | import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | const fields: { key: OrderField; label: string }[] = [
+  11 |   { key: "externalCode", label: "外部编码" },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-ssr] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component] 
+[browser] ./app/page.tsx:8:1
+Export default doesn't exist in target module
+   6 | import { parseByRule, validateRows } from "@/lib/rule-engine";
+   7 | import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/li...
+>  8 | import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | const fields: { key: OrderField; label: string }[] = [
+  11 |   { key: "externalCode", label: "外部编码" },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-client] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component] 
+[browser] ./app/page.tsx:8:1
+Export default doesn't exist in target module
+   6 | import { parseByRule, validateRows } from "@/lib/rule-engine";
+   7 | import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/li...
+>  8 | import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | const fields: { key: OrderField; label: string }[] = [
+  11 |   { key: "externalCode", label: "外部编码" },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-ssr] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component] 
+[browser] ./app/page.tsx:8:1
+Export default doesn't exist in target module
+   6 | import { parseByRule, validateRows } from "@/lib/rule-engine";
+   7 | import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/li...
+>  8 | import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | const fields: { key: OrderField; label: string }[] = [
+  11 |   { key: "externalCode", label: "外部编码" },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-client] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component] 
+[browser] ./app/page.tsx:8:1
+Export default doesn't exist in target module
+   6 | import { parseByRule, validateRows } from "@/lib/rule-engine";
+   7 | import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/li...
+>  8 | import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | const fields: { key: OrderField; label: string }[] = [
+  11 |   { key: "externalCode", label: "外部编码" },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-ssr] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component] 
+[browser] ./app/page.tsx:8:1
+Export default doesn't exist in target module
+   6 | import { parseByRule, validateRows } from "@/lib/rule-engine";
+   7 | import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/li...
+>  8 | import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | const fields: { key: OrderField; label: string }[] = [
+  11 |   { key: "externalCode", label: "外部编码" },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-client] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component] 
+[browser] ./app/page.tsx:8:1
+Export default doesn't exist in target module
+   6 | import { parseByRule, validateRows } from "@/lib/rule-engine";
+   7 | import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/li...
+>  8 | import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | const fields: { key: OrderField; label: string }[] = [
+  11 |   { key: "externalCode", label: "外部编码" },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-ssr] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component] 
+[browser] ./app/page.tsx:8:1
+Export default doesn't exist in target module
+   6 | import { parseByRule, validateRows } from "@/lib/rule-engine";
+   7 | import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/li...
+>  8 | import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | const fields: { key: OrderField; label: string }[] = [
+  11 |   { key: "externalCode", label: "外部编码" },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-client] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component] 
+[browser] ./app/page.tsx:8:1
+Export default doesn't exist in target module
+   6 | import { parseByRule, validateRows } from "@/lib/rule-engine";
+   7 | import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/li...
+>  8 | import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | const fields: { key: OrderField; label: string }[] = [
+  11 |   { key: "externalCode", label: "外部编码" },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-ssr] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component] 
+[browser] ./app/page.tsx:8:1
+Export default doesn't exist in target module
+   6 | import { parseByRule, validateRows } from "@/lib/rule-engine";
+   7 | import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/li...
+>  8 | import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | const fields: { key: OrderField; label: string }[] = [
+  11 |   { key: "externalCode", label: "外部编码" },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-client] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component] 
+[browser] ./app/page.tsx:8:1
+Export default doesn't exist in target module
+   6 | import { parseByRule, validateRows } from "@/lib/rule-engine";
+   7 | import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/li...
+>  8 | import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | const fields: { key: OrderField; label: string }[] = [
+  11 |   { key: "externalCode", label: "外部编码" },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-ssr] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component] 
+[browser] ./app/page.tsx:8:1
+Export default doesn't exist in target module
+   6 | import { parseByRule, validateRows } from "@/lib/rule-engine";
+   7 | import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/li...
+>  8 | import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | const fields: { key: OrderField; label: string }[] = [
+  11 |   { key: "externalCode", label: "外部编码" },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-client] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component] 
+[browser] ./app/page.tsx:8:1
+Export default doesn't exist in target module
+   6 | import { parseByRule, validateRows } from "@/lib/rule-engine";
+   7 | import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/li...
+>  8 | import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | const fields: { key: OrderField; label: string }[] = [
+  11 |   { key: "externalCode", label: "外部编码" },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-ssr] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component] 
+[browser] ./app/page.tsx:8:1
+Export default doesn't exist in target module
+   6 | import { parseByRule, validateRows } from "@/lib/rule-engine";
+   7 | import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/li...
+>  8 | import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | const fields: { key: OrderField; label: string }[] = [
+  11 |   { key: "externalCode", label: "外部编码" },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-client] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component] 
+[browser] ./app/page.tsx:8:1
+Export default doesn't exist in target module
+   6 | import { parseByRule, validateRows } from "@/lib/rule-engine";
+   7 | import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/li...
+>  8 | import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | const fields: { key: OrderField; label: string }[] = [
+  11 |   { key: "externalCode", label: "外部编码" },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-ssr] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component] 
+[browser] ./app/page.tsx:8:1
+Export default doesn't exist in target module
+   6 | import { parseByRule, validateRows } from "@/lib/rule-engine";
+   7 | import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/li...
+>  8 | import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | const fields: { key: OrderField; label: string }[] = [
+  11 |   { key: "externalCode", label: "外部编码" },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-client] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component] 
+[browser] ./app/page.tsx:8:1
+Export default doesn't exist in target module
+   6 | import { parseByRule, validateRows } from "@/lib/rule-engine";
+   7 | import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/li...
+>  8 | import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | const fields: { key: OrderField; label: string }[] = [
+  11 |   { key: "externalCode", label: "外部编码" },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-ssr] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component] 
+[browser] ./app/page.tsx:8:1
+Export default doesn't exist in target module
+   6 | import { parseByRule, validateRows } from "@/lib/rule-engine";
+   7 | import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/li...
+>  8 | import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | const fields: { key: OrderField; label: string }[] = [
+  11 |   { key: "externalCode", label: "外部编码" },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-client] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component] 
+[browser] ./app/page.tsx:8:1
+Export default doesn't exist in target module
+   6 | import { parseByRule, validateRows } from "@/lib/rule-engine";
+   7 | import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/li...
+>  8 | import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | const fields: { key: OrderField; label: string }[] = [
+  11 |   { key: "externalCode", label: "外部编码" },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-ssr] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component] 
+[browser] ./app/page.tsx:8:1
+Export default doesn't exist in target module
+   6 | import { parseByRule, validateRows } from "@/lib/rule-engine";
+   7 | import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/li...
+>  8 | import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | const fields: { key: OrderField; label: string }[] = [
+  11 |   { key: "externalCode", label: "外部编码" },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-client] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component] 
+[browser] ./app/page.tsx:8:1
+Export default doesn't exist in target module
+   6 | import { parseByRule, validateRows } from "@/lib/rule-engine";
+   7 | import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/li...
+>  8 | import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | const fields: { key: OrderField; label: string }[] = [
+  11 |   { key: "externalCode", label: "外部编码" },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-ssr] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component] 
+[browser] ./app/page.tsx:8:1
+Export default doesn't exist in target module
+   6 | import { parseByRule, validateRows } from "@/lib/rule-engine";
+   7 | import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/li...
+>  8 | import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | const fields: { key: OrderField; label: string }[] = [
+  11 |   { key: "externalCode", label: "外部编码" },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-client] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component] 
+[browser] ./app/page.tsx:8:1
+Export default doesn't exist in target module
+   6 | import { parseByRule, validateRows } from "@/lib/rule-engine";
+   7 | import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/li...
+>  8 | import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | const fields: { key: OrderField; label: string }[] = [
+  11 |   { key: "externalCode", label: "外部编码" },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-ssr] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component] 
+[browser] ./app/page.tsx:8:1
+Export default doesn't exist in target module
+   6 | import { parseByRule, validateRows } from "@/lib/rule-engine";
+   7 | import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/li...
+>  8 | import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | const fields: { key: OrderField; label: string }[] = [
+  11 |   { key: "externalCode", label: "外部编码" },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-client] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component] 
+[browser] ./app/page.tsx:8:1
+Export default doesn't exist in target module
+   6 | import { parseByRule, validateRows } from "@/lib/rule-engine";
+   7 | import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/li...
+>  8 | import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.mjs?url";
+     | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   9 |
+  10 | const fields: { key: OrderField; label: string }[] = [
+  11 |   { key: "externalCode", label: "外部编码" },
+
+The export default was not found in module [project]/node_modules/pdfjs-dist/legacy/build/pdf.worker.mjs?url [app-ssr] (ecmascript).
+Did you mean to import WorkerMessageHandler?
+All exports of the module are statically known (It doesn't have dynamic exports). So it's known statically that the requested export doesn't exist.
+
+Import traces:
+  Client Component Browser:
+    ./app/page.tsx [Client Component Browser]
+    ./app/page.tsx [Server Component]
+
+  Client Component SSR:
+    ./app/page.tsx [Client Component SSR]
+    ./app/page.tsx [Server Component] 
+✓ Compiled in 166ms
+ GET / 200 in 310ms (next.js: 142ms, application-code: 168ms)
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42710',
+  message: 'extension "pgcrypto" already exists, skipping',
+  file: 'extension.c',
+  line: '1791',
+  routine: 'CreateExtension'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "parse_rules" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "parse_rules_updated_at_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "import_batches" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+ GET /api/rules 200 in 4.0s (next.js: 81ms, application-code: 4.0s)
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "imported_orders" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "batch_id" of relation "imported_orders" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7471',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "spec" of relation "imported_orders" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7471',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "remark" of relation "imported_orders" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7471',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "imported_orders_external_code_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "imported_orders_receiver_name_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "imported_orders_created_at_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "import_batches_created_at_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
+}
+ GET /api/orders 200 in 7.3s (next.js: 172ms, application-code: 7.2s)
+ GET / 200 in 141ms (next.js: 90ms, application-code: 51ms)
+✓ Compiled in 47ms
+ GET / 200 in 114ms (next.js: 77ms, application-code: 37ms)
+ GET / 200 in 85ms (next.js: 4ms, application-code: 81ms)
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "parse_rules" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "parse_rules_updated_at_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
+}
+ GET /api/rules 200 in 4.0s (next.js: 57ms, application-code: 3.9s)
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42710',
+  message: 'extension "pgcrypto" already exists, skipping',
+  file: 'extension.c',
+  line: '1791',
+  routine: 'CreateExtension'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "import_batches" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "imported_orders" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "batch_id" of relation "imported_orders" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7471',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "spec" of relation "imported_orders" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7471',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "remark" of relation "imported_orders" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7471',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "imported_orders_external_code_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "imported_orders_receiver_name_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "imported_orders_created_at_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "import_batches_created_at_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
+}
+ GET /api/orders 200 in 6.8s (next.js: 123ms, application-code: 6.7s)
+ GET / 200 in 73ms (next.js: 6ms, application-code: 68ms)
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42710',
+  message: 'extension "pgcrypto" already exists, skipping',
+  file: 'extension.c',
+  line: '1791',
+  routine: 'CreateExtension'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "import_batches" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "parse_rules" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "imported_orders" already exists, skipping',
+  file: 'parse_utilcmd.c',
+  line: '207',
+  routine: 'transformCreateStmt'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "parse_rules_updated_at_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "batch_id" of relation "imported_orders" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7471',
+  routine: 'check_for_column_name_collision'
+}
+ GET /api/rules 200 in 3.6s (next.js: 7ms, application-code: 3.6s)
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "spec" of relation "imported_orders" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7471',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42701',
+  message: 'column "remark" of relation "imported_orders" already exists, skipping',
+  file: 'tablecmds.c',
+  line: '7471',
+  routine: 'check_for_column_name_collision'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "imported_orders_external_code_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "imported_orders_receiver_name_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "imported_orders_created_at_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
+}
+{
+  severity_local: 'NOTICE',
+  severity: 'NOTICE',
+  code: '42P07',
+  message: 'relation "import_batches_created_at_idx" already exists, skipping',
+  file: 'index.c',
+  line: '889',
+  routine: 'index_create'
+}
+ GET /api/orders 200 in 5.7s (next.js: 15ms, application-code: 5.7s)
