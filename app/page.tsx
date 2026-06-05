@@ -68,21 +68,58 @@ export default function Page() {
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
   const [progressText, setProgressText] = useState("0/0");
-  const [historyFilters, setHistoryFilters] = useState({ externalCode: "", receiverName: "", submittedDate: "" });
-  const [previewLimit, setPreviewLimit] = useState(300);
+  const [historyFilters, setHistoryFilters] = useState({ keyword: "", externalCode: "", receiverName: "", dateFrom: "", dateTo: "" });
+  const [previewPage, setPreviewPage] = useState(1);
   const [historyPage, setHistoryPage] = useState(1);
   const selectedRule = rules.find((rule) => rule.id === selectedRuleId);
   const existingCodes = useMemo(() => new Set(history.map((row) => row.externalCode).filter(Boolean)), [history]);
-  const visibleRows = rows.slice(0, previewLimit);
+  const previewPageSize = 100;
+  const totalPreviewPages = Math.max(1, Math.ceil(rows.length / previewPageSize));
+  const visibleRows = rows.slice((previewPage - 1) * previewPageSize, previewPage * previewPageSize);
   const filteredHistory = history.filter((row) => {
-    const submittedDate = row.submittedAt ? new Date(row.submittedAt).toLocaleDateString("zh-CN") : "";
-    return (!historyFilters.externalCode || row.externalCode.includes(historyFilters.externalCode)) &&
-      (!historyFilters.receiverName || row.receiverName.includes(historyFilters.receiverName)) &&
-      (!historyFilters.submittedDate || submittedDate.includes(historyFilters.submittedDate));
+    const keyword = historyFilters.keyword.trim().toLowerCase();
+    const values = [
+      row.externalCode,
+      row.storeName,
+      row.receiverName,
+      row.receiverPhone,
+      row.receiverAddress,
+      row.skuCode,
+      row.skuName,
+      row.spec,
+      row.remark
+    ].map((value) => String(value ?? "").toLowerCase());
+    const submittedTime = row.submittedAt ? new Date(row.submittedAt).getTime() : 0;
+    const fromTime = historyFilters.dateFrom ? new Date(`${historyFilters.dateFrom}T00:00:00`).getTime() : 0;
+    const toTime = historyFilters.dateTo ? new Date(`${historyFilters.dateTo}T23:59:59.999`).getTime() : 0;
+    return (!keyword || values.some((value) => value.includes(keyword))) &&
+      (!historyFilters.externalCode || String(row.externalCode ?? "").toLowerCase().includes(historyFilters.externalCode.toLowerCase())) &&
+      (!historyFilters.receiverName || String(row.receiverName ?? "").toLowerCase().includes(historyFilters.receiverName.toLowerCase())) &&
+      (!fromTime || submittedTime >= fromTime) &&
+      (!toTime || submittedTime <= toTime);
   });
   const historyPageSize = 24;
   const totalHistoryPages = Math.max(1, Math.ceil(filteredHistory.length / historyPageSize));
   const pagedHistory = filteredHistory.slice((historyPage - 1) * historyPageSize, historyPage * historyPageSize);
+
+  async function loadHistory(): Promise<void> {
+    try {
+      const params = new URLSearchParams();
+      if (historyFilters.keyword.trim()) params.set("q", historyFilters.keyword.trim());
+      if (historyFilters.externalCode.trim()) params.set("externalCode", historyFilters.externalCode.trim());
+      if (historyFilters.receiverName.trim()) params.set("receiverName", historyFilters.receiverName.trim());
+      if (historyFilters.dateFrom) params.set("dateFrom", historyFilters.dateFrom);
+      if (historyFilters.dateTo) params.set("dateTo", historyFilters.dateTo);
+      const response = await fetch(`/api/orders${params.size ? `?${params.toString()}` : ""}`);
+      const data = await response.json();
+      if (!response.ok) return setTimedToast(data.error ?? "数据库历史记录读取失败");
+      setHistory(Array.isArray(data.rows) ? data.rows : []);
+      setHistoryPage(1);
+      if (data.error) setTimedToast(data.error);
+    } catch {
+      setTimedToast("数据库历史记录读取失败");
+    }
+  }
 
   useEffect(() => {
     fetch("/api/rules").then((res) => res.json()).then((data) => {
@@ -93,10 +130,7 @@ export default function Page() {
       if (data.error) setTimedToast(data.error);
       if (Array.isArray(data.rules) && !data.rules.length) setTimedToast("数据库暂无解析规则，请新建或使用 AI 生成规则");
     }).catch(() => setTimedToast("数据库解析规则读取失败"));
-    fetch("/api/orders").then((res) => res.json()).then((data) => {
-      if (Array.isArray(data.rows) && data.rows.length) setHistory(data.rows);
-      if (data.error) setTimedToast(data.error);
-    }).catch(() => setTimedToast("数据库历史记录读取失败"));
+    void loadHistory();
   }, []);
 
   useEffect(() => {
@@ -113,10 +147,11 @@ export default function Page() {
     try {
       const buffer = await file.arrayBuffer();
       const lower = file.name.toLowerCase();
+      let nextSheets: SheetSnapshot[];
       if (lower.endsWith(".xlsx") || lower.endsWith(".xls")) {
         const XLSX = await import("@e965/xlsx");
         const workbook = XLSX.read(buffer, { type: "array" });
-        const nextSheets = workbook.SheetNames.map((name) => {
+        nextSheets = workbook.SheetNames.map((name) => {
           const sheet = workbook.Sheets[name];
           const rows = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: "", raw: false })
             .map((row) => row.map(excelCellText));
@@ -127,7 +162,8 @@ export default function Page() {
       } else if (lower.endsWith(".docx")) {
         const mammoth = await import("mammoth/mammoth.browser");
         const result = await mammoth.extractRawText({ arrayBuffer: buffer });
-        setSheets(sheetRowsFromText(file.name, result.value));
+        nextSheets = sheetRowsFromText(file.name, result.value);
+        setSheets(nextSheets);
         setProgressText("1/1");
       } else if (lower.endsWith(".pdf")) {
         const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
@@ -141,12 +177,17 @@ export default function Page() {
           setProgress(Math.round((pageNo / doc.numPages) * 90));
           setProgressText(`${pageNo}/${doc.numPages}`);
         }
-        setSheets(sheetRowsFromText(file.name, lines.join("\n")));
+        nextSheets = sheetRowsFromText(file.name, lines.join("\n"));
+        setSheets(nextSheets);
       } else {
         throw new Error("仅支持 .xlsx/.xls/.docx/.pdf 文件");
       }
+      setRows([]);
+      setIssues([]);
+      setPreviewPage(1);
       setProgress(100);
-      setTimedToast("文件已读取，可选择规则或生成 AI 草案");
+      setTimedToast("文件已读取，正在实时调用 AI 生成规则");
+      void generateRule(nextSheets, file.name, true);
     } catch (error) {
       setTimedToast(error instanceof Error ? error.message : "文件读取失败");
     } finally {
@@ -160,25 +201,31 @@ export default function Page() {
     if (file) void readFile(file);
   };
 
-  const generateRule = async (): Promise<void> => {
-    if (!sheets.length) return setTimedToast("请先上传文件");
+  const generateRule = async (sourceSheets = sheets, sourceFileName = fileName, auto = false): Promise<void> => {
+    if (!sourceSheets.length) return setTimedToast("请先上传文件");
     setBusy(true);
     setProgress(35);
-    const response = await fetch("/api/ai-rules", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ fileName, sheets: sheets.map((sheet) => ({ ...sheet, rows: sheet.rows.slice(0, 30) })) })
-    });
-    const aiData = await response.json();
-    const rule = aiData.rule as ParseRule;
-    const savedData = await saveRuleRemote(rule);
-    if (!savedData.rules) return setTimedToast("规则保存失败，请检查数据库配置");
-    const nextRules = savedData.rules as ParseRule[];
-    setRules(nextRules);
-    setSelectedRuleId(rule.id);
-    setProgress(100);
-    setBusy(false);
-    setTimedToast(aiData.degraded ? `已生成启发式规则草案：${aiData.error ?? "请人工确认"}` : `AI 已生成规则草案，已保存到${savedData.mode === "database" ? "数据库" : "服务端文件"}`);
+    try {
+      const response = await fetch("/api/ai-rules", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fileName: sourceFileName, sheets: sourceSheets.map((sheet) => ({ ...sheet, rows: sheet.rows.slice(0, 30) })) })
+      });
+      const aiData = await response.json();
+      if (!response.ok || !aiData.rule) return setTimedToast(aiData.error ?? "AI 规则生成失败");
+      const rule = aiData.rule as ParseRule;
+      const savedData = await saveRuleRemote(rule);
+      if (!savedData.rules) return setTimedToast("规则保存失败，请检查数据库配置");
+      const nextRules = savedData.rules as ParseRule[];
+      setRules(nextRules);
+      setSelectedRuleId(rule.id);
+      setProgress(100);
+      setTimedToast(aiData.degraded ? `已生成启发式规则草案：${aiData.error ?? "请人工确认"}` : `${auto ? "已实时" : "AI 已"}生成规则草案，已保存到${savedData.mode === "database" ? "数据库" : "服务端文件"}`);
+    } catch {
+      setTimedToast("AI 规则生成失败，请查看服务端调用日志");
+    } finally {
+      setBusy(false);
+    }
   };
 
   const saveRule = (): void => {
@@ -385,7 +432,7 @@ export default function Page() {
               {rules.map((rule) => <option key={rule.id} value={rule.id}>{rule.name}</option>)}
             </select>
             <div className="actions">
-              <button onClick={generateRule} disabled={busy}><Wand2 size={16} /> AI 生成规则</button>
+              <button onClick={() => void generateRule()} disabled={busy}><Wand2 size={16} /> AI 生成规则</button>
               <button onClick={() => setRuleText(JSON.stringify(createBlankRule(), null, 2))}><Plus size={16} /> 新建规则</button>
               <button onClick={copyRule}><Copy size={16} /> 复制</button>
               <button onClick={saveRule}><Save size={16} /> 保存</button>
@@ -427,20 +474,23 @@ export default function Page() {
         <section className="panel wide">
           <div className="panel-title"><Database size={18} /> 已导入运单</div>
           <div className="history-filters">
+            <input className="search span-2" value={historyFilters.keyword} onChange={(event) => { setHistoryFilters((value) => ({ ...value, keyword: event.target.value })); setHistoryPage(1); }} placeholder="模糊查询：外部编码、门店、收件人、电话、地址、SKU、备注" />
             <input className="search" value={historyFilters.externalCode} onChange={(event) => { setHistoryFilters((value) => ({ ...value, externalCode: event.target.value })); setHistoryPage(1); }} placeholder="外部编码" />
             <input className="search" value={historyFilters.receiverName} onChange={(event) => { setHistoryFilters((value) => ({ ...value, receiverName: event.target.value })); setHistoryPage(1); }} placeholder="收件人" />
-            <input className="search" value={historyFilters.submittedDate} onChange={(event) => { setHistoryFilters((value) => ({ ...value, submittedDate: event.target.value })); setHistoryPage(1); }} placeholder="提交日期，如 2026/6/5" />
-            <button onClick={() => { setHistoryFilters({ externalCode: "", receiverName: "", submittedDate: "" }); setHistoryPage(1); }}>重置查询</button>
+            <label className="date-filter"><span>开始日期</span><input className="search" type="date" value={historyFilters.dateFrom} onChange={(event) => { setHistoryFilters((value) => ({ ...value, dateFrom: event.target.value })); setHistoryPage(1); }} /></label>
+            <label className="date-filter"><span>结束日期</span><input className="search" type="date" value={historyFilters.dateTo} onChange={(event) => { setHistoryFilters((value) => ({ ...value, dateTo: event.target.value })); setHistoryPage(1); }} /></label>
+            <button onClick={loadHistory} disabled={busy}>查询</button>
+            <button onClick={() => { setHistoryFilters({ keyword: "", externalCode: "", receiverName: "", dateFrom: "", dateTo: "" }); setHistoryPage(1); }}>重置查询</button>
             <button onClick={clearImportedOrders} disabled={!history.length || busy}><Trash2 size={16} /> 清空导入数据</button>
           </div>
           <div className="table-wrap history-table">
             <table>
-              <thead><tr><th>外部编码</th><th>收货门店</th><th>收件人</th><th>电话</th><th>SKU编码</th><th>SKU名称</th><th>数量</th><th>提交时间</th></tr></thead>
+              <thead><tr><th>外部编码</th><th>收货门店</th><th>收件人</th><th>电话</th><th>地址</th><th>SKU编码</th><th>SKU名称</th><th>规格</th><th>数量</th><th>备注</th><th>提交时间</th></tr></thead>
               <tbody>
-                {pagedHistory.map((row) => <tr key={row.id}><td>{row.externalCode}</td><td>{row.storeName}</td><td>{row.receiverName}</td><td>{row.receiverPhone}</td><td>{row.skuCode}</td><td>{row.skuName}</td><td>{row.quantity}</td><td>{row.submittedAt ? new Date(row.submittedAt).toLocaleString("zh-CN") : "数据库记录"}</td></tr>)}
+                {pagedHistory.map((row) => <tr key={row.id}><td>{row.externalCode}</td><td>{row.storeName}</td><td>{row.receiverName}</td><td>{row.receiverPhone}</td><td className="wide-cell">{row.receiverAddress}</td><td>{row.skuCode}</td><td className="wide-cell">{row.skuName}</td><td>{row.spec}</td><td>{row.quantity}</td><td className="wide-cell">{row.remark}</td><td>{row.submittedAt ? new Date(row.submittedAt).toLocaleString("zh-CN") : "数据库记录"}</td></tr>)}
               </tbody>
             </table>
-            {!filteredHistory.length && <p className="empty">暂无历史记录</p>}
+            {!filteredHistory.length && <p className="empty">暂无匹配的已导入运单</p>}
           </div>
           <div className="pager">
             <button onClick={() => setHistoryPage((page) => Math.max(1, page - 1))} disabled={historyPage <= 1}>上一页</button>

@@ -43,11 +43,43 @@ const ensureTable = async (sql: NonNullable<ReturnType<typeof getSql>>): Promise
   await sql`create index if not exists import_batches_created_at_idx on import_batches (created_at desc)`;
 };
 
-export async function GET() {
+const escapeLike = (value: string): string =>
+  value.replace(/[\\%_]/g, (match) => `\\${match}`);
+
+export async function GET(request: Request) {
   const sql = getSql();
   if (!sql) return NextResponse.json({ error: "数据库未配置，无法读取已导入运单" }, { status: 503 });
   await ensureTable(sql);
-  const rows = await sql`select payload, created_at from imported_orders order by created_at desc limit 500`;
+  const { searchParams } = new URL(request.url);
+  const keyword = searchParams.get("q")?.trim();
+  const externalCode = searchParams.get("externalCode")?.trim();
+  const receiverName = searchParams.get("receiverName")?.trim();
+  const dateFrom = searchParams.get("dateFrom")?.trim();
+  const dateTo = searchParams.get("dateTo")?.trim();
+  const keywordLike = keyword ? `%${escapeLike(keyword)}%` : "";
+  const externalLike = externalCode ? `%${escapeLike(externalCode)}%` : "";
+  const receiverLike = receiverName ? `%${escapeLike(receiverName)}%` : "";
+  const rows = await sql`
+    select payload, created_at
+    from imported_orders
+    where (${keyword ?? null}::text is null or (
+      external_code ilike ${keywordLike} escape '\' or
+      store_name ilike ${keywordLike} escape '\' or
+      receiver_name ilike ${keywordLike} escape '\' or
+      receiver_phone ilike ${keywordLike} escape '\' or
+      receiver_address ilike ${keywordLike} escape '\' or
+      sku_code ilike ${keywordLike} escape '\' or
+      sku_name ilike ${keywordLike} escape '\' or
+      spec ilike ${keywordLike} escape '\' or
+      remark ilike ${keywordLike} escape '\'
+    ))
+      and (${externalCode ?? null}::text is null or external_code ilike ${externalLike} escape '\')
+      and (${receiverName ?? null}::text is null or receiver_name ilike ${receiverLike} escape '\')
+      and (${dateFrom ?? null}::date is null or created_at >= ${dateFrom ?? null}::date)
+      and (${dateTo ?? null}::date is null or created_at < (${dateTo ?? null}::date + interval '1 day'))
+    order by created_at desc
+    limit 500
+  `;
   return NextResponse.json({ rows: rows.map((row) => ({ ...row.payload, submittedAt: row.created_at })), mode: "database" });
 }
 

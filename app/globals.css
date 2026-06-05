@@ -39,9 +39,14 @@ td input { width: 100%; min-height: 30px; border: 1px solid transparent; border-
 td input:focus { outline: 2px solid #b5e8e8; background: #fff; }
 tr.bad td { background: #fff8f7; }
 .sticky-actions { position: sticky; bottom: 0; align-items: center; padding-top: 12px; background: #fff; }
-.history-filters { display: grid; grid-template-columns: repeat(3, minmax(160px, 1fr)) auto auto; gap: 8px; align-items: center; }
-.history-table { margin-top: 12px; max-height: 460px; }
+.history-filters { display: grid; grid-template-columns: minmax(220px, 2fr) repeat(4, minmax(140px, 1fr)) auto auto auto; gap: 8px; align-items: end; }
+.history-filters .span-2 { grid-column: span 2; }
+.date-filter { display: grid; gap: 4px; color: #4e5969; font-size: 12px; }
+.history-table { margin-top: 12px; max-height: 500px; }
+.history-table table { table-layout: fixed; min-width: 1560px; }
+.history-table th, .history-table td { min-width: 112px; max-width: 180px; height: 34px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .history-table td { background: #fff; }
+.history-table .wide-cell { min-width: 220px; max-width: 280px; }
 .empty { margin: 12px; color: #6b7785; font-size: 13px; }
 .pager { display: flex; align-items: center; justify-content: flex-end; gap: 10px; margin-top: 12px; color: #4e5969; font-size: 13px; }
 @media (max-width: 900px) {

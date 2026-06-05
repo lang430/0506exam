@@ -24,7 +24,7 @@ const checks = {
   submitSummary: page.includes("成功 ${successCount} 条，失败 ${failureCount} 条"),
   databaseTables: ["parse_rules", "import_batches", "imported_orders", "ai_usage_events"].every((text) => db.includes(text)),
   ordersPersistToDatabase: !page.includes("localStorage") && !page.includes("本地暂存") && !ordersApi.includes("local-demo") && ordersApi.includes("import_batches") && ordersApi.includes("imported_orders"),
-  historyTableAndFilters: page.includes("historyFilters") && page.includes("history-table") && ["外部编码", "收件人", "提交日期"].every((text) => page.includes(text)),
+  historyTableAndFilters: page.includes("historyFilters") && page.includes("history-table") && ["外部编码", "收件人", "开始日期", "结束日期", "模糊查询"].every((text) => page.includes(text)),
   clearImportedOrders: page.includes("clearImportedOrders") && ordersApi.includes("export async function DELETE") && ordersApi.includes("delete from imported_orders") && ordersApi.includes("delete from import_batches"),
   aiRateLimit: db.includes("ai_usage_events") && aiQuota.includes("getAiQuotaConfig") && runtimeConfig.includes("AI_RATE_LIMIT_PER_MINUTE") && runtimeConfig.includes("AI_DAILY_LIMIT"),
   defaultRulesCoverAvailableDemos: defaultRules.length >= 6,
