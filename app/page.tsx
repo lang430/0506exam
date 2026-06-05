@@ -320,7 +320,7 @@ export default function Page() {
     if (!response.ok) return setTimedToast(data.error ?? "清空数据库数据失败");
     setHistory([]);
     setHistoryPage(1);
-    setTimedToast("已清空数据库中的已导入运单数据");
+    setTimedToast(`已清空数据库导入数据：运单 ${data.deletedOrders ?? 0} 条，批次 ${data.deletedBatches ?? 0} 条`);
   };
 
   return (

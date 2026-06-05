@@ -55,11 +55,12 @@ export async function DELETE() {
   const sql = getSql();
   if (!sql) return NextResponse.json({ error: "数据库未配置，无法清空已导入运单" }, { status: 503 });
   await ensureTable(sql);
-  await sql.begin(async (transaction) => {
-    await transaction`delete from imported_orders`;
-    await transaction`delete from import_batches`;
+  const result = await sql.begin(async (transaction) => {
+    const orders = await transaction`delete from imported_orders returning id`;
+    const batches = await transaction`delete from import_batches returning id`;
+    return { orders: orders.length, batches: batches.length };
   });
-  return NextResponse.json({ cleared: true, mode: "database" });
+  return NextResponse.json({ cleared: true, deletedOrders: result.orders, deletedBatches: result.batches, mode: "database" });
 }
 
 export async function POST(request: Request) {
