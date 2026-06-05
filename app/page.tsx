@@ -222,7 +222,7 @@ export default function Page() {
         method: "POST",
         signal: controller.signal,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fileName: sourceFileName, sheets: sourceSheets.map((sheet) => ({ ...sheet, rows: sheet.rows.slice(0, 30) })) })
+        body: JSON.stringify({ fileName: sourceFileName, auto, sheets: sourceSheets.map((sheet) => ({ ...sheet, rows: sheet.rows.slice(0, 30) })) })
       }).finally(() => clearTimeout(timeout));
       setProgress(70);
       const rawText = await response.text();

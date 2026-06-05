@@ -10,6 +10,7 @@ export const runtime = "nodejs";
 interface Payload {
   fileName: string;
   sheets: SheetSnapshot[];
+  auto?: boolean;
 }
 
 interface AiAttempt {
@@ -28,7 +29,7 @@ const logAiRules = (event: string, details: Record<string, unknown>): void => {
 };
 
 const maxAiAttempts = 3;
-const aiRequestTimeoutMs = 20000;
+const aiRequestTimeoutMs = 12000;
 
 const previewText = (value: unknown, maxLength = 240): string =>
   String(value ?? "").replace(/\s+/g, " ").trim().slice(0, maxLength);
@@ -269,7 +270,8 @@ ColumnMapping 只能使用以下形式：
 ${JSON.stringify(payload).slice(0, 12000)}`;
   const attempts: AiAttempt[] = [];
   let attemptedCount = 0;
-  for (let attemptIndex = 0; attemptIndex < maxAiAttempts; attemptIndex += 1) {
+  const maxAttempts = payload.auto ? 1 : maxAiAttempts;
+  for (let attemptIndex = 0; attemptIndex < maxAttempts; attemptIndex += 1) {
       const quota = await consumeAiQuota(`${provider}:${model}`);
       if (!quota.allowed) {
         logAiRules("quota-blocked", { requestId, model, attemptIndex, quota });
@@ -388,6 +390,6 @@ ${JSON.stringify(payload).slice(0, 12000)}`;
   const fallbackReason = preferredFailure?.error
     ? `${preferredFailure.error}，未生成可保存规则`
     : "大模型未返回可用规则，未生成可保存规则";
-  logAiRules("fallback", { requestId, reason: fallbackReason, attemptedCount, maxAiAttempts, attempts });
+  logAiRules("fallback", { requestId, reason: fallbackReason, attemptedCount, maxAiAttempts: maxAttempts, attempts });
   return NextResponse.json({ degraded: true, error: fallbackReason, configStatus, attempts }, { status: 503 });
 }

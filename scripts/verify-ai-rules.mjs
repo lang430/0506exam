@@ -1,6 +1,7 @@
 import ExcelJS from "exceljs";
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
+import { parseByRule } from "../lib/rule-engine.ts";
 
 const cellText = (cell) => {
   if (cell == null) return "";
@@ -48,6 +49,45 @@ const response = await fetch(process.env.AI_BASE_URL, {
 });
 const body = await response.text();
 const contentType = response.headers.get("content-type") ?? "";
+let parsedRows = 0;
+let rulePreview = null;
+if (response.ok && contentType.includes("application/json")) {
+  const data = JSON.parse(body);
+  const content = data.choices?.[0]?.message?.content ?? "{}";
+  const rawRule = JSON.parse(content.slice(content.indexOf("{"), content.lastIndexOf("}") + 1));
+  const aliases = {
+    skuCode: ["skuCode", "productCode", "物品编码", "商品编码", "产品编码"],
+    skuName: ["skuName", "productName", "物品名称", "商品名称", "产品名称"],
+    quantity: ["quantity", "数量", "订货数量", "原订货数量", "实发数量", "配送数量"],
+    spec: ["spec", "规格", "规格型号"],
+    storeName: ["storeName", "门店", "收货门店", "客户", "订货方"],
+    externalCode: ["externalCode", "单号", "订单号", "出库单号", "配送单号"],
+    receiverName: ["receiverName", "收件人", "联系人"],
+    receiverPhone: ["receiverPhone", "电话", "手机号"],
+    receiverAddress: ["receiverAddress", "地址", "收货地址"],
+    remark: ["remark", "备注"]
+  };
+  const mappings = {};
+  for (const [field, names] of Object.entries(aliases)) {
+    for (const name of names) {
+      if (rawRule.mappings?.[name]) {
+        mappings[field] = rawRule.mappings[name];
+        break;
+      }
+    }
+  }
+  const rule = {
+    id: "verify-ai",
+    name: rawRule.name ?? "AI验证规则",
+    mode: ["table", "matrix", "cards", "text"].includes(rawRule.mode) ? rawRule.mode : "table",
+    sheetStrategy: rawRule.sheetStrategy === "all" || rawRule.sheetStrategy?.type === "all" ? "all" : "first",
+    headerRow: Number(rawRule.headerRow || 1),
+    dataStartRow: Number(rawRule.dataStartRow || 2),
+    mappings
+  };
+  parsedRows = parseByRule(sheets, rule).length;
+  rulePreview = { name: rule.name, mode: rule.mode, sheetStrategy: rule.sheetStrategy, headerRow: rule.headerRow, dataStartRow: rule.dataStartRow, mappingFields: Object.keys(rule.mappings) };
+}
 console.log(JSON.stringify({
   hasKey: Boolean(process.env.AI_API_KEY),
   keyLength: process.env.AI_API_KEY?.length ?? 0,
@@ -57,6 +97,8 @@ console.log(JSON.stringify({
   ok: response.ok,
   contentType,
   elapsedMs: Date.now() - startedAt,
+  parsedRows,
+  rulePreview,
   bodyPreview: body.slice(0, 1000)
 }, null, 2));
-if (!response.ok || !contentType.includes("application/json")) process.exit(1);
+if (!response.ok || !contentType.includes("application/json") || !parsedRows) process.exit(1);

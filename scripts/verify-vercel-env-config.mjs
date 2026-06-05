@@ -33,7 +33,7 @@ const checks = {
     !runtimeConfig.includes("OPENROUTER_API_KEYS") &&
     !runtimeConfig.includes("AI_MODELS"),
   aiSingleProviderConfigured: docs.includes("https://www.pomoai.xyz/v1/chat/completions") && docs.includes("gpt-5.5"),
-  aiSingleModelOnly: aiRoute.includes("maxAiAttempts = 3") && aiRoute.includes("for (let attemptIndex = 0; attemptIndex < maxAiAttempts") && !aiRoute.includes("keyIndex"),
+  aiSingleModelOnly: aiRoute.includes("maxAiAttempts = 3") && aiRoute.includes("const maxAttempts = payload.auto ? 1 : maxAiAttempts") && aiRoute.includes("for (let attemptIndex = 0; attemptIndex < maxAttempts") && !aiRoute.includes("keyIndex"),
   noHardcodedAiSecrets: ![runtimeConfig, aiRoute].some((content) => /sk-(or-v1-)?[A-Za-z0-9_-]{20,}/.test(content)),
   noLegacyAiProviders: ![runtimeConfig, aiRoute, page, docs].some((content) => content.includes("AIHUBMIX") || content.includes("aihubmix") || content.includes("OpenRouter") || content.includes("openrouter")),
   aiRuleNormalization: aiRoute.includes("normalizeModelRule") && aiRoute.includes("normalizeMapping") && aiRoute.includes("columnIndex"),
