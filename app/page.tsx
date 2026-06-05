@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { AlertCircle, CheckCircle2, Copy, Database, Download, FileUp, Play, Plus, Save, Trash2, Wand2 } from "lucide-react";
 import { parseByRule, validateRows } from "@/lib/rule-engine";
 import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/lib/types";
@@ -22,6 +22,20 @@ const sheetRowsFromText = (name: string, content: string): SheetSnapshot[] => [{
   name,
   rows: content.split(/\r?\n/).map((line) => [line])
 }];
+
+const orderGroupKey = (row: OrderRow): string =>
+  row.externalCode?.trim() ||
+  [row.storeName, row.receiverName, row.receiverPhone, row.receiverAddress].map((value) => String(value ?? "").trim()).join("|") ||
+  row.id;
+
+const groupRowsByOrder = (sourceRows: OrderRow[]) => {
+  const map = new Map<string, OrderRow[]>();
+  for (const row of sourceRows) {
+    const key = orderGroupKey(row);
+    map.set(key, [...(map.get(key) ?? []), row]);
+  }
+  return Array.from(map.entries()).map(([key, groupRows], index) => ({ key, index: index + 1, rows: groupRows, head: groupRows[0] }));
+};
 
 const excelCellText = (value: unknown): string => {
   if (value == null) return "";
@@ -80,6 +94,7 @@ export default function Page() {
   const previewPageSize = 100;
   const totalPreviewPages = Math.max(1, Math.ceil(rows.length / previewPageSize));
   const visibleRows = rows.slice((previewPage - 1) * previewPageSize, previewPage * previewPageSize);
+  const previewOrderGroups = useMemo(() => groupRowsByOrder(visibleRows), [visibleRows]);
   const filteredHistory = history.filter((row) => {
     const keyword = historyFilters.keyword.trim().toLowerCase();
     const values = [
@@ -105,6 +120,7 @@ export default function Page() {
   const historyPageSize = 24;
   const totalHistoryPages = Math.max(1, Math.ceil(filteredHistory.length / historyPageSize));
   const pagedHistory = filteredHistory.slice((historyPage - 1) * historyPageSize, historyPage * historyPageSize);
+  const historyOrderGroups = useMemo(() => groupRowsByOrder(pagedHistory), [pagedHistory]);
 
   async function loadHistory(): Promise<void> {
     try {
@@ -496,11 +512,22 @@ export default function Page() {
             <table>
               <thead><tr><th>操作</th>{fields.map((field) => <th key={field.key}>{field.label}</th>)}</tr></thead>
               <tbody>
-                {visibleRows.map((row) => (
-                  <tr key={row.id} className={row.errors.length ? "bad" : ""}>
-                    <td><button className="icon" onClick={() => deletePreviewRow(row.id)}><Trash2 size={15} /></button></td>
-                    {fields.map((field) => <td key={field.key}><input data-grid-cell="true" value={String(row[field.key] ?? "")} onKeyDown={moveCellFocus} onChange={(event) => updateCell(row.id, field.key, event.target.value)} /></td>)}
-                  </tr>
+                {previewOrderGroups.map((group) => (
+                  <Fragment key={group.key}>
+                    <tr key={`${group.key}-group`} className="order-group-row">
+                      <td colSpan={fields.length + 1}>
+                        出库单 {group.index} · 外部编码：{group.head.externalCode || "未填写"} ·
+                        收货：{group.head.storeName || [group.head.receiverName, group.head.receiverPhone, group.head.receiverAddress].filter(Boolean).join(" / ") || "未填写"} ·
+                        SKU {group.rows.length} 行
+                      </td>
+                    </tr>
+                    {group.rows.map((row) => (
+                      <tr key={row.id} className={row.errors.length ? "bad" : ""}>
+                        <td><button className="icon" onClick={() => deletePreviewRow(row.id)}><Trash2 size={15} /></button></td>
+                        {fields.map((field) => <td key={field.key}><input data-grid-cell="true" value={String(row[field.key] ?? "")} onKeyDown={moveCellFocus} onChange={(event) => updateCell(row.id, field.key, event.target.value)} /></td>)}
+                      </tr>
+                    ))}
+                  </Fragment>
                 ))}
               </tbody>
             </table>
@@ -512,7 +539,7 @@ export default function Page() {
             <button onClick={() => setPreviewPage((page) => Math.min(totalPreviewPages, page + 1))} disabled={previewPage >= totalPreviewPages}>下一页</button>
             <button onClick={exportExcel} disabled={!rows.length}><Download size={16} /> 导出 Excel</button>
             <button onClick={submitOrders} disabled={!rows.length || busy}><Database size={16} /> 提交下单</button>
-            <span>当前第 {previewPage} 页，显示 {visibleRows.length} / {rows.length} 行，每页 {previewPageSize} 行</span>
+            <span>当前第 {previewPage} 页，显示 {previewOrderGroups.length} 个出库单 / {visibleRows.length} 个 SKU 行，共 {rows.length} 行</span>
           </div>
         </section>
 
@@ -532,14 +559,25 @@ export default function Page() {
             <table>
               <thead><tr><th>外部编码</th><th>收货门店</th><th>收件人</th><th>电话</th><th>地址</th><th>SKU编码</th><th>SKU名称</th><th>规格</th><th>数量</th><th>备注</th><th>提交时间</th></tr></thead>
               <tbody>
-                {pagedHistory.map((row) => <tr key={row.id}><td>{row.externalCode}</td><td>{row.storeName}</td><td>{row.receiverName}</td><td>{row.receiverPhone}</td><td className="wide-cell">{row.receiverAddress}</td><td>{row.skuCode}</td><td className="wide-cell">{row.skuName}</td><td>{row.spec}</td><td>{row.quantity}</td><td className="wide-cell">{row.remark}</td><td>{row.submittedAt ? new Date(row.submittedAt).toLocaleString("zh-CN") : "数据库记录"}</td></tr>)}
+                {historyOrderGroups.map((group) => (
+                  <Fragment key={group.key}>
+                    <tr key={`${group.key}-history-group`} className="order-group-row">
+                      <td colSpan={11}>
+                        出库单 {group.index} · 外部编码：{group.head.externalCode || "未填写"} ·
+                        收货：{group.head.storeName || [group.head.receiverName, group.head.receiverPhone, group.head.receiverAddress].filter(Boolean).join(" / ") || "未填写"} ·
+                        SKU {group.rows.length} 行
+                      </td>
+                    </tr>
+                    {group.rows.map((row) => <tr key={row.id}><td>{row.externalCode}</td><td>{row.storeName}</td><td>{row.receiverName}</td><td>{row.receiverPhone}</td><td className="wide-cell">{row.receiverAddress}</td><td>{row.skuCode}</td><td className="wide-cell">{row.skuName}</td><td>{row.spec}</td><td>{row.quantity}</td><td className="wide-cell">{row.remark}</td><td>{row.submittedAt ? new Date(row.submittedAt).toLocaleString("zh-CN") : "数据库记录"}</td></tr>)}
+                  </Fragment>
+                ))}
               </tbody>
             </table>
             {!filteredHistory.length && <p className="empty">暂无匹配的已导入运单</p>}
           </div>
           <div className="pager">
             <button onClick={() => setHistoryPage((page) => Math.max(1, page - 1))} disabled={historyPage <= 1}>上一页</button>
-            <span>第 {historyPage} / {totalHistoryPages} 页，共 {filteredHistory.length} 条</span>
+            <span>第 {historyPage} / {totalHistoryPages} 页，共 {groupRowsByOrder(filteredHistory).length} 个出库单 / {filteredHistory.length} 个 SKU 行</span>
             <button onClick={() => setHistoryPage((page) => Math.min(totalHistoryPages, page + 1))} disabled={historyPage >= totalHistoryPages}>下一页</button>
           </div>
         </section>

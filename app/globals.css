@@ -38,6 +38,7 @@ th:first-child, td:first-child { min-width: 64px; position: sticky; left: 0; bac
 td input { width: 100%; min-height: 30px; border: 1px solid transparent; border-radius: 6px; padding: 4px 6px; background: transparent; }
 td input:focus { outline: 2px solid #b5e8e8; background: #fff; }
 tr.bad td { background: #fff8f7; }
+.order-group-row td { position: sticky; left: 0; z-index: 1; background: #f0fafa; color: #0b6e6e; font-weight: 700; border-top: 1px solid #b5e8e8; }
 .sticky-actions { position: sticky; bottom: 0; align-items: center; padding-top: 12px; background: #fff; }
 .page-jump { display: inline-grid; grid-template-columns: auto 64px auto; align-items: center; gap: 6px; color: #4e5969; font-size: 13px; }
 .page-jump .search { height: 34px; text-align: center; }
