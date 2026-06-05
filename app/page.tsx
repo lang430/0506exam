@@ -225,8 +225,12 @@ export default function Page() {
       setIssues([]);
       setPreviewPage(1);
       setProgress(100);
-      setTimedToast("文件已读取，正在实时调用 AI 生成规则", "info");
-      await generateRule(nextSheets, file.name, true, true);
+      setTimedToast("文件已读取，正在优先匹配已有解析规则", "info");
+      const reusableRules = rules.length ? rules : await fetchReusableRules();
+      if (!parseWithReusableRule(nextSheets, reusableRules)) {
+        setTimedToast("已有规则未命中，正在调用 AI 生成规则", "info");
+        await generateRule(nextSheets, file.name, true, true);
+      }
     } catch (error) {
       setTimedToast(error instanceof Error ? error.message : "文件读取失败", "error");
     } finally {
@@ -297,6 +301,38 @@ export default function Page() {
     setProgress(100);
     setTimedToast(`AI 规则生成失败，已使用「${rule.name}」解析 ${parsed.length} 行：${reason}`, "info");
     return true;
+  };
+
+  const fetchReusableRules = async (): Promise<ParseRule[]> => {
+    try {
+      const response = await fetch("/api/rules");
+      const data = await response.json();
+      if (!response.ok || !Array.isArray(data.rules)) return [];
+      const usableRules = (data.rules as ParseRule[]).filter((rule) => !isDegradedAiRule(rule));
+      setRules(usableRules);
+      return usableRules;
+    } catch {
+      return [];
+    }
+  };
+
+  const parseWithReusableRule = (sourceSheets: SheetSnapshot[], candidateRules = rules): boolean => {
+    for (const rule of candidateRules) {
+      const parsed = parseByRule(sourceSheets, rule);
+      if (!parsed.length) continue;
+      const nextIssues = validateRows(parsed, existingCodes);
+      if (nextIssues.length) continue;
+      setSelectedRuleId(rule.id);
+      setRuleText(JSON.stringify(rule, null, 2));
+      setRows(parsed.map((row) => ({ ...row, errors: [] })));
+      setIssues([]);
+      setPreviewPage(1);
+      setProgress(100);
+      setProgressText(`${parsed.length}/${parsed.length}`);
+      setTimedToast(`已使用已有规则「${rule.name}」解析 ${parsed.length} 行`, "success");
+      return true;
+    }
+    return false;
   };
 
   const saveRule = (): void => {

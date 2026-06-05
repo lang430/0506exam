@@ -6,6 +6,12 @@ export const runtime = "nodejs";
 
 const ensureTable = async (sql: NonNullable<ReturnType<typeof getSql>>): Promise<void> => {
   await sql`create extension if not exists pgcrypto`;
+  await sql`create table if not exists parse_rules (
+    id text primary key,
+    payload jsonb not null,
+    created_at timestamptz not null default now(),
+    updated_at timestamptz not null default now()
+  )`;
   await sql`create table if not exists import_batches (
     id uuid primary key default gen_random_uuid(),
     file_name text,
@@ -102,9 +108,13 @@ export async function POST(request: Request) {
   if (!sql) return NextResponse.json({ error: "数据库未配置，运单数据未写入" }, { status: 503 });
   await ensureTable(sql);
   const result = await sql.begin(async (transaction) => {
+    const requestedRuleId = Array.isArray(payload) ? null : payload.ruleId?.trim() || null;
+    const validRuleId = requestedRuleId
+      ? (await transaction<{ id: string }[]>`select id from parse_rules where id = ${requestedRuleId} limit 1`)[0]?.id ?? null
+      : null;
     const [batch] = await transaction<{ id: string; created_at: Date }[]>`
       insert into import_batches (file_name, rule_id, total_rows, success_rows, failed_rows, status)
-      values (${Array.isArray(payload) ? null : payload.fileName ?? null}, ${Array.isArray(payload) ? null : payload.ruleId ?? null}, ${rows.length}, ${rows.length}, 0, 'submitted')
+      values (${Array.isArray(payload) ? null : payload.fileName ?? null}, ${validRuleId}, ${rows.length}, ${rows.length}, 0, 'submitted')
       returning id, created_at
     `;
     for (const row of rows) {
@@ -134,7 +144,7 @@ export async function POST(request: Request) {
           source = excluded.source,
           updated_at = now()`;
     }
-    return { batchId: batch.id, submittedAt: batch.created_at, rows: rows.map((row) => ({ ...row, submittedAt: batch.created_at })) };
+    return { batchId: batch.id, ruleId: validRuleId, submittedAt: batch.created_at, rows: rows.map((row) => ({ ...row, submittedAt: batch.created_at })) };
   });
   return NextResponse.json({ saved: rows.length, failed: 0, mode: "database", ...result });
 }
