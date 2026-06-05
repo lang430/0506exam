@@ -32,7 +32,7 @@ const checks = {
     !runtimeConfig.includes("getLocalValue") &&
     !runtimeConfig.includes("OPENROUTER_API_KEYS") &&
     !runtimeConfig.includes("AI_MODELS"),
-  aiSingleProviderConfigured: runtimeConfig.includes("https://www.pomoai.xyz//v1/chat/completions") && runtimeConfig.includes("gpt-5.5"),
+  aiSingleProviderConfigured: docs.includes("https://www.pomoai.xyz//v1/chat/completions") && docs.includes("gpt-5.5"),
   aiSingleModelOnly: aiRoute.includes("maxAiAttempts = 3") && aiRoute.includes("for (let attemptIndex = 0; attemptIndex < maxAiAttempts") && !aiRoute.includes("keyIndex"),
   noHardcodedAiSecrets: ![runtimeConfig, aiRoute].some((content) => /sk-(or-v1-)?[A-Za-z0-9_-]{20,}/.test(content)),
   noLegacyAiProviders: ![runtimeConfig, aiRoute, page, docs].some((content) => content.includes("AIHUBMIX") || content.includes("aihubmix") || content.includes("OpenRouter") || content.includes("openrouter")),
@@ -48,7 +48,7 @@ const checks = {
   noPublicSecretEnv: ![runtimeConfig, db, aiRoute, page].some((content) => /NEXT_PUBLIC_.*(KEY|SECRET|TOKEN|URL)/.test(content)),
   documentsDatabaseVars: requiredDatabaseVars.every((name) => docs.includes(name)),
   documentsAiVars: requiredAiVars.every((name) => docs.includes(name)) && docs.includes("Vercel Environment Variables"),
-  aiFallbackConfigured: runtimeConfig.includes("defaultAiBaseUrl") && runtimeConfig.includes("defaultAiModel") && runtimeConfig.includes("usingDefaultModels"),
+  aiFallbackConfigured: runtimeConfig.includes("usingDefaultBaseUrl: false") && runtimeConfig.includes("usingDefaultModels: false"),
   aiCallLogsConfigured: [
     "request-start",
     "model-attempt",

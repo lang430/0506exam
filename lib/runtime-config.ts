@@ -1,9 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
-const splitCsv = (value: string | undefined): string[] =>
-  value?.split(/[\s,]+/).map((item) => item.trim()).filter(Boolean) ?? [];
-
 const parseLocalEnv = (): Record<string, string> => {
   const envPath = join(process.cwd(), ".env.local");
   if (!existsSync(envPath)) return {};
@@ -26,9 +23,6 @@ const getLocalEnv = (): Record<string, string> => parseLocalEnv();
 const getRuntimeValue = (name: string): string | undefined =>
   process.env[name] || getLocalEnv()[name];
 
-const defaultAiBaseUrl = "https://www.pomoai.xyz//v1/chat/completions";
-const defaultAiModel = "gpt-5.5";
-
 export const getDatabaseConfig = (): { url?: string } => ({
   url: getRuntimeValue("DATABASE_URL") ||
     getRuntimeValue("POSTGRES_URL") ||
@@ -44,11 +38,11 @@ export const getAiConfig = () => {
     provider: process.env.AI_PROVIDER || "pomoai",
     apiKey,
     apiKeySource: apiKey ? "Vercel Environment:AI_API_KEY" : undefined,
-    baseUrl: aiBaseUrl || defaultAiBaseUrl,
-    model: model || defaultAiModel,
-    models: [model || defaultAiModel],
-    usingDefaultBaseUrl: !aiBaseUrl,
-    usingDefaultModels: !model
+    baseUrl: aiBaseUrl,
+    model,
+    models: model ? [model] : [],
+    usingDefaultBaseUrl: false,
+    usingDefaultModels: false
   };
 };
 
