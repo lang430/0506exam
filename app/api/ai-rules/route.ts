@@ -222,6 +222,46 @@ const looksLikeCardItems = (payload: Payload): boolean => {
     /(数量|发货数量|出库数量)/.test(content);
 };
 
+const buildCardFallbackRule = (payload: Payload): ParseRule | null => {
+  if (!looksLikeCardItems(payload)) return null;
+  return {
+    id: crypto.randomUUID(),
+    name: `AI结构兜底-${payload.fileName.replace(/\.[^.]+$/, "")}`.slice(0, 50),
+    mode: "cards",
+    sheetStrategy: "first",
+    boundaryPattern: "调拨记录",
+    itemHeaderPattern: "物品编码",
+    stopWhenContains: "合计",
+    mappings: {
+      skuCode: { source: "header", header: "物品编码" },
+      skuName: { source: "header", header: "物品名称" },
+      spec: { source: "header", header: "规格" },
+      quantity: { source: "header", header: "数量" },
+      remark: { source: "header", header: "备注" }
+    },
+    tailExtractions: [
+      { field: "storeName", label: "调入门店" },
+      { field: "receiverName", label: "收货人" },
+      { field: "receiverPhone", label: "电话" },
+      { field: "receiverAddress", label: "收货地址" }
+    ],
+    assumptions: [
+      "检测到纵向堆叠的调拨记录卡片结构，按卡片边界拆分。",
+      "每个卡片内使用物品编码表头定位明细小表，收货信息从卡片内标签行提取。",
+      "此规则由结构特征兜底生成，请预览确认后再保存。"
+    ]
+  };
+};
+
+const tryStructureFallbackRule = (payload: Payload): { rule: ParseRule; parsedRows: number } | null => {
+  const rule = buildCardFallbackRule(payload);
+  if (!rule) return null;
+  const parsedRows = parseByRule(payload.sheets, rule);
+  const validationIssues = validateRows(parsedRows, new Set());
+  if (!parsedRows.length || validationIssues.length) return null;
+  return { rule, parsedRows: parsedRows.length };
+};
+
 const looksLikeStoreMatrix = (payload: Payload): boolean => {
   const rows = payload.sheets[0] ? safeRows(payload.sheets[0]) : [];
   const header = rows[0] ?? [];
@@ -464,6 +504,11 @@ export async function POST(request: Request) {
       !model ? "AI_MODEL" : ""
     ].filter(Boolean).join("、");
     const error = `大模型环境变量未完整配置，缺少：${missing}，请检查 Vercel Environment Variables`;
+    const fallback = tryStructureFallbackRule(payload);
+    if (fallback) {
+      logAiRules("structure-fallback-success", { requestId, reason: error, ruleName: fallback.rule.name, mode: fallback.rule.mode, parsedRows: fallback.parsedRows });
+      return NextResponse.json({ rule: fallback.rule, degraded: false, model: "structure-fallback", parsedRows: fallback.parsedRows, configStatus, attempts: [{ model: "structure-fallback", ok: true, error }] });
+    }
     return NextResponse.json({ degraded: true, error, configStatus }, { status: 503 });
   }
 
@@ -657,6 +702,11 @@ ${JSON.stringify(payload).slice(0, 12000)}`;
   const fallbackReason = preferredFailure?.error
     ? `${preferredFailure.error}，未生成可保存规则`
     : "大模型未返回可用规则，未生成可保存规则";
+  const fallback = tryStructureFallbackRule(payload);
+  if (fallback) {
+    logAiRules("structure-fallback-success", { requestId, reason: fallbackReason, ruleName: fallback.rule.name, mode: fallback.rule.mode, parsedRows: fallback.parsedRows });
+    return NextResponse.json({ rule: fallback.rule, degraded: false, model: "structure-fallback", parsedRows: fallback.parsedRows, configStatus, attempts });
+  }
   logAiRules("fallback", { requestId, reason: fallbackReason, attemptedCount, maxAiAttempts: maxAttempts, attempts });
   return NextResponse.json({ degraded: true, error: fallbackReason, configStatus, attempts }, { status: 503 });
 }

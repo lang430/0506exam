@@ -31,13 +31,13 @@ export const getDatabaseConfig = (): { url?: string } => ({
 });
 
 export const getAiConfig = () => {
-  const apiKey = process.env.AI_API_KEY;
-  const aiBaseUrl = process.env.AI_BASE_URL;
-  const model = process.env.AI_MODEL;
+  const apiKey = getRuntimeValue("AI_API_KEY");
+  const aiBaseUrl = getRuntimeValue("AI_BASE_URL");
+  const model = getRuntimeValue("AI_MODEL");
   return {
     provider: "pomoai",
     apiKey,
-    apiKeySource: apiKey ? "Vercel Environment:AI_API_KEY" : undefined,
+    apiKeySource: apiKey ? process.env.AI_API_KEY ? "Environment:AI_API_KEY" : ".env.local:AI_API_KEY" : undefined,
     baseUrl: aiBaseUrl,
     model,
     models: model ? [model] : [],
