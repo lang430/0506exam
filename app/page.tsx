@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, CheckCircle2, Copy, Database, Download, FileUp, Inbox, Loader2, Play, Plus, Save, Trash2, Wand2, XCircle } from "lucide-react";
 import { parseByRule, validateRows } from "@/lib/rule-engine";
 import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/lib/types";
@@ -87,8 +87,9 @@ export default function Page() {
   const [rows, setRows] = useState<OrderRow[]>([]);
   const [history, setHistory] = useState<OrderRow[]>([]);
   const [issues, setIssues] = useState<ValidationIssue[]>([]);
-  const [toast, setToast] = useState("等待上传文件");
+  const [toast, setToast] = useState("");
   const [toastKind, setToastKind] = useState<"info" | "success" | "error">("info");
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
   const [progressText, setProgressText] = useState("0/0");
@@ -172,9 +173,15 @@ export default function Page() {
     if (selectedRule) setRuleText(JSON.stringify(selectedRule, null, 2));
   }, [selectedRuleId]);
 
+  useEffect(() => () => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+  }, []);
+
   const setTimedToast = (message: string, kind: "info" | "success" | "error" = "info"): void => {
+    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     setToast(message);
     setToastKind(kind);
+    toastTimerRef.current = setTimeout(() => setToast(""), kind === "error" ? 5200 : 3600);
   };
 
   const readFile = async (file: File): Promise<void> => {
@@ -528,7 +535,6 @@ export default function Page() {
             <p className="eyebrow">万能导入 V2</p>
             <h1>智能多格式批量下单系统</h1>
           </div>
-          <div className={`status ${toastKind}`}>{toastKind === "error" ? <XCircle size={18} /> : <CheckCircle2 size={18} />}{toast}</div>
         </header>
 
         <div className="grid">
@@ -646,6 +652,9 @@ export default function Page() {
           </div>
         </section>
       </section>
+      {toast && <div className="toast-stack" aria-live="polite" aria-atomic="true">
+        <div className={`status ${toastKind}`}>{toastKind === "error" ? <XCircle size={18} /> : <CheckCircle2 size={18} />}{toast}</div>
+      </div>}
       {busy && <div className="loading-overlay" role="status" aria-live="polite"><div className="loading-card"><Loader2 className="spinner" size={24} /><strong>处理中</strong><span>{progressText}</span></div></div>}
     </main>
   );
