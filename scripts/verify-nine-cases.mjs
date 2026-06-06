@@ -65,7 +65,7 @@ const cases = [
     source: "real",
     sheets: await readWorkbook("欢乐牧场模板0430.xlsx"),
     rule: defaultRules.find((rule) => rule.id === "matrix-store"),
-    expectedRows: 10
+    expectedRows: 15
   },
   {
     name: "黔寨寨配送单",

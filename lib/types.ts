@@ -69,6 +69,7 @@ export interface ParseRule {
   tailExtractions?: TailExtraction[];
   matrixValueStartColumn?: number;
   matrixValueEndColumn?: number;
+  matrixStopHeaderPattern?: string;
   matrixColumnRole?: "store" | "date";
   matrixRowStoreMapping?: ColumnMapping;
   compoundCellPattern?: string;

@@ -40,6 +40,15 @@ const makeHeaderMap = (row: string[]): Map<string, number> => {
   return map;
 };
 
+const matrixValueEndIndex = (header: string[], rows: string[][], rule: ParseRule): number => {
+  const naturalEnd = Math.min(rule.matrixValueEndColumn ?? rowLength(rows), header.length || rowLength(rows));
+  if (!rule.matrixStopHeaderPattern) return naturalEnd;
+  const pattern = new RegExp(rule.matrixStopHeaderPattern);
+  const start = Math.max((rule.matrixValueStartColumn ?? 1) - 1, 0);
+  const stopIndex = header.findIndex((cell, index) => index >= start && pattern.test(text(cell)));
+  return stopIndex >= 0 ? Math.min(stopIndex, naturalEnd) : naturalEnd;
+};
+
 const readMapping = (
   field: OrderField,
   row: string[],
@@ -104,7 +113,7 @@ const parseMatrix = (sheets: SheetSnapshot[], rule: ParseRule): OrderRow[] => {
   const header = sheet.rows[headerIndex] ?? [];
   const headerMap = makeHeaderMap(header);
   const valueStart = Math.max((rule.matrixValueStartColumn ?? 1) - 1, 0);
-  const valueEnd = Math.min(rule.matrixValueEndColumn ?? rowLength(sheet.rows), header.length || rowLength(sheet.rows));
+  const valueEnd = matrixValueEndIndex(header, sheet.rows, rule);
   const fixedIndexes = new Set(Object.values(rule.mappings).map((mapping) => mapping?.index ? mapping.index - 1 : undefined));
   const result: OrderRow[] = [];
   for (const row of sheet.rows.slice(dataStart)) {

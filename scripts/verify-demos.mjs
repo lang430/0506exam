@@ -98,7 +98,7 @@ const rules = [
     headerRow: 1,
     dataStartRow: 2,
     matrixValueStartColumn: 14,
-    matrixValueEndColumn: 16,
+    matrixStopHeaderPattern: "下单后结余|结余|库存|合计",
     mappings: {
       skuName: { source: "index", index: 3 },
       skuCode: { source: "index", index: 5 },

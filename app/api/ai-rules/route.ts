@@ -183,6 +183,24 @@ const inferStopWhenContains = (payload: Payload): string | undefined =>
     ? "合计"
     : undefined;
 
+const findHeaderColumn = (row: string[], patterns: RegExp[]): number | undefined => {
+  const index = row.findIndex((cell) => patterns.some((pattern) => pattern.test(cell)));
+  return index >= 0 ? index + 1 : undefined;
+};
+
+const headerMappingByPattern = (row: string[], patterns: RegExp[], fallback?: ColumnMapping): ColumnMapping | undefined => {
+  const column = findHeaderColumn(row, patterns);
+  return column ? { source: "header", header: row[column - 1] } : fallback;
+};
+
+const inferStoreMatrixStartColumn = (payload: Payload): number | undefined => {
+  const rows = payload.sheets[0] ? safeRows(payload.sheets[0]) : [];
+  const header = rows[0] ?? [];
+  const skuNameColumn = findHeaderColumn(header, [/SKU.*名称/, /物品.*名称/, /商品.*名称/]) ?? 1;
+  const index = header.findIndex((cell, columnIndex) => columnIndex + 1 > skuNameColumn && textLooksLikeStoreColumn(cell));
+  return index >= 0 ? index + 1 : undefined;
+};
+
 const payloadText = (payload: Payload): string =>
   payload.sheets.flatMap((sheet) => safeRows(sheet).map((row) => row.join(" "))).join("\n");
 
@@ -204,8 +222,59 @@ const looksLikeCardItems = (payload: Payload): boolean => {
     /(数量|发货数量|出库数量)/.test(content);
 };
 
+const looksLikeStoreMatrix = (payload: Payload): boolean => {
+  const rows = payload.sheets[0] ? safeRows(payload.sheets[0]) : [];
+  const header = rows[0] ?? [];
+  const normalized = header.join(" ");
+  return payload.sheets.length === 1 &&
+    /SKU|物品|商品/.test(normalized) &&
+    /(门店|下单后结余|结余)/.test(normalized) &&
+    header.length >= 8 &&
+    header.some((cell, index) => index > 0 && textLooksLikeStoreColumn(cell));
+};
+
+const textLooksLikeStoreColumn = (value: string): boolean =>
+  Boolean(value.trim()) &&
+  !/(SKU|编码|条码|名称|规格|库存|数量|单位|仓库|货主|状态|结余|合计|总和|商品)/.test(value) &&
+  !/^\d+(\.\d+)?$/.test(value.trim());
+
+const looksLikeMultiSheetTable = (payload: Payload): boolean =>
+  payload.sheets.length > 1 &&
+  payload.sheets.every((sheet) => safeRows(sheet).slice(0, 8).some((row) =>
+    row.some((cell) => cell.includes("物品编码")) &&
+    row.some((cell) => cell.includes("物品名称")) &&
+    row.some((cell) => /(出库数量|发货数量|数量)/.test(cell))
+  ));
+
+const looksLikePlainTextBlocks = (payload: Payload): boolean => {
+  const content = payloadText(payload);
+  return /\.docx$/i.test(payload.fileName) &&
+    /━━━/.test(content) &&
+    /\d+\.\s*[^|\s]+\s*\|/.test(content);
+};
+
+const looksLikeWeeklyCompoundMatrix = (payload: Payload): boolean => {
+  const rows = payload.sheets[0] ? safeRows(payload.sheets[0]) : [];
+  const header = rows[0] ?? [];
+  const content = payloadText(payload);
+  return /(周一|周二|周三|周四|周五|日期)/.test(header.join(" ")) &&
+    /(门店|收货门店)/.test(header.join(" ")) &&
+    /[xX×]\s*\d+/.test(content);
+};
+
+const looksLikeMultiPdfBlocks = (payload: Payload): boolean => {
+  const content = payloadText(payload);
+  return /\.pdf$/i.test(payload.fileName) &&
+    /(---PAGE---|━━━)/.test(content) &&
+    (content.match(/收货人/g)?.length ?? 0) >= 2;
+};
+
 const inferTextItemPattern = (payload: Payload): string | undefined =>
-  looksLikePdfTextItems(payload)
+  looksLikePlainTextBlocks(payload)
+    ? "\\d+\\.\\s*(?<skuCode>[^\\s|]+)\\s*\\|\\s*(?<skuName>[^|]+)\\|\\s*(?<spec>[^|]+)\\|\\s*(?<quantity>\\d+)"
+    : looksLikeMultiPdfBlocks(payload)
+      ? "\\b\\d+\\s+(?<skuCode>[A-Z0-9-]{4,})\\s+(?<skuName>[^\\s]+)\\s+(?<spec>[^\\s]+)\\s+(?:件|瓶|包|桶|袋|盒|箱)\\s+(?<quantity>\\d+)\\b"
+      : looksLikePdfTextItems(payload)
     ? "\\b\\d+\\s+(?<remark>[^\\s]+)\\s+(?<skuCode>[A-Z0-9-]{4,})\\s+(?<skuName>.+?)\\s+(?<spec>(?:\\d[^\\s]*(?:\\s*/\\s*[^\\s]+)?|[A-Z0-9]+码|均码))\\s+(?<unit>件|瓶|包|桶|袋|盒|箱)\\s+(?<quantity>\\d+)\\b"
     : undefined;
 
@@ -228,6 +297,11 @@ const normalizeModelRule = (rule: Partial<ParseRule>, payload: Payload): Partial
   const mappings: ParseRule["mappings"] = {};
   const rawMappings = rule.mappings && typeof rule.mappings === "object" ? rule.mappings as Record<string, unknown> : {};
   const cardLike = looksLikeCardItems(payload);
+  const weeklyMatrixLike = looksLikeWeeklyCompoundMatrix(payload);
+  const storeMatrixLike = !weeklyMatrixLike && looksLikeStoreMatrix(payload);
+  const multiSheetLike = looksLikeMultiSheetTable(payload);
+  const plainTextBlocksLike = looksLikePlainTextBlocks(payload);
+  const multiPdfBlocksLike = looksLikeMultiPdfBlocks(payload);
   for (const [rawField, rawMapping] of Object.entries(rawMappings)) {
     const field = normalizeFieldName(rawField);
     if (!field) continue;
@@ -241,13 +315,38 @@ const normalizeModelRule = (rule: Partial<ParseRule>, payload: Payload): Partial
     mappings.quantity ??= { source: "header", header: "数量" };
     mappings.remark ??= { source: "header", header: "备注" };
   }
+  if (storeMatrixLike) {
+    const header = safeRows(payload.sheets[0])[0] ?? [];
+    mappings.skuName = headerMappingByPattern(header, [/SKU.*名称/, /物品.*名称/, /商品.*名称/], { source: "index", index: 3 });
+    mappings.skuCode = headerMappingByPattern(header, [/外部.*编码/, /SKU.*条码/, /SKU.*编码/, /物品.*编码/, /商品.*编码/], { source: "index", index: 5 });
+    mappings.spec = headerMappingByPattern(header, [/规格/], { source: "index", index: 8 });
+  }
+  if (multiSheetLike) {
+    mappings.storeName = { source: "sheet" };
+    mappings.skuCode = { source: "header", header: "物品编码" };
+    mappings.skuName = { source: "header", header: "物品名称" };
+    mappings.spec = { source: "header", header: "规格型号" };
+    mappings.quantity = { source: "header", header: "出库数量" };
+    mappings.remark = { source: "header", header: "备注" };
+  }
+  if (weeklyMatrixLike) {
+    mappings.skuCode ??= { source: "static", value: "AUTO" };
+  }
+  if (plainTextBlocksLike || multiPdfBlocksLike) {
+    mappings.storeName ??= { source: "regex", pattern: "门店：\\s*([^\\s]+)" };
+    mappings.receiverName ??= { source: "regex", pattern: "收货人：\\s*([^\\s]+)" };
+    mappings.receiverPhone ??= { source: "regex", pattern: "电话：\\s*([0-9-]+)" };
+    mappings.receiverAddress ??= { source: "regex", pattern: "地址：\\s*([^\\n]+)" };
+  }
   if (!Object.keys(mappings).length) return null;
   const rawSheetStrategy = rule.sheetStrategy as unknown;
-  const sheetStrategy = rawSheetStrategy === "all" || (typeof rawSheetStrategy === "object" && rawSheetStrategy && (rawSheetStrategy as { type?: unknown }).type === "all") ? "all" : "first";
+  const sheetStrategy = multiSheetLike || rawSheetStrategy === "all" || (typeof rawSheetStrategy === "object" && rawSheetStrategy && (rawSheetStrategy as { type?: unknown }).type === "all") ? "all" : "first";
   const headerRow = inferHeaderRow(payload, Number(rule.headerRow || 1));
-  const dataStartRow = Number(rule.dataStartRow || Math.max(headerRow + 1, 2));
+  const dataStartRow = multiSheetLike || storeMatrixLike || weeklyMatrixLike
+    ? Math.max(headerRow + 1, 2)
+    : Number(rule.dataStartRow || Math.max(headerRow + 1, 2));
   const itemPattern = rule.itemPattern ?? inferTextItemPattern(payload);
-  const mode = itemPattern ? "text" : cardLike ? "cards" : rule.mode && ["table", "matrix", "cards", "text"].includes(rule.mode) ? rule.mode : "table";
+  const mode = itemPattern ? "text" : cardLike ? "cards" : storeMatrixLike || weeklyMatrixLike ? "matrix" : rule.mode && ["table", "matrix", "cards", "text"].includes(rule.mode) ? rule.mode : "table";
   if (itemPattern) {
     mappings.externalCode ??= { source: "regex", pattern: "单据编号：\\s*([A-Z0-9]+)" };
     mappings.storeName ??= { source: "regex", pattern: "收货机构：\\s*([^\\s]+)" };
@@ -270,8 +369,15 @@ const normalizeModelRule = (rule: Partial<ParseRule>, payload: Payload): Partial
     dataStartRow,
     itemPattern,
     boundaryPattern: rule.boundaryPattern ?? (cardLike ? "调拨记录" : undefined),
+    blockPattern: rule.blockPattern ?? (plainTextBlocksLike || multiPdfBlocksLike ? "---PAGE---|━━━" : undefined),
     itemHeaderPattern: rule.itemHeaderPattern ?? (cardLike ? "物品编码" : undefined),
     stopWhenContains: rule.stopWhenContains ?? (cardLike ? "合计" : inferStopWhenContains(payload)),
+    matrixValueStartColumn: rule.matrixValueStartColumn ?? (storeMatrixLike ? inferStoreMatrixStartColumn(payload) : weeklyMatrixLike ? 2 : undefined),
+    matrixValueEndColumn: rule.matrixValueEndColumn,
+    matrixStopHeaderPattern: rule.matrixStopHeaderPattern ?? (storeMatrixLike ? "下单后结余|结余|库存|合计" : undefined),
+    matrixColumnRole: rule.matrixColumnRole ?? (weeklyMatrixLike ? "date" : storeMatrixLike ? "store" : undefined),
+    matrixRowStoreMapping: rule.matrixRowStoreMapping ?? (weeklyMatrixLike ? { source: "index", index: 1 } : undefined),
+    compoundCellPattern: rule.compoundCellPattern ?? (weeklyMatrixLike ? "(?<skuName>[^xX×\\n]+)[xX×](?<quantity>\\d+)" : undefined),
     assumptions: Array.isArray(rule.assumptions) ? rule.assumptions.map((item) => typeof item === "string" ? item : JSON.stringify(item)) : ["大模型生成规则，已由服务端归一化字段映射"],
     mappings,
     tailExtractions: rule.tailExtractions?.length ? rule.tailExtractions : cardLike ? [
