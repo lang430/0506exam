@@ -31,6 +31,13 @@ const toNumber = (value: string): number | string => {
   return match ? Number(match[0]) : text(value);
 };
 
+const rowDuplicateKey = (row: Pick<OrderRow, "externalCode" | "skuCode" | "skuName">): string => {
+  const externalCode = text(row.externalCode);
+  if (!externalCode) return "";
+  const skuKey = text(row.skuCode) || text(row.skuName);
+  return skuKey ? `${externalCode}::${skuKey}` : externalCode;
+};
+
 const makeHeaderMap = (row: string[]): Map<string, number> => {
   const map = new Map<string, number>();
   row.forEach((cell, index) => {
@@ -231,6 +238,18 @@ export const parseByRule = (sheets: SheetSnapshot[], rule: ParseRule): OrderRow[
 
 export const validateRows = (rows: OrderRow[], existingCodes: Set<string>): ValidationIssue[] => {
   const issues: ValidationIssue[] = [];
+  const firstRowByDuplicateKey = new Map<string, number>();
+  const duplicateRowsByDuplicateKey = new Map<string, number[]>();
+  rows.forEach((row, index) => {
+    const duplicateKey = rowDuplicateKey(row);
+    if (!duplicateKey) return;
+    const firstRow = firstRowByDuplicateKey.get(duplicateKey);
+    if (firstRow === undefined) {
+      firstRowByDuplicateKey.set(duplicateKey, index + 1);
+      return;
+    }
+    duplicateRowsByDuplicateKey.set(duplicateKey, [...(duplicateRowsByDuplicateKey.get(duplicateKey) ?? [firstRow]), index + 1]);
+  });
   rows.forEach((row, index) => {
     const rowNumber = index + 1;
     const add = (field: ValidationIssue["field"], message: string): void => {
@@ -240,6 +259,15 @@ export const validateRows = (rows: OrderRow[], existingCodes: Set<string>): Vali
     if (!text(row.skuName)) add("skuName", "SKU物品名称必填");
     if (!(Number(row.quantity) > 0)) add("quantity", "SKU发货数量必须为正数");
     if (!text(row.storeName) && !(text(row.receiverName) && text(row.receiverPhone) && text(row.receiverAddress))) add("row", "收货门店或收件人姓名、电话、地址二选一必填");
+    const phone = text(row.receiverPhone);
+    if (phone && !/^1[3-9]\d{9}$|^(0\d{2,3}-?)?\d{7,8}$/.test(phone)) add("receiverPhone", "电话格式错误");
+    const duplicateKey = rowDuplicateKey(row);
+    if (duplicateKey && existingCodes.has(duplicateKey)) add("externalCode", "外部编码与已存在数据重复");
+    const duplicateRows = duplicateKey ? duplicateRowsByDuplicateKey.get(duplicateKey) : undefined;
+    if (duplicateRows?.includes(rowNumber)) {
+      const otherRows = duplicateRows.filter((item) => item !== rowNumber).join("、");
+      add("externalCode", `外部编码同批次重复，与第 ${otherRows} 行重复`);
+    }
   });
   return issues;
 };

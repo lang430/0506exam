@@ -21,7 +21,7 @@ const checks = {
   addAndDeleteRows: page.includes("新增行") && page.includes("deletePreviewRow"),
   fullErrorList: page.includes("已全部列出") && !page.includes("issues.slice(0, 30)"),
   previewPagination: page.includes("previewPage") && page.includes("totalPreviewPages") && page.includes("每页 {previewPageSize} 行") && !page.includes("加载更多"),
-  realtimeAiRuleGeneration: page.includes("文件已读取，正在调用 AI 生成推荐规则") && page.includes("await generateRule(nextSheets, file.name, true, true)") && !page.includes("parseWithReusableRule(nextSheets"),
+  realtimeAiRuleGeneration: page.includes("文件已读取，请手动选择已有规则或点击新建规则生成推荐规则") && page.includes("const startNewRule = (): void =>") && page.includes("void generateRule(sheets, fileName, false)") && !page.includes("parseWithReusableRule(nextSheets"),
   aiRuleParsesWithoutDatabase: page.includes("parseByRule(sourceSheets, rule)") && page.includes("请预览确认后点击保存"),
   aiRulesRequireUserConfirmation: page.includes("setRuleText(JSON.stringify(rule, null, 2))") && page.includes("saveRuleRemote(rule)") && !page.includes("const savedData = await saveRuleRemote(rule)"),
   degradedAiRulesNotSaved: page.includes("isDegradedAiRule") && page.includes("aiData.degraded") && page.includes("degraded: true"),

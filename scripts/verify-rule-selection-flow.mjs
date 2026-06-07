@@ -4,7 +4,8 @@ const page = readFileSync("app/page.tsx", "utf-8");
 
 const checks = {
   uploadDoesNotAutoMatchSavedRules: !page.includes("parseWithReusableRule(nextSheets") && !page.includes("已有规则未命中，正在调用 AI 生成规则"),
-  uploadGeneratesAiDraft: page.includes("文件已读取，正在调用 AI 生成推荐规则") && page.includes("await generateRule(nextSheets, file.name, true, true)"),
+  uploadDoesNotAutoGenerateAiDraft: !page.includes("await generateRule(nextSheets, file.name, true, true)") && page.includes("文件已读取，请手动选择已有规则或点击新建规则生成推荐规则"),
+  newRuleUsesAiWhenFileLoaded: page.includes("const startNewRule = (): void =>") && page.includes("if (sheets.length)"),
   aiFailureDoesNotSilentlyUseExistingRule: !page.includes("parseWithExistingRule(sourceSheets"),
   previewParsesEditorDraft: page.includes("const rule = JSON.parse(ruleText) as ParseRule") && page.includes("parseByRule(sheets, rule)"),
   previewSelectsDraftRule: page.includes("setSelectedRuleId(rule.id)") && page.includes("试解析完成")

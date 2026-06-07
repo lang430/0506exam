@@ -28,6 +28,13 @@ const orderGroupKey = (row: OrderRow): string =>
   [row.storeName, row.receiverName, row.receiverPhone, row.receiverAddress].map((value) => String(value ?? "").trim()).join("|") ||
   row.id;
 
+const rowDuplicateKey = (row: Pick<OrderRow, "externalCode" | "skuCode" | "skuName">): string => {
+  const externalCode = String(row.externalCode ?? "").trim();
+  if (!externalCode) return "";
+  const skuKey = String(row.skuCode || row.skuName || "").trim();
+  return skuKey ? `${externalCode}::${skuKey}` : externalCode;
+};
+
 const groupRowsByOrder = (sourceRows: OrderRow[]) => {
   const map = new Map<string, OrderRow[]>();
   for (const row of sourceRows) {
@@ -97,7 +104,7 @@ export default function Page() {
   const [previewPage, setPreviewPage] = useState(1);
   const [historyPage, setHistoryPage] = useState(1);
   const selectedRule = rules.find((rule) => rule.id === selectedRuleId);
-  const existingCodes = useMemo(() => new Set(history.map((row) => row.externalCode).filter(Boolean)), [history]);
+  const existingCodes = useMemo(() => new Set(history.map(rowDuplicateKey).filter(Boolean)), [history]);
   const previewPageSize = 100;
   const totalPreviewPages = Math.max(1, Math.ceil(rows.length / previewPageSize));
   const visibleRows = rows.slice((previewPage - 1) * previewPageSize, previewPage * previewPageSize);
@@ -232,8 +239,7 @@ export default function Page() {
       setIssues([]);
       setPreviewPage(1);
       setProgress(100);
-      setTimedToast("文件已读取，正在调用 AI 生成推荐规则", "info");
-      await generateRule(nextSheets, file.name, true, true);
+      setTimedToast("文件已读取，请手动选择已有规则或点击新建规则生成推荐规则", "info");
     } catch (error) {
       setTimedToast(error instanceof Error ? error.message : "文件读取失败", "error");
     } finally {
@@ -245,6 +251,18 @@ export default function Page() {
     event.preventDefault();
     const file = event.dataTransfer.files?.[0];
     if (file) void readFile(file);
+  };
+
+  const startNewRule = (): void => {
+    if (busy) return;
+    if (sheets.length) {
+      void generateRule(sheets, fileName, false);
+      return;
+    }
+    const rule = createBlankRule();
+    setRuleText(JSON.stringify(rule, null, 2));
+    setSelectedRuleId("");
+    setTimedToast("已创建空白规则，请上传文件后试解析确认", "info");
   };
 
   const generateRule = async (sourceSheets = sheets, sourceFileName = fileName, auto = false, fromUpload = false): Promise<void> => {
@@ -517,7 +535,7 @@ export default function Page() {
             </select>
             <div className="actions">
               <button onClick={() => void generateRule()} disabled={busy}><Wand2 size={16} /> AI 生成规则</button>
-              <button onClick={() => setRuleText(JSON.stringify(createBlankRule(), null, 2))} disabled={busy}><Plus size={16} /> 新建规则</button>
+              <button onClick={startNewRule} disabled={busy}><Plus size={16} /> 新建规则</button>
               <button onClick={copyRule} disabled={busy}><Copy size={16} /> 复制</button>
               <button onClick={saveRule} disabled={busy}><Save size={16} /> 保存</button>
               <button onClick={deleteRule} disabled={busy}><Trash2 size={16} /> 删除</button>
