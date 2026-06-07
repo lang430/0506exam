@@ -102,32 +102,62 @@ export async function DELETE() {
 }
 
 export async function POST(request: Request) {
-  const payload = await request.json() as OrderRow[] | { fileName?: string; ruleId?: string; rows?: OrderRow[] };
-  const rows = Array.isArray(payload) ? payload : payload.rows ?? [];
-  const sql = getSql();
-  if (!sql) return NextResponse.json({ error: "数据库未配置，运单数据未写入" }, { status: 503 });
-  await ensureTable(sql);
-  const result = await sql.begin(async (transaction) => {
-    const requestedRuleId = Array.isArray(payload) ? null : payload.ruleId?.trim() || null;
-    const validRuleId = requestedRuleId
-      ? (await transaction<{ id: string }[]>`select id from parse_rules where id = ${requestedRuleId} limit 1`)[0]?.id ?? null
-      : null;
-    const [batch] = await transaction<{ id: string; created_at: Date }[]>`
-      insert into import_batches (file_name, rule_id, total_rows, success_rows, failed_rows, status)
-      values (${Array.isArray(payload) ? null : payload.fileName ?? null}, ${validRuleId}, ${rows.length}, ${rows.length}, 0, 'submitted')
-      returning id, created_at
-    `;
-    for (const row of rows) {
-      const storedRow = { ...row, submittedAt: batch.created_at };
-      await transaction`insert into imported_orders (
+  try {
+    const payload = await request.json() as OrderRow[] | { fileName?: string; ruleId?: string; rows?: OrderRow[] };
+    const rows = Array.isArray(payload) ? payload : payload.rows ?? [];
+    const sql = getSql();
+    if (!sql) return NextResponse.json({ error: "数据库未配置，运单数据未写入" }, { status: 503 });
+    await ensureTable(sql);
+    const result = await sql.begin(async (transaction) => {
+      const requestedRuleId = Array.isArray(payload) ? null : payload.ruleId?.trim() || null;
+      const validRuleId = requestedRuleId
+        ? (await transaction<{ id: string }[]>`select id from parse_rules where id = ${requestedRuleId} limit 1`)[0]?.id ?? null
+        : null;
+      const [batch] = await transaction<{ id: string; created_at: Date }[]>`
+        insert into import_batches (file_name, rule_id, total_rows, success_rows, failed_rows, status)
+        values (${Array.isArray(payload) ? null : payload.fileName ?? null}, ${validRuleId}, ${rows.length}, ${rows.length}, 0, 'submitted')
+        returning id, created_at
+      `;
+      if (rows.length) {
+        const orderValues = rows.map((row) => {
+          const storedRow = { ...row, submittedAt: batch.created_at };
+          return {
+            id: row.id,
+            batch_id: batch.id,
+            payload: transaction.json(JSON.parse(JSON.stringify(storedRow))),
+            external_code: row.externalCode,
+            store_name: row.storeName,
+            receiver_name: row.receiverName,
+            receiver_phone: row.receiverPhone,
+            receiver_address: row.receiverAddress,
+            sku_code: row.skuCode,
+            sku_name: row.skuName,
+            quantity: Number(row.quantity) || null,
+            spec: row.spec,
+            remark: row.remark,
+            source: row.source
+          };
+        });
+        await transaction`insert into imported_orders (
           id, batch_id, payload, external_code, store_name, receiver_name, receiver_phone,
-          receiver_address, sku_code, sku_name, quantity, spec, remark, source, updated_at
+          receiver_address, sku_code, sku_name, quantity, spec, remark, source
         )
-        values (
-          ${row.id}, ${batch.id}, ${transaction.json(JSON.parse(JSON.stringify(storedRow)))}, ${row.externalCode}, ${row.storeName},
-          ${row.receiverName}, ${row.receiverPhone}, ${row.receiverAddress}, ${row.skuCode},
-          ${row.skuName}, ${Number(row.quantity) || null}, ${row.spec}, ${row.remark}, ${row.source}, now()
-        )
+        values ${transaction(orderValues,
+          "id",
+          "batch_id",
+          "payload",
+          "external_code",
+          "store_name",
+          "receiver_name",
+          "receiver_phone",
+          "receiver_address",
+          "sku_code",
+          "sku_name",
+          "quantity",
+          "spec",
+          "remark",
+          "source"
+        )}
         on conflict (id) do update set
           batch_id = excluded.batch_id,
           payload = excluded.payload,
@@ -143,8 +173,12 @@ export async function POST(request: Request) {
           remark = excluded.remark,
           source = excluded.source,
           updated_at = now()`;
-    }
-    return { batchId: batch.id, ruleId: validRuleId, submittedAt: batch.created_at, rows: rows.map((row) => ({ ...row, submittedAt: batch.created_at })) };
-  });
-  return NextResponse.json({ saved: rows.length, failed: 0, mode: "database", ...result });
+      }
+      return { batchId: batch.id, ruleId: validRuleId, submittedAt: batch.created_at, rows: rows.map((row) => ({ ...row, submittedAt: batch.created_at })) };
+    });
+    return NextResponse.json({ saved: rows.length, failed: 0, mode: "database", ...result });
+  } catch (error) {
+    console.error("[orders] write-failed", error);
+    return NextResponse.json({ error: "运单数据写入失败，请稍后重试或检查数据库连接" }, { status: 500 });
+  }
 }
