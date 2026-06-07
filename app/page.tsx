@@ -232,12 +232,8 @@ export default function Page() {
       setIssues([]);
       setPreviewPage(1);
       setProgress(100);
-      setTimedToast("文件已读取，正在优先匹配已有解析规则", "info");
-      const reusableRules = rules.length ? rules : await fetchReusableRules();
-      if (!parseWithReusableRule(nextSheets, reusableRules)) {
-        setTimedToast("已有规则未命中，正在调用 AI 生成规则", "info");
-        await generateRule(nextSheets, file.name, true, true);
-      }
+      setTimedToast("文件已读取，正在调用 AI 生成推荐规则", "info");
+      await generateRule(nextSheets, file.name, true, true);
     } catch (error) {
       setTimedToast(error instanceof Error ? error.message : "文件读取失败", "error");
     } finally {
@@ -270,7 +266,6 @@ export default function Page() {
       const rawText = await response.text();
       const aiData = rawText ? JSON.parse(rawText) : {};
       if (!response.ok || aiData.degraded || !aiData.rule) {
-        if (auto && parseWithExistingRule(sourceSheets, aiData.error ?? "AI 规则生成失败")) return;
         setProgress(100);
         setProgressText("AI失败");
         return setTimedToast(aiData.error ?? "AI 规则生成失败", "error");
@@ -294,52 +289,6 @@ export default function Page() {
     } finally {
       setBusy(false);
     }
-  };
-
-  const parseWithExistingRule = (sourceSheets: SheetSnapshot[], reason: string): boolean => {
-    const rule = selectedRule ?? rules[0];
-    if (!rule) return false;
-    const parsed = parseByRule(sourceSheets, rule);
-    const nextIssues = validateRows(parsed, existingCodes);
-    setRows(parsed.map((row) => ({ ...row, errors: nextIssues.filter((issue) => issue.rowId === row.id).map((issue) => issue.message) })));
-    setIssues(nextIssues);
-    setPreviewPage(1);
-    setProgressText(`${parsed.length}/${parsed.length}`);
-    setProgress(100);
-    setTimedToast(`AI 规则生成失败，已使用「${rule.name}」解析 ${parsed.length} 行：${reason}`, "info");
-    return true;
-  };
-
-  const fetchReusableRules = async (): Promise<ParseRule[]> => {
-    try {
-      const response = await fetch("/api/rules");
-      const data = await response.json();
-      if (!response.ok || !Array.isArray(data.rules)) return [];
-      const usableRules = (data.rules as ParseRule[]).filter((rule) => !isDegradedAiRule(rule));
-      setRules(usableRules);
-      return usableRules;
-    } catch {
-      return [];
-    }
-  };
-
-  const parseWithReusableRule = (sourceSheets: SheetSnapshot[], candidateRules = rules): boolean => {
-    for (const rule of candidateRules) {
-      const parsed = parseByRule(sourceSheets, rule);
-      if (!parsed.length) continue;
-      const nextIssues = validateRows(parsed, existingCodes);
-      if (nextIssues.length) continue;
-      setSelectedRuleId(rule.id);
-      setRuleText(JSON.stringify(rule, null, 2));
-      setRows(parsed.map((row) => ({ ...row, errors: [] })));
-      setIssues([]);
-      setPreviewPage(1);
-      setProgress(100);
-      setProgressText(`${parsed.length}/${parsed.length}`);
-      setTimedToast(`已使用已有规则「${rule.name}」解析 ${parsed.length} 行`, "success");
-      return true;
-    }
-    return false;
   };
 
   const saveRule = (): void => {
@@ -393,15 +342,21 @@ export default function Page() {
   const runParse = (): void => {
     if (busy) return;
     if (!sheets.length) return setTimedToast("请先上传文件", "error");
-    if (!selectedRule) return setTimedToast("请先从数据库选择解析规则", "error");
-    const parsed = parseByRule(sheets, selectedRule);
-    const nextIssues = validateRows(parsed, existingCodes);
-    setPreviewPage(1);
-    setProgress(100);
-    setProgressText(`${parsed.length}/${parsed.length}`);
-    setRows(parsed.map((row) => ({ ...row, errors: nextIssues.filter((issue) => issue.rowId === row.id).map((issue) => issue.message) })));
-    setIssues(nextIssues);
-    setTimedToast(`试解析完成：${parsed.length} 行，${nextIssues.length} 个问题`, nextIssues.length ? "info" : "success");
+    try {
+      const rule = JSON.parse(ruleText) as ParseRule;
+      const parsed = parseByRule(sheets, rule);
+      const nextIssues = validateRows(parsed, existingCodes);
+      setRules((currentRules) => [rule, ...currentRules.filter((item) => item.id !== rule.id)]);
+      setSelectedRuleId(rule.id);
+      setPreviewPage(1);
+      setProgress(100);
+      setProgressText(`${parsed.length}/${parsed.length}`);
+      setRows(parsed.map((row) => ({ ...row, errors: nextIssues.filter((issue) => issue.rowId === row.id).map((issue) => issue.message) })));
+      setIssues(nextIssues);
+      setTimedToast(`试解析完成：${parsed.length} 行，${nextIssues.length} 个问题`, nextIssues.length ? "info" : "success");
+    } catch {
+      setTimedToast("规则 JSON 格式不正确，无法试解析", "error");
+    }
   };
 
   const revalidateAndSetRows = (nextRows: OrderRow[]): void => {
@@ -566,7 +521,7 @@ export default function Page() {
               <button onClick={copyRule} disabled={busy}><Copy size={16} /> 复制</button>
               <button onClick={saveRule} disabled={busy}><Save size={16} /> 保存</button>
               <button onClick={deleteRule} disabled={busy}><Trash2 size={16} /> 删除</button>
-              <button onClick={runParse} disabled={!selectedRule || busy}><Play size={16} /> 试解析</button>
+              <button onClick={runParse} disabled={!ruleText.trim() || busy}><Play size={16} /> 试解析</button>
             </div>
             <textarea value={ruleText} onChange={(event) => setRuleText(event.target.value)} spellCheck={false} />
           </section>
