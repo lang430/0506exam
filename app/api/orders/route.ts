@@ -182,11 +182,7 @@ export async function POST(request: Request) {
         });
         for (let index = 0; index < orderValues.length; index += insertBatchSize) {
           const chunk = orderValues.slice(index, index + insertBatchSize);
-          await transaction`insert into imported_orders (
-            id, batch_id, payload, external_code, store_name, receiver_name, receiver_phone,
-            receiver_address, sku_code, sku_name, quantity, spec, remark, source
-          )
-          values ${transaction(chunk,
+          await transaction`insert into imported_orders ${transaction(chunk,
             "id",
             "batch_id",
             "payload",
