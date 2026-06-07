@@ -166,7 +166,7 @@ export async function POST(request: Request) {
           return {
             id: storedRow.id,
             batch_id: batch.id,
-            payload: transaction.json(orderPayloadJson(storedRow)),
+            payload: JSON.stringify(orderPayloadJson(storedRow)),
             external_code: nullableText(row.externalCode),
             store_name: nullableText(row.storeName),
             receiver_name: nullableText(row.receiverName),

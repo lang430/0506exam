@@ -6,6 +6,7 @@ const checks = {
   noPerRowAwaitInsert: !/for\s*\(const row of rows\)[\s\S]*?await transaction`insert into imported_orders/.test(route),
   usesBulkValuesHelper: route.includes("const orderValues = rows.map") && route.includes("${transaction(chunk,"),
   normalizesUndefinedValues: route.includes("const nullableText =") && route.includes("nullableText(row.spec)") && route.includes("cleanOrderPayload"),
+  avoidsSqlFragmentsInsideBulkValues: !route.includes("payload: transaction.json") && route.includes("payload: JSON.stringify(orderPayloadJson(storedRow))"),
   chunksBulkWrites: route.includes("const insertBatchSize") && route.includes("for (let index = 0; index < orderValues.length; index += insertBatchSize)"),
   catchesPostErrorsAsJson: route.includes("catch (error)") && route.includes("运单数据写入失败")
 };
