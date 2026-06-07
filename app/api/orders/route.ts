@@ -4,6 +4,8 @@ import type { OrderRow } from "@/lib/types";
 
 export const runtime = "nodejs";
 
+type JsonObject = Record<string, string | number | string[]>;
+
 const ensureTable = async (sql: NonNullable<ReturnType<typeof getSql>>): Promise<void> => {
   await sql`create extension if not exists pgcrypto`;
   await sql`create table if not exists parse_rules (
@@ -51,6 +53,46 @@ const ensureTable = async (sql: NonNullable<ReturnType<typeof getSql>>): Promise
 
 const escapeLike = (value: string): string =>
   value.replace(/[\\%_]/g, (match) => `\\${match}`);
+
+const insertBatchSize = 200;
+
+const nullableText = (value: unknown): string =>
+  String(value ?? "");
+
+const cleanOrderPayload = (row: OrderRow, submittedAt: Date): OrderRow => ({
+  id: nullableText(row.id) || crypto.randomUUID(),
+  externalCode: nullableText(row.externalCode),
+  storeName: nullableText(row.storeName),
+  receiverName: nullableText(row.receiverName),
+  receiverPhone: nullableText(row.receiverPhone),
+  receiverAddress: nullableText(row.receiverAddress),
+  skuCode: nullableText(row.skuCode),
+  skuName: nullableText(row.skuName),
+  quantity: row.quantity ?? "",
+  spec: nullableText(row.spec),
+  remark: nullableText(row.remark),
+  source: nullableText(row.source),
+  submittedAt: submittedAt.toISOString(),
+  errors: Array.isArray(row.errors) ? row.errors.map((error) => nullableText(error)) : []
+});
+
+const orderPayloadJson = (row: OrderRow): JsonObject => ({
+  id: row.id,
+  externalCode: row.externalCode,
+  storeName: row.storeName,
+  receiverName: row.receiverName,
+  receiverPhone: row.receiverPhone,
+  receiverAddress: row.receiverAddress,
+  skuCode: row.skuCode,
+  skuName: row.skuName,
+  quantity: row.quantity,
+  spec: row.spec,
+  remark: row.remark,
+  source: row.source,
+  submittedAt: row.submittedAt ?? "",
+  errors: row.errors
+});
+
 
 export async function GET(request: Request) {
   const sql = getSql();
@@ -120,61 +162,64 @@ export async function POST(request: Request) {
       `;
       if (rows.length) {
         const orderValues = rows.map((row) => {
-          const storedRow = { ...row, submittedAt: batch.created_at };
+          const storedRow = cleanOrderPayload(row, batch.created_at);
           return {
-            id: row.id,
+            id: storedRow.id,
             batch_id: batch.id,
-            payload: transaction.json(JSON.parse(JSON.stringify(storedRow))),
-            external_code: row.externalCode,
-            store_name: row.storeName,
-            receiver_name: row.receiverName,
-            receiver_phone: row.receiverPhone,
-            receiver_address: row.receiverAddress,
-            sku_code: row.skuCode,
-            sku_name: row.skuName,
+            payload: transaction.json(orderPayloadJson(storedRow)),
+            external_code: nullableText(row.externalCode),
+            store_name: nullableText(row.storeName),
+            receiver_name: nullableText(row.receiverName),
+            receiver_phone: nullableText(row.receiverPhone),
+            receiver_address: nullableText(row.receiverAddress),
+            sku_code: nullableText(row.skuCode),
+            sku_name: nullableText(row.skuName),
             quantity: Number(row.quantity) || null,
-            spec: row.spec,
-            remark: row.remark,
-            source: row.source
+            spec: nullableText(row.spec),
+            remark: nullableText(row.remark),
+            source: nullableText(row.source)
           };
         });
-        await transaction`insert into imported_orders (
-          id, batch_id, payload, external_code, store_name, receiver_name, receiver_phone,
-          receiver_address, sku_code, sku_name, quantity, spec, remark, source
-        )
-        values ${transaction(orderValues,
-          "id",
-          "batch_id",
-          "payload",
-          "external_code",
-          "store_name",
-          "receiver_name",
-          "receiver_phone",
-          "receiver_address",
-          "sku_code",
-          "sku_name",
-          "quantity",
-          "spec",
-          "remark",
-          "source"
-        )}
-        on conflict (id) do update set
-          batch_id = excluded.batch_id,
-          payload = excluded.payload,
-          external_code = excluded.external_code,
-          store_name = excluded.store_name,
-          receiver_name = excluded.receiver_name,
-          receiver_phone = excluded.receiver_phone,
-          receiver_address = excluded.receiver_address,
-          sku_code = excluded.sku_code,
-          sku_name = excluded.sku_name,
-          quantity = excluded.quantity,
-          spec = excluded.spec,
-          remark = excluded.remark,
-          source = excluded.source,
-          updated_at = now()`;
+        for (let index = 0; index < orderValues.length; index += insertBatchSize) {
+          const chunk = orderValues.slice(index, index + insertBatchSize);
+          await transaction`insert into imported_orders (
+            id, batch_id, payload, external_code, store_name, receiver_name, receiver_phone,
+            receiver_address, sku_code, sku_name, quantity, spec, remark, source
+          )
+          values ${transaction(chunk,
+            "id",
+            "batch_id",
+            "payload",
+            "external_code",
+            "store_name",
+            "receiver_name",
+            "receiver_phone",
+            "receiver_address",
+            "sku_code",
+            "sku_name",
+            "quantity",
+            "spec",
+            "remark",
+            "source"
+          )}
+          on conflict (id) do update set
+            batch_id = excluded.batch_id,
+            payload = excluded.payload,
+            external_code = excluded.external_code,
+            store_name = excluded.store_name,
+            receiver_name = excluded.receiver_name,
+            receiver_phone = excluded.receiver_phone,
+            receiver_address = excluded.receiver_address,
+            sku_code = excluded.sku_code,
+            sku_name = excluded.sku_name,
+            quantity = excluded.quantity,
+            spec = excluded.spec,
+            remark = excluded.remark,
+            source = excluded.source,
+            updated_at = now()`;
+        }
       }
-      return { batchId: batch.id, ruleId: validRuleId, submittedAt: batch.created_at, rows: rows.map((row) => ({ ...row, submittedAt: batch.created_at })) };
+      return { batchId: batch.id, ruleId: validRuleId, submittedAt: batch.created_at, rows: rows.map((row) => cleanOrderPayload(row, batch.created_at)) };
     });
     return NextResponse.json({ saved: rows.length, failed: 0, mode: "database", ...result });
   } catch (error) {
