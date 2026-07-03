@@ -93,6 +93,26 @@ const orderPayloadJson = (row: OrderRow): JsonObject => ({
   errors: row.errors
 });
 
+export const normalizeOrderPayloadForResponse = (payload: unknown, createdAt: Date): OrderRow => {
+  const parsedPayload = typeof payload === "string" ? JSON.parse(payload) as Partial<OrderRow> : payload as Partial<OrderRow>;
+  return {
+    id: nullableText(parsedPayload.id),
+    externalCode: nullableText(parsedPayload.externalCode),
+    storeName: nullableText(parsedPayload.storeName),
+    receiverName: nullableText(parsedPayload.receiverName),
+    receiverPhone: nullableText(parsedPayload.receiverPhone),
+    receiverAddress: nullableText(parsedPayload.receiverAddress),
+    skuCode: nullableText(parsedPayload.skuCode),
+    skuName: nullableText(parsedPayload.skuName),
+    quantity: parsedPayload.quantity ?? "",
+    spec: nullableText(parsedPayload.spec),
+    remark: nullableText(parsedPayload.remark),
+    source: nullableText(parsedPayload.source),
+    submittedAt: createdAt.toISOString(),
+    errors: Array.isArray(parsedPayload.errors) ? parsedPayload.errors.map((error) => nullableText(error)) : []
+  };
+};
+
 
 export async function GET(request: Request) {
   const sql = getSql();
@@ -128,7 +148,7 @@ export async function GET(request: Request) {
     order by created_at desc
     limit 500
   `;
-  return NextResponse.json({ rows: rows.map((row) => ({ ...row.payload, submittedAt: row.created_at })), mode: "database" });
+  return NextResponse.json({ rows: rows.map((row) => normalizeOrderPayloadForResponse(row.payload, row.created_at)), mode: "database" });
 }
 
 export async function DELETE() {
