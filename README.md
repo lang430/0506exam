@@ -2,7 +2,7 @@
 
 V2「万能导入解析系统」的生产级重构：把同步阻塞式下单链路改造为**异步事件驱动 + 批量处理 + 全链路可观测**的导入链路。10,000 行运单从任务创建到入库完成 **8.6 秒**（目标 ≤60s），上传接口服务端处理 **182~400ms**（目标 P95 ≤1s）。
 
-- 在线地址：https://0506exam.vercel.app
+- 在线地址：https://0807v4.vercel.app
 - 提交说明与文档：`docs/` 目录（重构假设说明 / 架构设计文档 / 接口文档 / 压测报告）+ `提交说明.md`（V2 大模型调用说明）
 - V4 需求拆分：`V4需求拆分与开发任务.md`
 
@@ -45,14 +45,14 @@ npm run dev          # http://127.0.0.1:3000
 
 ```bash
 npm run seed     # 幂等：清理旧压测数据 → 20,000 SKU → 压测规则 → 10,000 行压测 Excel（含 170 个预埋错误）
-npm run loadtest -- --base-url https://0506exam.vercel.app   # 压测并输出报告
+npm run loadtest -- --base-url https://0807v4.vercel.app   # 压测并输出报告
 npm test         # 自动化测试（29 项：纯逻辑 + 数据库集成 + HTTP，覆盖题面 10.1 全部场景）
 ```
 
 验收步骤：
 
 1. `npm run seed` 后确认 `sku_master` 20,000 条、`test-data/10000-orders.xlsx` 生成；
-2. 打开 https://0506exam.vercel.app/tasks 上传压测文件（规则选"压测标准表"），观察 1.5s 级进度刷新；
+2. 打开 https://0807v4.vercel.app/tasks 上传压测文件（规则选"压测标准表"），观察 1.5s 级进度刷新；
 3. 任务终态 PARTIAL_SUCCESS：成功 9830 / 失败 170（E001×120 + E003×30 + E004×20）；
 4. 错误明细按批次/错误码筛选、分页、导出 CSV；`/monitor` 查看吞吐与阶段耗时；`/traces` 按 task_id 查看时间线；
 5. `npm run loadtest` 自动完成上述校验并输出 `test-data/loadtest-report.json` 与 `docs/压测报告.md` 结论。
@@ -66,7 +66,7 @@ npm test         # 自动化测试（29 项：纯逻辑 + 数据库集成 + HTTP
 | 消息投递失败 | 队列写入异常 | Outbox 指数退避重试，5 次后转死信（status=failed）不丢记录 |
 | 重复上传/重复消费 | 同一文件二次上传；重放已完成批次 | 上传返回 duplicate_of 提示；重复消费不重复入库、不重复累计进度（测试场景 5 覆盖） |
 | 队列/数据库不可用 | 断开数据库变量 | 监控看板红色告警（503 + alertLevel=critical） |
-| 手动兜底 | `curl -X POST -H "Authorization: Bearer $DISPATCHER_TOKEN" https://0506exam.vercel.app/api/import-dispatcher` | 立即执行一轮调度 |
+| 手动兜底 | `curl -X POST -H "Authorization: Bearer $DISPATCHER_TOKEN" https://0807v4.vercel.app/api/import-dispatcher` | 立即执行一轮调度 |
 
 ## 清理策略
 
