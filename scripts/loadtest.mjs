@@ -186,11 +186,11 @@ const main = async () => {
     process.exit(1);
   }
 
-  // 1. 上传接口 P95 采样（50 行小文件 × 10 次）
+  // 1. 上传接口 P95 采样（50 行小文件 × 10 次；每轮重建保证业务键唯一，不产生 E005 噪音）
   console.log("[loadtest] 1/3 上传接口 P95 采样（小文件 × 10）…");
-  const smallBuffer = await buildSmallFile();
   const uploadSamples = [];
   for (let round = 0; round < 10; round += 1) {
+    const smallBuffer = await buildSmallFile();
     const result = await uploadFile(smallBuffer, `p95-sample-${round}.xlsx`);
     uploadSamples.push(result.elapsed);
     if (result.status >= 500) report.http_500_504 = [...(report.http_500_504 ?? []), result.status];

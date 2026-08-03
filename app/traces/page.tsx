@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Search } from "lucide-react";
-import V4Nav from "@/app/v4-nav";
+import V4Shell from "@/app/v4-shell";
 
 interface TraceHit {
   task_id: string;
@@ -102,9 +102,8 @@ function TracesContent() {
   };
 
   return (
-    <main>
+    <V4Shell title="Trace 检索" subtitle="task_id / 文件名 / 批次号 / 错误码 / 行号范围 → 时间线与失败节点">
       <section className="shell">
-        <V4Nav />
         <section className="panel">
           <div className="panel-title"><Search size={18} /> 全链路 Trace 检索（task_id / 文件名 / 错误码 / 行号范围）</div>
           <div className="history-filters" style={{ gridTemplateColumns: "minmax(200px,2fr) minmax(150px,1fr) 90px 110px 90px 90px auto" }}>
@@ -219,13 +218,13 @@ function TracesContent() {
           </section>
         )}
       </section>
-    </main>
+    </V4Shell>
   );
 }
 
 export default function TracesPage() {
   return (
-    <Suspense fallback={<main><section className="shell"><V4Nav /><section className="panel"><div className="empty-state compact"><strong>加载中…</strong></div></section></section></main>}>
+    <Suspense fallback={<div className="v4-content"><section className="shell"><section className="panel"><div className="empty-state compact"><strong>加载中…</strong></div></section></section></div>}>
       <TracesContent />
     </Suspense>
   );

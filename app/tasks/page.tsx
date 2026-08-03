@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { FileUp, Loader2, Wand2 } from "lucide-react";
-import V4Nav from "@/app/v4-nav";
+import V4Shell from "@/app/v4-shell";
 import type { ParseRule } from "@/lib/types";
 
 interface TaskSummary {
@@ -83,9 +83,8 @@ export default function TasksPage() {
   };
 
   return (
-    <main>
+    <V4Shell title="导入任务" subtitle="异步导入：上传即返回 task_id，后台事件驱动批量处理">
       <section className="shell">
-        <V4Nav />
         <section className="panel">
           <div className="panel-title"><FileUp size={18} /> 新建异步导入任务（上传即返回 task_id）</div>
           <div className="grid" style={{ gridTemplateColumns: "1fr 1fr auto" }}>
@@ -148,6 +147,6 @@ export default function TasksPage() {
           </div>
         </section>
       </section>
-    </main>
+    </V4Shell>
   );
 }

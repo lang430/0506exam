@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, CheckCircle2, Copy, Database, Download, FileUp, Inbox, Loader2, Play, Plus, Save, Trash2, Wand2, XCircle } from "lucide-react";
+import V4Shell from "@/app/v4-shell";
 import { parseByRule, validateRows } from "@/lib/rule-engine";
 import type { OrderField, OrderRow, ParseRule, SheetSnapshot, ValidationIssue } from "@/lib/types";
 
@@ -501,15 +502,9 @@ export default function Page() {
   };
 
   return (
-    <main aria-busy={busy}>
+    <V4Shell title="导入工作台" subtitle="V2 手动链路保留：上传 → 规则选择/AI 生成 → 预览编辑 → 同步提交">
+      <div aria-busy={busy}>
       <section className="shell">
-        <header className="topbar">
-          <div>
-            <p className="eyebrow">万能导入 V2</p>
-            <h1>智能多格式批量下单系统</h1>
-          </div>
-        </header>
-
         <div className="grid">
           <section className="panel">
             <div className="panel-title"><FileUp size={18} /> 文件导入</div>
@@ -629,6 +624,7 @@ export default function Page() {
         <div className={`status ${toastKind}`}>{toastKind === "error" ? <XCircle size={18} /> : <CheckCircle2 size={18} />}{toast}</div>
       </div>}
       {busy && <div className="loading-overlay" role="status" aria-live="polite"><div className="loading-card"><Loader2 className="spinner" size={24} /><strong>处理中</strong><span>{progressText}</span></div></div>}
-    </main>
+      </div>
+    </V4Shell>
   );
 }

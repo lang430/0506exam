@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Activity, AlertTriangle, BarChart3, Layers } from "lucide-react";
-import V4Nav from "@/app/v4-nav";
+import V4Shell from "@/app/v4-shell";
 
 interface MonitorSummary {
   generatedAt: string;
@@ -96,9 +96,8 @@ export default function MonitorPage() {
     : 1;
 
   return (
-    <main>
+    <V4Shell title="监控看板" subtitle="吞吐 / 队列积压 / 阶段耗时 / 错误分布 / 慢批次 / 失败趋势">
       <section className="shell">
-        <V4Nav />
         {critical && (
           <div className="alert-box critical" role="alert">
             <AlertTriangle size={16} /> 队列/数据库不可用：监控聚合失败，请检查数据库连接与部署环境变量。
@@ -223,6 +222,6 @@ export default function MonitorPage() {
           </div>
         )}
       </section>
-    </main>
+    </V4Shell>
   );
 }

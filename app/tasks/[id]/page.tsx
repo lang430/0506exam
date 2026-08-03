@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { AlertTriangle, Download, Loader2, Search } from "lucide-react";
-import V4Nav from "@/app/v4-nav";
+import V4Shell from "@/app/v4-shell";
 
 interface TaskDetail {
   task_id: string;
@@ -107,12 +107,11 @@ export default function TaskDetailPage() {
 
   if (notFound) {
     return (
-      <main>
+      <V4Shell title="任务详情" subtitle="任务不存在或已清理">
         <section className="shell">
-          <V4Nav />
           <section className="panel"><div className="empty-state compact"><strong>任务不存在</strong><span>请检查 task_id 是否正确。</span></div></section>
         </section>
-      </main>
+      </V4Shell>
     );
   }
 
@@ -120,9 +119,8 @@ export default function TaskDetailPage() {
   const finished = task ? TERMINAL_STATUS.includes(task.status) : false;
 
   return (
-    <main>
+    <V4Shell title="任务详情" subtitle="进度轮询 1.5s · 错误明细筛选导出 · 批次执行情况">
       <section className="shell">
-        <V4Nav />
         {!task ? (
           <section className="panel"><div className="empty-state compact"><Loader2 className="spinner" size={28} /><strong>加载任务中</strong></div></section>
         ) : (
@@ -226,6 +224,6 @@ export default function TaskDetailPage() {
           </>
         )}
       </section>
-    </main>
+    </V4Shell>
   );
 }
