@@ -16,11 +16,29 @@ import { join } from "node:path";
 import postgres from "postgres";
 import ExcelJS from "exceljs";
 
-const args = Object.fromEntries(
-  process.argv.slice(2)
-    .map((item) => item.replace(/^--/, "").split("="))
-    .map(([key, value]) => [key, value ?? "true"])
-);
+const parseArgs = (argv) => {
+  const result = {};
+  const items = argv.slice(2);
+  for (let index = 0; index < items.length; index += 1) {
+    const item = items[index];
+    if (!item.startsWith("--")) continue;
+    const body = item.slice(2);
+    if (body.includes("=")) {
+      const eq = body.indexOf("=");
+      result[body.slice(0, eq)] = body.slice(eq + 1);
+    } else {
+      const next = items[index + 1];
+      if (next && !next.startsWith("--")) {
+        result[body] = next;
+        index += 1;
+      } else {
+        result[body] = "true";
+      }
+    }
+  }
+  return result;
+};
+const args = parseArgs(process.argv);
 const BASE_URL = (args["base-url"] || process.env.V4_LOADTEST_BASE_URL || "http://127.0.0.1:3000").replace(/\/$/, "");
 const FILE_PATH = join(process.cwd(), "test-data", "10000-orders.xlsx");
 const RULE_ID = args["rule"] || "rule-loadtest-standard";
