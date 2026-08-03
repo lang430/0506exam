@@ -20,6 +20,33 @@ export const DEFAULT_SKU_CHECK_TIMEOUT_MS = 3000;
 const UPSERT_CHUNK_SIZE = 250;
 const ERROR_CHUNK_SIZE = 500;
 
+/**
+ * 实例级解析缓存：同一任务的后续批次直接复用规则引擎解析结果。
+ * 全局单处理器串行消费时，同任务批次大概率落在同一函数实例；
+ * 每批省去"读文件 + 全量解析"约 700ms。LRU 上限 3 条防止内存膨胀。
+ */
+const PARSE_CACHE_LIMIT = 3;
+const parseCache = new Map<string, OrderRow[]>();
+
+const readParseCache = (taskId: string): OrderRow[] | undefined => {
+  const cached = parseCache.get(taskId);
+  if (cached) {
+    parseCache.delete(taskId);
+    parseCache.set(taskId, cached); // 刷新 LRU 位置
+  }
+  return cached;
+};
+
+const writeParseCache = (taskId: string, rows: OrderRow[]): void => {
+  if (parseCache.has(taskId)) parseCache.delete(taskId);
+  parseCache.set(taskId, rows);
+  while (parseCache.size > PARSE_CACHE_LIMIT) {
+    const oldest = parseCache.keys().next().value;
+    if (oldest === undefined) break;
+    parseCache.delete(oldest);
+  }
+};
+
 export interface BatchOutcome {
   taskId: string;
   unitId: string;
@@ -212,13 +239,19 @@ export const processBatch = async (sql: postgres.Sql, batch: BatchRow): Promise<
 
   await recordTraceEvents(sql, [{ traceId, ...tracePrefix, eventName: ImportEvents.ImportBatchStarted, message: `开始处理批次 ${batch.batch_index}（第 ${batch.start_row + 1} 行起）` }]);
 
-  // 阶段 1+2：文件解析 + 规则引擎（复用 V2 parseByRule）
+  // 阶段 1+2：文件解析 + 规则引擎（复用 V2 parseByRule；实例级缓存命中时跳过）
   const parseStartedAt = Date.now();
-  const sheets: SheetSnapshot[] = await readSheetsFromBuffer(file.file_name, file.data);
-  const parseDuration = Date.now() - parseStartedAt;
-  const ruleStartedAt = Date.now();
-  const parsed = parseByRule(sheets, rule);
-  const ruleDuration = Date.now() - ruleStartedAt;
+  let parsed = readParseCache(task.id);
+  let parseDuration = 0;
+  let ruleDuration = 0;
+  if (!parsed) {
+    const sheets: SheetSnapshot[] = await readSheetsFromBuffer(file.file_name, file.data);
+    parseDuration = Date.now() - parseStartedAt;
+    const ruleStartedAt = Date.now();
+    parsed = parseByRule(sheets, rule);
+    ruleDuration = Date.now() - ruleStartedAt;
+    writeParseCache(task.id, parsed);
+  }
 
   // 回填精确总行数（幂等）
   await sql`update import_tasks set total_rows = ${parsed.length} where id = ${task.id} and total_rows <> ${parsed.length}`;

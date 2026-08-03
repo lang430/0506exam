@@ -105,7 +105,19 @@ const uploadFile = async (buffer, fileName) => {
   form.append("file", new Blob([new Uint8Array(buffer)]), fileName);
   form.append("ruleId", RULE_ID);
   const startedAt = Date.now();
-  const response = await fetch(`${BASE_URL}/api/import-tasks`, { method: "POST", body: form });
+  let response;
+  let lastError;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      response = await fetch(`${BASE_URL}/api/import-tasks`, { method: "POST", body: form });
+      break;
+    } catch (error) {
+      lastError = error;
+      console.log(`  上传网络重试 ${attempt + 1}/3：${error.message}`);
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+  }
+  if (!response) throw lastError;
   const elapsed = Date.now() - startedAt;
   const body = await response.json().catch(() => ({}));
   return { status: response.status, elapsed, body };
@@ -147,6 +159,18 @@ const main = async () => {
   let sql = null;
   if (databaseUrl) {
     sql = postgres(databaseUrl, { ssl: "require", max: 1 });
+    // 静默：先作废所有未终态任务（含批次与 Outbox），避免前序任务的僵尸批次在压测窗口内提交污染结果
+    const voidedTasks = await sql`
+      update import_tasks set status = 'failed', completed_at = now(),
+        error_message = coalesce(error_message, '压测前静默：手动作废未终态任务')
+      where status in ('pending', 'processing') returning id
+    `;
+    if (voidedTasks.length) {
+      await sql`update import_task_batches set status = 'failed', completed_at = now() where status in ('pending', 'ready', 'processing')`;
+      await sql`update event_outbox set status = 'failed' where status = 'pending'`;
+      console.log(`[loadtest] 已静默 ${voidedTasks.length} 个未终态任务`);
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+    }
     const skuCount = await sql`select count(*)::int as c from sku_master`;
     report.sku_master_count = Number(skuCount[0]?.c ?? 0);
     console.log(`[loadtest] SKU 主数据：${report.sku_master_count} 条${report.sku_master_count >= 20000 ? " ✓" : " ✗（请先 npm run seed）"}`);

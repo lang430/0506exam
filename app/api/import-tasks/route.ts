@@ -35,13 +35,47 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "文件格式不支持（E008）：仅支持 .xlsx / .xls / .docx / .pdf" }, { status: 415 });
   }
 
-  const rules = await sql`select id from parse_rules where id = ${ruleId}`;
-  if (!rules.length) return badRequest(`解析规则 ${ruleId} 不存在`);
-
   const buffer = Buffer.from(await file.arrayBuffer());
   const sha256 = crypto.createHash("sha256").update(buffer).digest("hex");
 
-  // 轻量预扫描：Excel 用工作表范围估算行数（毫秒级）；精确值由 Worker 回填
+  // 规则校验 + 重复上传检测合并为单次查询（压缩上传关键路径的数据库往返）
+  const precheck = await sql`
+    select
+      (select count(*)::int from parse_rules where id = ${ruleId}) as rule_exists,
+      (select id from import_tasks
+        where file_sha256 = ${sha256} and created_at > now() - interval '24 hours'
+        order by created_at desc limit 1) as duplicate_of,
+      (select id from import_tasks
+        where file_sha256 = ${sha256} and created_at > now() - interval '60 seconds'
+          and status in ('pending', 'processing')
+        order by created_at desc limit 1) as active_task
+  `;
+  if (!Number(precheck[0]?.rule_exists ?? 0)) return badRequest(`解析规则 ${ruleId} 不存在`);
+
+  // 上传幂等：60 秒内同哈希的活跃任务直接复用（网络层请求重放不产生孪生任务）
+  const activeTaskId = precheck[0]?.active_task ?? null;
+  if (activeTaskId) {
+    const activeTasks = await sql`select id, trace_id, total_rows, total_batches from import_tasks where id = ${activeTaskId}`;
+    const active = activeTasks[0];
+    if (active) {
+      return NextResponse.json({
+        task_id: active.id,
+        trace_id: active.trace_id,
+        status: "PENDING",
+        total_rows: Number(active.total_rows),
+        total_batches: Number(active.total_batches),
+        batch_size: batchSize(),
+        duplicate_of: activeTaskId,
+        reused_task: true,
+        upload_ms: Date.now() - startedAt
+      }, { status: 202 });
+    }
+  }
+  // 重复上传策略：同哈希 24 小时内已有任务时返回 duplicate_of 提示（仍创建新任务，
+  // 数据层由稳定业务键 UPSERT 幂等兜底，见《重构假设说明》）
+  const duplicateOf = precheck[0]?.duplicate_of ?? null;
+
+  // 轻量预扫描：xlsx 用 zip 级行计数（毫秒级）；精确值由 Worker 回填
   let estimatedRows = 0;
   try {
     estimatedRows = await preCountRows(file.name, buffer);
@@ -84,15 +118,6 @@ export async function POST(request: Request) {
     );
   });
 
-  // 重复上传策略：同哈希 24 小时内已有任务时返回 duplicate_of 提示（仍创建新任务，
-  // 数据层由稳定业务键 UPSERT 幂等兜底，见《重构假设说明》）
-  const duplicateRows = await sql`
-    select id from import_tasks
-    where file_sha256 = ${sha256} and created_at > now() - interval '24 hours'
-    order by created_at desc limit 1
-  `;
-  const duplicateOf = duplicateRows[0]?.id ?? null;
-
   // 单事务：文件 + 任务 + 批次 + Outbox（任务创建与事件写入同事务，防丢消息）
   await sql.begin(async (tx) => {
     await tx`
@@ -120,16 +145,16 @@ export async function POST(request: Request) {
     await enqueueEvents(tx, [taskCreatedEvent, ...batchEvents]);
   });
 
-  await recordTraceEvent(sql, {
-    traceId,
-    taskId,
-    eventName: "UploadAccepted",
-    message: `用户上传 ${file.name}（${buffer.length} 字节），预估 ${estimatedRows} 行，创建 ${totalBatches} 个处理单元`
-  });
-
-  // 响应先行：后台立即启动一次调度循环（Next.js after：不阻塞响应）
+  // 响应先行：trace 记录与调度循环都在后台执行（Next.js after：不阻塞响应）
+  const uploadMs = Date.now() - startedAt;
   after(async () => {
     try {
+      await recordTraceEvent(sql, {
+        traceId,
+        taskId,
+        eventName: "UploadAccepted",
+        message: `用户上传 ${file.name}（${buffer.length} 字节），预估 ${estimatedRows} 行，创建 ${totalBatches} 个处理单元，上传耗时 ${uploadMs}ms`
+      });
       await runDispatchCycle(sql, { maxBatches: totalBatches, timeBudgetMs: 50_000 });
     } catch (error) {
       console.error("[v4] post-upload dispatch failed", error instanceof Error ? error.message : error);
@@ -144,7 +169,7 @@ export async function POST(request: Request) {
     total_batches: totalBatches,
     batch_size: size,
     duplicate_of: duplicateOf,
-    upload_ms: Date.now() - startedAt
+    upload_ms: uploadMs
   }, { status: 202 });
 }
 
