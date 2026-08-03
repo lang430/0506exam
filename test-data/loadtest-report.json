@@ -1,0 +1,129 @@
+{
+  "test_time": "2026-08-03T11:14:51.347Z",
+  "deploy_env": "https://0506exam.vercel.app",
+  "worker_config": "Vercel Serverless（after() 进程内调度 + 自链式 Dispatcher，批次顺序消费，单批 1000 行）",
+  "database": "Supabase Postgres（连接池 max=1/函数实例，批量 IN 校验 + 250 行/批 UPSERT）",
+  "file_path": "D:\\AI\\0506exam\\test-data\\10000-orders.xlsx",
+  "sku_master_count": 20000,
+  "upload_latency_samples_ms": [
+    1476,
+    987,
+    533,
+    559,
+    729,
+    369,
+    534,
+    719,
+    365,
+    525
+  ],
+  "upload_p95_ms": 1476,
+  "file_rows": 10000,
+  "main_upload_ms": 2101,
+  "task_status": "PARTIAL_SUCCESS",
+  "success_rows": 9830,
+  "failed_rows": 170,
+  "total_elapsed_seconds": 8.600999999999999,
+  "degraded": false,
+  "http_errors": [],
+  "result": "PASS",
+  "batch_performance": [
+    {
+      "unit_id": "unit_001",
+      "batch_index": 0,
+      "parse_duration_ms": 715,
+      "rule_duration_ms": 130,
+      "validate_duration_ms": 100,
+      "insert_duration_ms": 379,
+      "total_duration_ms": 1386,
+      "degraded": false,
+      "status": "completed",
+      "created_at": "2026-08-03T11:15:07.591Z"
+    },
+    {
+      "unit_id": "unit_002",
+      "batch_index": 1,
+      "parse_duration_ms": 792,
+      "rule_duration_ms": 106,
+      "validate_duration_ms": 76,
+      "insert_duration_ms": 305,
+      "total_duration_ms": 1341,
+      "degraded": false,
+      "status": "completed",
+      "created_at": "2026-08-03T11:15:09.068Z"
+    },
+    {
+      "unit_id": "unit_003",
+      "batch_index": 2,
+      "parse_duration_ms": 640,
+      "rule_duration_ms": 125,
+      "validate_duration_ms": 52,
+      "insert_duration_ms": 434,
+      "total_duration_ms": 1286,
+      "degraded": false,
+      "status": "completed",
+      "created_at": "2026-08-03T11:15:10.272Z"
+    },
+    {
+      "unit_id": "unit_004",
+      "batch_index": 3,
+      "parse_duration_ms": 646,
+      "rule_duration_ms": 128,
+      "validate_duration_ms": 67,
+      "insert_duration_ms": 262,
+      "total_duration_ms": 1148,
+      "degraded": false,
+      "status": "completed",
+      "created_at": "2026-08-03T11:15:11.642Z"
+    },
+    {
+      "unit_id": "unit_005",
+      "batch_index": 4,
+      "parse_duration_ms": 650,
+      "rule_duration_ms": 116,
+      "validate_duration_ms": 0,
+      "insert_duration_ms": 12,
+      "total_duration_ms": 826,
+      "degraded": false,
+      "status": "completed",
+      "created_at": "2026-08-03T11:15:12.760Z"
+    }
+  ],
+  "batches": [
+    {
+      "unit_id": "unit_001",
+      "status": "completed",
+      "retry_count": 1,
+      "success_rows": 2470,
+      "failed_rows": 30
+    },
+    {
+      "unit_id": "unit_002",
+      "status": "completed",
+      "retry_count": 1,
+      "success_rows": 2455,
+      "failed_rows": 45
+    },
+    {
+      "unit_id": "unit_003",
+      "status": "completed",
+      "retry_count": 1,
+      "success_rows": 2459,
+      "failed_rows": 41
+    },
+    {
+      "unit_id": "unit_004",
+      "status": "completed",
+      "retry_count": 1,
+      "success_rows": 2446,
+      "failed_rows": 54
+    },
+    {
+      "unit_id": "unit_005",
+      "status": "completed",
+      "retry_count": 1,
+      "success_rows": 0,
+      "failed_rows": 0
+    }
+  ]
+}

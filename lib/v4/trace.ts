@@ -53,7 +53,7 @@ export const recordTraceEvents = async (
       event_status: event.eventStatus ?? "ok",
       message: event.message ?? ""
     }));
-    await sql`insert into trace_events (trace_id, task_id, unit_id, event_name, event_status, message) ${sql(rows, "trace_id", "task_id", "unit_id", "event_name", "event_status", "message")}`;
+    await sql`insert into trace_events ${sql(rows, "trace_id", "task_id", "unit_id", "event_name", "event_status", "message")}`;
   } catch (error) {
     console.error("[trace] batch record failed", error instanceof Error ? error.message : error);
   }

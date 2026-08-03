@@ -11,7 +11,8 @@
     "verify:v3-contract": "node --import tsx scripts/verify-v3-contract.mjs",
     "seed": "node --import tsx scripts/seed-data.ts",
     "loadtest": "node scripts/loadtest.mjs",
-    "worker-loop": "node scripts/worker-loop.mjs"
+    "worker-loop": "node scripts/worker-loop.mjs",
+    "test": "vitest run"
   },
   "dependencies": {
     "@e965/xlsx": "^0.20.3",
@@ -29,7 +30,8 @@
     "@types/react": "^19.0.1",
     "@types/react-dom": "^19.0.2",
     "tsx": "^4.20.6",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "vitest": "^4.1.10"
   },
   "overrides": {
     "postcss": "8.5.10",
