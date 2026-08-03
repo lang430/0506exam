@@ -3,6 +3,7 @@ import crypto from "node:crypto";
 import { after } from "next/server";
 import { buildEnvelope, ImportEvents } from "@/lib/v4/events";
 import { badRequest, batchSize, dbUnavailable, getV4Sql } from "@/lib/v4/http";
+import { getBackgroundSql } from "@/lib/db";
 import { enqueueEvents } from "@/lib/v4/queue";
 import { isSupportedFile, preCountRows } from "@/lib/v4/parse-file";
 import { recordTraceEvent, newTaskId, newTraceId } from "@/lib/v4/trace";
@@ -145,19 +146,19 @@ export async function POST(request: Request) {
     await enqueueEvents(tx, [taskCreatedEvent, ...batchEvents]);
   });
 
-  // 响应先行：trace 记录与调度循环都在后台执行（Next.js after：不阻塞响应）
+  // 响应先行：trace 记录放后台（轻量、不持租约）；调度由轮询内联/调度端点可靠推进
   const uploadMs = Date.now() - startedAt;
   after(async () => {
     try {
-      await recordTraceEvent(sql, {
+      const bgSql = getBackgroundSql() ?? sql;
+      await recordTraceEvent(bgSql, {
         traceId,
         taskId,
         eventName: "UploadAccepted",
         message: `用户上传 ${file.name}（${buffer.length} 字节），预估 ${estimatedRows} 行，创建 ${totalBatches} 个处理单元，上传耗时 ${uploadMs}ms`
       });
-      await runDispatchCycle(sql, { maxBatches: totalBatches, timeBudgetMs: 50_000 });
     } catch (error) {
-      console.error("[v4] post-upload dispatch failed", error instanceof Error ? error.message : error);
+      console.error("[v4] post-upload trace failed", error instanceof Error ? error.message : error);
     }
   });
 

@@ -22,7 +22,7 @@ export interface DispatchCycleResult {
   skippedByLock?: boolean;
 }
 
-const LEASE_SECONDS = 90;
+const LEASE_SECONDS = 30;
 
 /**
  * 租约锁：INSERT ... ON CONFLICT 条件更新实现 CAS 抢占。

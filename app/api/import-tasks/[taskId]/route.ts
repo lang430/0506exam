@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { after } from "next/server";
 import { runDispatchCycle } from "@/lib/v4/dispatch";
 import { dbUnavailable, getV4Sql, notFound } from "@/lib/v4/http";
 
@@ -22,15 +21,14 @@ export async function GET(
   const task = tasks[0];
   if (!task) return notFound(`任务 ${taskId} 不存在`);
 
-  // 自愈兜底：非终态任务被轮询时顺带推动调度（租约锁保证全局单处理器）
+  // 自愈兜底：非终态任务被轮询时内联推进调度（请求生命周期内执行，必然释放租约；
+  // Hobby 计划 after() 随实例挂起且会持租约阻塞其他循环，故不再使用 after 调度）
   if (["pending", "processing"].includes(String(task.status))) {
-    after(async () => {
-      try {
-        await runDispatchCycle(sql, { maxBatches: 8, timeBudgetMs: 15_000 });
-      } catch (error) {
-        console.error("[v4] poll-triggered dispatch failed", error instanceof Error ? error.message : error);
-      }
-    });
+    try {
+      await runDispatchCycle(sql, { maxBatches: 4, timeBudgetMs: 8_000 });
+    } catch (error) {
+      console.error("[v4] inline dispatch failed", error instanceof Error ? error.message : error);
+    }
   }
   const batchSummary = await sql`
     select
