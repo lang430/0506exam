@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/import-dispatcher",
-      "schedule": "* * * * *",
+      "schedule": "0 3 * * *",
       "headers": {
         "Authorization": "Bearer $DISPATCHER_TOKEN"
       }

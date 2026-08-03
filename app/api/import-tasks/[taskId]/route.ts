@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
+import { after } from "next/server";
+import { runDispatchCycle } from "@/lib/v4/dispatch";
 import { dbUnavailable, getV4Sql, notFound } from "@/lib/v4/http";
 
 export const runtime = "nodejs";
+export const maxDuration = 60;
 
-/** GET /api/import-tasks/:taskId —— 任务进度查询（前端 1~2s 轮询） */
+/** GET /api/import-tasks/:taskId —— 任务进度查询（前端 1~2s 轮询，附带自愈调度） */
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ taskId: string }> }
@@ -18,6 +21,17 @@ export async function GET(
   `;
   const task = tasks[0];
   if (!task) return notFound(`任务 ${taskId} 不存在`);
+
+  // 自愈兜底：非终态任务被轮询时顺带推动调度（SKIP LOCKED 保证并发安全）
+  if (["pending", "processing"].includes(String(task.status))) {
+    after(async () => {
+      try {
+        await runDispatchCycle(sql, { maxBatches: 5, timeBudgetMs: 8_000 });
+      } catch (error) {
+        console.error("[v4] poll-triggered dispatch failed", error instanceof Error ? error.message : error);
+      }
+    });
+  }
   const batchSummary = await sql`
     select
       count(*)::int as total_batches,
