@@ -43,7 +43,7 @@ export type OutboxRow = {
 
 export const MAX_OUTBOX_RETRY = 5;
 export const MAX_BATCH_RETRY = 3;
-export const STUCK_BATCH_MINUTES = 5;
+export const STUCK_BATCH_MINUTES = 2;
 
 /** 与任务创建同事务写入 Outbox（event_id 幂等） */
 export const enqueueEvents = async (

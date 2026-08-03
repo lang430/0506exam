@@ -22,11 +22,11 @@ export async function GET(
   const task = tasks[0];
   if (!task) return notFound(`任务 ${taskId} 不存在`);
 
-  // 自愈兜底：非终态任务被轮询时顺带推动调度（SKIP LOCKED 保证并发安全）
+  // 自愈兜底：非终态任务被轮询时顺带推动调度（租约锁保证全局单处理器）
   if (["pending", "processing"].includes(String(task.status))) {
     after(async () => {
       try {
-        await runDispatchCycle(sql, { maxBatches: 5, timeBudgetMs: 8_000 });
+        await runDispatchCycle(sql, { maxBatches: 8, timeBudgetMs: 15_000 });
       } catch (error) {
         console.error("[v4] poll-triggered dispatch failed", error instanceof Error ? error.message : error);
       }
