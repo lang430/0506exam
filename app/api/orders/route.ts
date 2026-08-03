@@ -6,7 +6,15 @@ export const runtime = "nodejs";
 
 type JsonObject = Record<string, string | number | string[]>;
 
+let v2TablesReady = false;
+
 const ensureTable = async (sql: NonNullable<ReturnType<typeof getSql>>): Promise<void> => {
+  if (v2TablesReady) return;
+  const existing = await sql`select to_regclass('public.imported_orders') as r`;
+  if (existing[0]?.r) {
+    v2TablesReady = true;
+    return;
+  }
   await sql`create extension if not exists pgcrypto`;
   await sql`create table if not exists parse_rules (
     id text primary key,
@@ -49,6 +57,7 @@ const ensureTable = async (sql: NonNullable<ReturnType<typeof getSql>>): Promise
   await sql`create index if not exists imported_orders_receiver_name_idx on imported_orders (receiver_name)`;
   await sql`create index if not exists imported_orders_created_at_idx on imported_orders (created_at desc)`;
   await sql`create index if not exists import_batches_created_at_idx on import_batches (created_at desc)`;
+  v2TablesReady = true;
 };
 
 const escapeLike = (value: string): string =>

@@ -5,7 +5,15 @@ import type { ParseRule } from "@/lib/types";
 
 export const runtime = "nodejs";
 
+let rulesTableReady = false;
+
 const ensureTable = async (sql: postgres.Sql): Promise<void> => {
+  if (rulesTableReady) return;
+  const existing = await sql`select to_regclass('public.parse_rules') as r`;
+  if (existing[0]?.r) {
+    rulesTableReady = true;
+    return;
+  }
   await sql`create table if not exists parse_rules (
     id text primary key,
     payload jsonb not null,
@@ -13,6 +21,7 @@ const ensureTable = async (sql: postgres.Sql): Promise<void> => {
     updated_at timestamptz not null default now()
   )`;
   await sql`create index if not exists parse_rules_updated_at_idx on parse_rules (updated_at desc)`;
+  rulesTableReady = true;
 };
 
 export async function GET() {

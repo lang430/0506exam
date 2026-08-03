@@ -34,10 +34,17 @@ export const getAiConfig = () => {
   const apiKey = getRuntimeValue("AI_API_KEY");
   const aiBaseUrl = getRuntimeValue("AI_BASE_URL");
   const model = getRuntimeValue("AI_MODEL");
+  // 逐变量诊断来源（Vercel Environment Variables 优先，.env.local 兜底）
+  const envSources = {
+    AI_API_KEY: process.env.AI_API_KEY ? "Environment:AI_API_KEY" : apiKey ? ".env.local:AI_API_KEY" : "missing",
+    AI_BASE_URL: process.env.AI_BASE_URL ? "Environment:AI_BASE_URL" : aiBaseUrl ? ".env.local:AI_BASE_URL" : "missing",
+    AI_MODEL: process.env.AI_MODEL ? "Environment:AI_MODEL" : model ? ".env.local:AI_MODEL" : "missing"
+  };
   return {
     provider: "pomoai",
     apiKey,
-    apiKeySource: apiKey ? process.env.AI_API_KEY ? "Environment:AI_API_KEY" : ".env.local:AI_API_KEY" : undefined,
+    apiKeySource: envSources.AI_API_KEY === "missing" ? undefined : envSources.AI_API_KEY,
+    envSources,
     baseUrl: aiBaseUrl,
     model,
     models: model ? [model] : [],
