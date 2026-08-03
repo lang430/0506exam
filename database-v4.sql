@@ -185,6 +185,16 @@ create index if not exists trace_events_trace_occurred_idx
 create index if not exists trace_events_task_idx on public.trace_events (task_id);
 
 -- ------------------------------------------------------------
+-- 调度租约表：Serverless 友好的全局单处理器锁（自动过期，可被接管）
+-- ------------------------------------------------------------
+create table if not exists public.dispatch_lease (
+  key integer primary key,
+  owner text not null,
+  acquired_at timestamptz not null default now(),
+  expires_at timestamptz not null
+);
+
+-- ------------------------------------------------------------
 -- updated_at 触发器（复用 V2 函数，若不存在则创建）
 -- ------------------------------------------------------------
 create or replace function public.set_updated_at()

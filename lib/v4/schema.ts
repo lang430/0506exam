@@ -160,4 +160,14 @@ export const ensureV4Schema = async (sql: postgres.Sql): Promise<void> => {
   `;
   await sql`create index if not exists trace_events_trace_occurred_idx on public.trace_events (trace_id, occurred_at)`;
   await sql`create index if not exists trace_events_task_idx on public.trace_events (task_id)`;
+
+  // 调度租约表：Serverless 友好的全局单处理器锁（自动过期，可被接管）
+  await sql`
+    create table if not exists public.dispatch_lease (
+      key integer primary key,
+      owner text not null,
+      acquired_at timestamptz not null default now(),
+      expires_at timestamptz not null
+    )
+  `;
 };
