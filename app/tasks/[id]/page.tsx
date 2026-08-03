@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { AlertTriangle, Download, Loader2, Search } from "lucide-react";
+import { AlertTriangle, Download, Loader2, RefreshCw, Search } from "lucide-react";
 import V4Shell from "@/app/v4-shell";
 
 interface TaskDetail {
@@ -63,13 +63,17 @@ export default function TaskDetailPage() {
   const [codeFilter, setCodeFilter] = useState("");
   const [batches, setBatches] = useState<BatchInfo[]>([]);
   const [notFound, setNotFound] = useState(false);
+  const terminalRef = useRef(false);
 
   const loadTask = useCallback(async (): Promise<void> => {
     try {
       const response = await fetch(`/api/import-tasks/${id}`);
       if (response.status === 404) return setNotFound(true);
       const data = await response.json();
-      if (data.task_id) setTask(data);
+      if (data.task_id) {
+        setTask(data);
+        if (["COMPLETED", "PARTIAL_SUCCESS", "FAILED"].includes(String(data.status))) terminalRef.current = true;
+      }
     } catch { /* 轮询容错 */ }
   }, [id]);
 
@@ -98,6 +102,7 @@ export default function TaskDetailPage() {
     void loadErrors();
     void loadBatches();
     const timer = setInterval(() => {
+      if (terminalRef.current) return; // 终态后停止轮询
       void loadTask();
       void loadBatches();
       void loadErrors();
@@ -128,7 +133,13 @@ export default function TaskDetailPage() {
             <section className="panel">
               <div className="panel-title">
                 任务详情 · <span className={`badge ${task.status_raw}`}>{task.status}</span>
-                <span className="muted">（1.5 秒自动刷新）</span>
+                <span className="muted">（1.5 秒自动刷新，终态自动停止）</span>
+                <button
+                  style={{ marginLeft: "auto", minHeight: 30 }}
+                  onClick={() => { terminalRef.current = false; void loadTask(); void loadErrors(); void loadBatches(); }}
+                >
+                  <RefreshCw size={14} /> 刷新
+                </button>
               </div>
               {task.degraded && (
                 <div className="degrade-banner" role="alert">

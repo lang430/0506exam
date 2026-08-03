@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Activity, AlertTriangle, BarChart3, Layers } from "lucide-react";
+import { Activity, AlertTriangle, BarChart3, Layers, RefreshCw } from "lucide-react";
 import V4Shell from "@/app/v4-shell";
 
 interface MonitorSummary {
@@ -67,25 +67,30 @@ export default function MonitorPage() {
   const [summary, setSummary] = useState<MonitorSummary | null>(null);
   const [critical, setCritical] = useState(false);
 
-  useEffect(() => {
-    const load = async (): Promise<void> => {
-      try {
-        const response = await fetch("/api/import-monitor/summary");
-        const data = await response.json();
-        if (!response.ok) {
-          setCritical(true);
-          setSummary(data);
-          return;
-        }
-        setCritical(false);
-        setSummary(data);
-      } catch {
+  const [lastUpdated, setLastUpdated] = useState("");
+
+  const load = async (): Promise<void> => {
+    try {
+      const response = await fetch("/api/import-monitor/summary");
+      const data = await response.json();
+      if (!response.ok) {
         setCritical(true);
+        setSummary(data);
+        return;
       }
-    };
+      setCritical(false);
+      setSummary(data);
+      setLastUpdated(new Date().toLocaleTimeString("zh-CN"));
+    } catch {
+      setCritical(true);
+    }
+  };
+
+  useEffect(() => {
     void load();
     const timer = setInterval(() => void load(), 5000);
     return () => clearInterval(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const maxThroughput = Math.max(1, ...(summary?.throughput.map((item) => item.rows) ?? [1]));
@@ -103,9 +108,20 @@ export default function MonitorPage() {
             <AlertTriangle size={16} /> 队列/数据库不可用：监控聚合失败，请检查数据库连接与部署环境变量。
           </div>
         )}
-        {!summary && !critical && <section className="panel"><div className="empty-state compact"><strong>加载监控数据中…</strong></div></section>}
+        {!summary && !critical && (
+          <section className="panel">
+            <div className="skeleton-row"><span className="skeleton" style={{ height: 24 }} /><span className="skeleton" style={{ height: 24 }} /><span className="skeleton" style={{ height: 24 }} /></div>
+            <div className="skeleton-row"><span className="skeleton" style={{ height: 90 }} /><span className="skeleton" style={{ height: 90 }} /><span className="skeleton" style={{ height: 90 }} /></div>
+          </section>
+        )}
         {summary && !critical && (
           <div className="grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
+            <section className="panel" style={{ gridColumn: "1 / -1", padding: "10px 18px" }}>
+              <div className="refresh-meta" style={{ justifyContent: "space-between", width: "100%" }}>
+                <span>5 秒自动刷新 · 最后更新 {lastUpdated || "—"}</span>
+                <button style={{ minHeight: 30 }} onClick={() => void load()}><RefreshCw size={14} /> 立即刷新</button>
+              </div>
+            </section>
             <section className="panel">
               <div className="panel-title"><Activity size={18} /> 实时吞吐量（过去 5 分钟每分钟入库行数）</div>
               {summary.throughput.length ? (

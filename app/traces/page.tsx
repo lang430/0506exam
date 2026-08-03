@@ -64,6 +64,7 @@ function TracesContent() {
   const [traceErrors, setTraceErrors] = useState<TraceError[]>([]);
   const [traceBatches, setTraceBatches] = useState<TraceBatch[]>([]);
   const [searched, setSearched] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const loadTrace = useCallback(async (traceId: string): Promise<void> => {
     if (!traceId) return;
@@ -91,6 +92,7 @@ function TracesContent() {
     if (errorCode.trim()) params.set("error_code", errorCode.trim());
     if (rowFrom.trim()) params.set("row_from", rowFrom.trim());
     if (rowTo.trim()) params.set("row_to", rowTo.trim());
+    setLoading(true);
     try {
       const response = await fetch(`/api/traces?${params.toString()}`);
       const data = await response.json();
@@ -98,15 +100,23 @@ function TracesContent() {
       setHits(traces);
       setSearched(true);
       if (traces[0]?.trace_id && !activeTraceId) setActiveTraceId(traces[0].trace_id);
-    } catch { /* 忽略 */ }
+    } catch { /* 忽略 */ } finally {
+      setLoading(false);
+    }
   };
+
+  // 打开页面即自动加载最近任务（无需手动点击搜索）
+  useEffect(() => {
+    void search();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <V4Shell title="Trace 检索" subtitle="task_id / 文件名 / 批次号 / 错误码 / 行号范围 → 时间线与失败节点">
       <section className="shell">
         <section className="panel">
           <div className="panel-title"><Search size={18} /> 全链路 Trace 检索（task_id / 文件名 / 错误码 / 行号范围）</div>
-          <div className="history-filters" style={{ gridTemplateColumns: "minmax(200px,2fr) minmax(150px,1fr) 90px 110px 90px 90px auto" }}>
+          <div className="history-filters" style={{ gridTemplateColumns: "minmax(200px,2fr) minmax(150px,1fr) 90px 110px 90px 90px auto" }} onKeyDown={(event) => { if (event.key === "Enter") void search(); }}>
             <input className="search" placeholder="task_id（精确）" value={taskId} onChange={(event) => setTaskId(event.target.value)} />
             <input className="search" placeholder="文件名（模糊）" value={fileName} onChange={(event) => setFileName(event.target.value)} />
             <input className="search" placeholder="批次号" value={batchFilter} onChange={(event) => setBatchFilter(event.target.value)} />
@@ -116,8 +126,14 @@ function TracesContent() {
             </select>
             <input className="search" placeholder="行号起" value={rowFrom} onChange={(event) => setRowFrom(event.target.value)} />
             <input className="search" placeholder="行号止" value={rowTo} onChange={(event) => setRowTo(event.target.value)} />
-            <button onClick={() => void search()}><Search size={16} /> 搜索</button>
+            <button onClick={() => void search()} disabled={loading}><Search size={16} /> {loading ? "加载中" : "搜索"}</button>
           </div>
+          {loading && (
+            <div style={{ marginTop: 10 }}>
+              <div className="skeleton-row"><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /></div>
+              <div className="skeleton-row"><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /></div>
+            </div>
+          )}
           {searched && !hits.length && <p className="muted" style={{ marginTop: 10 }}>没有匹配的任务。试试清空条件或直接输入 task_id。</p>}
           {hits.length > 0 && (
             <div className="table-wrap" style={{ marginTop: 10, maxHeight: 240 }}>

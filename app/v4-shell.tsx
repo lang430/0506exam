@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { Activity, Boxes, FileUp, Home, Search } from "lucide-react";
 
 /**
  * V4 全站布局壳：参考鲸天系统设计语言（左侧固定深色菜单 + 顶部信息条 + 圆角卡片内容区），
- * 主色 #0fc6c2。菜单点击直接跳转对应页面。
+ * 主色 #0fc6c2。菜单点击直接跳转对应页面；顶栏状态芯片随页面打开自动加载队列健康度。
  */
 
 const MENU = [
@@ -24,8 +25,28 @@ interface V4ShellProps {
 
 export default function V4Shell({ title, subtitle, children }: V4ShellProps) {
   const pathname = usePathname();
+  const [queue, setQueue] = useState<{ level: "ok" | "warn" | "error"; text: string } | null>(null);
   const isActive = (item: (typeof MENU)[number]): boolean =>
     item.exact ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`);
+
+  // 打开任意页面即自动加载队列健康度（顶栏状态芯片）
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/import-monitor/summary")
+      .then((response) => (response.ok ? response.json() : Promise.reject(new Error(String(response.status)))))
+      .then((data) => {
+        if (cancelled) return;
+        const waiting = Number(data?.queueDepth?.waitingRows ?? 0);
+        const level: "ok" | "warn" = data?.queueDepth?.alertLevel === "warn" ? "warn" : "ok";
+        setQueue({ level, text: level === "warn" ? `队列积压 ${waiting} 行` : `队列正常 · 待处理 ${waiting} 行` });
+      })
+      .catch(() => {
+        if (!cancelled) setQueue({ level: "error", text: "监控不可用" });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [pathname]);
 
   return (
     <div className="v4-app">
@@ -58,7 +79,10 @@ export default function V4Shell({ title, subtitle, children }: V4ShellProps) {
             {subtitle ? <p>{subtitle}</p> : null}
           </div>
           <div className="v4-top-meta">
-            <span className="code-pill">主色 #0fc6c2</span>
+            <span className={`v4-top-chip ${queue?.level === "warn" ? "warn" : queue?.level === "error" ? "error" : ""}`} title="打开页面时自动加载队列健康度">
+              <span className="dot" />
+              {queue ? queue.text : "状态加载中…"}
+            </span>
             <Link href="/tasks" className="v4-top-link">新建导入</Link>
           </div>
         </header>

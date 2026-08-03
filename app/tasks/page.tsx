@@ -25,18 +25,22 @@ export default function TasksPage() {
   const [rules, setRules] = useState<ParseRule[]>([]);
   const [ruleId, setRuleId] = useState("");
   const [tasks, setTasks] = useState<TaskSummary[]>([]);
+  const [loadingList, setLoadingList] = useState(true);
   const [fileName, setFileName] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadTasks = async (): Promise<void> => {
+    setLoadingList(true);
     try {
       const response = await fetch("/api/import-tasks");
       const data = await response.json();
       if (Array.isArray(data.tasks)) setTasks(data.tasks);
     } catch {
       /* 静默重试 */
+    } finally {
+      setLoadingList(false);
     }
   };
 
@@ -143,7 +147,14 @@ export default function TasksPage() {
                 ))}
               </tbody>
             </table>
-            {!tasks.length && <div className="empty-state compact"><strong>暂无导入任务</strong><span>上传文件后会创建异步导入任务并显示在这里。</span></div>}
+            {loadingList && !tasks.length && (
+              <div style={{ padding: "6px 10px" }}>
+                <div className="skeleton-row"><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /></div>
+                <div className="skeleton-row"><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /></div>
+                <div className="skeleton-row"><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /></div>
+              </div>
+            )}
+            {!tasks.length && !loadingList && <div className="empty-state compact"><strong>暂无导入任务</strong><span>上传文件后会创建异步导入任务并显示在这里。</span></div>}
           </div>
         </section>
       </section>

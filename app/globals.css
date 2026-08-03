@@ -110,6 +110,25 @@ tr.bad td { background: #fff8f7; }
 .v4-content .shell { max-width: none; margin: 0; }
 .v4-content .panel { min-width: 0; }
 .v4-content .table-wrap { max-width: 100%; }
+/* 交互升级：骨架屏 / 悬停 / 动效 */
+.skeleton { position: relative; overflow: hidden; border-radius: 6px; background: #e8f1f1; }
+.skeleton::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, rgba(255, 255, 255, .75), transparent); animation: shimmer 1.2s infinite; }
+@keyframes shimmer { 100% { transform: translateX(100%); } }
+.skeleton-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; padding: 10px 6px; }
+.skeleton-row .skeleton { height: 16px; }
+.v4-table tbody tr:not(.order-group-row):hover td { background: #f0fbfb; }
+.metric-card { transition: transform .15s ease, box-shadow .15s ease; }
+.metric-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(15, 198, 194, .12); }
+.progress span { background-image: linear-gradient(45deg, rgba(255, 255, 255, .25) 25%, transparent 25%, transparent 50%, rgba(255, 255, 255, .25) 50%, rgba(255, 255, 255, .25) 75%, transparent 75%); background-size: 24px 24px; animation: progressStripes 1s linear infinite; }
+@keyframes progressStripes { 100% { background-position: 24px 0; } }
+.v4-top-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px; border: 1px solid #d8eeee; background: #f7fdfd; color: #0b6e6e; font-size: 12px; }
+.v4-top-chip .dot { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; }
+.v4-top-chip.warn { border-color: #ffe4ba; background: #fff7e8; color: #d97b00; }
+.v4-top-chip.warn .dot { background: #ff7d00; }
+.v4-top-chip.error { border-color: #ffccc7; background: #fff1f0; color: #cf1322; }
+.v4-top-chip.error .dot { background: #f53f3f; }
+button:focus-visible, .v4-sidebar nav a:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid #0fc6c2; outline-offset: 2px; }
+.refresh-meta { display: inline-flex; align-items: center; gap: 8px; color: #6b7785; font-size: 12px; }
 @media (max-width: 900px) {
   .v4-app { grid-template-columns: 64px minmax(0, 1fr); }
   .v4-sidebar { padding: 14px 8px; }
