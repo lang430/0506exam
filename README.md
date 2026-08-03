@@ -3,8 +3,9 @@
 V2「万能导入解析系统」的生产级重构：把同步阻塞式下单链路改造为**异步事件驱动 + 批量处理 + 全链路可观测**的导入链路。10,000 行运单从任务创建到入库完成 **5.6 秒**（目标 ≤60s），上传接口服务端处理 **150~260ms**（目标 P95 ≤1s）。
 
 - 在线地址：https://0807v4.vercel.app
-- 提交说明与文档：`docs/` 目录（重构假设说明 / 架构设计文档 / 接口文档 / 压测报告）+ `提交说明.md`（V2 大模型调用说明）
-- V4 需求拆分：`V4需求拆分与开发任务.md`
+- **交付物清单**：`DELIVERABLES.md`（十项提交物索引，英文命名）
+- 文档：`docs/` 目录 —— refactoring-assumptions（重构假设说明）/ architecture-design（架构设计）/ api-documentation（接口文档）/ load-test-report（压测报告）/ v4-task-breakdown（需求拆分）
+- V2 大模型调用说明：`SUBMISSION-NOTES.md`
 
 ## 功能地图
 
@@ -55,7 +56,7 @@ npm test         # 自动化测试（29 项：纯逻辑 + 数据库集成 + HTTP
 2. 打开 https://0807v4.vercel.app/tasks 上传压测文件（规则选"压测标准表"），观察 1.5s 级进度刷新；
 3. 任务终态 PARTIAL_SUCCESS：成功 9830 / 失败 170（E001×120 + E003×30 + E004×20）；
 4. 错误明细按批次/错误码筛选、分页、导出 CSV；`/monitor` 查看吞吐与阶段耗时；`/traces` 按 task_id 查看时间线；
-5. `npm run loadtest` 自动完成上述校验并输出 `test-data/loadtest-report.json` 与 `docs/压测报告.md` 结论。
+5. `npm run loadtest` 自动完成上述校验并输出 `test-data/loadtest-report.json` 与 `docs/load-test-report.md` 结论。
 
 ## 故障模拟
 
@@ -76,7 +77,7 @@ npm test         # 自动化测试（29 项：纯逻辑 + 数据库集成 + HTTP
 
 ## 事件版本策略
 
-事件信封 `schema_version=1`；新增字段向后兼容，消费者必须忽略未知字段（`readPayloadField`）；重大语义变更升级版本号并在 `docs/架构设计文档.md` 第 4 节登记。
+事件信封 `schema_version=1`；新增字段向后兼容，消费者必须忽略未知字段（`readPayloadField`）；重大语义变更升级版本号并在 `docs/architecture-design.md` 第 4 节登记。
 
 ## 项目结构（V4 新增）
 

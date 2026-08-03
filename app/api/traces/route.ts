@@ -4,7 +4,7 @@ import { dbUnavailable, getV4Sql } from "@/lib/v4/http";
 export const runtime = "nodejs";
 
 /**
- * GET /api/traces —— 多条件 Trace 检索（task_id / 文件名 / 错误码 / 行号范围 → 命中的 trace 列表）
+ * GET /api/traces —— 多条件 Trace 检索（task_id / 文件名 / 批次号 / 错误码 / 行号范围 → 命中的 trace 列表）
  * 命中后前端再用 /api/traces/:traceId 拉时间线。
  */
 export async function GET(request: Request) {
@@ -14,6 +14,7 @@ export async function GET(request: Request) {
   const taskId = searchParams.get("task_id")?.trim() || null;
   const fileName = searchParams.get("file_name")?.trim() || null;
   const errorCode = searchParams.get("error_code")?.trim() || null;
+  const batch = searchParams.get("batch")?.trim() || null;
   const rowFrom = searchParams.get("row_from")?.trim() || null;
   const rowTo = searchParams.get("row_to")?.trim() || null;
 
@@ -23,11 +24,18 @@ export async function GET(request: Request) {
     where (${taskId}::text is null or id = ${taskId}::text)
       and (${fileName}::text is null or file_name ilike ${fileName ? `%${fileName}%` : null})
       and (
-        ${errorCode}::text is null
+        ${batch}::int is null
+        or exists (
+          select 1 from import_task_errors e
+          where e.task_id = import_tasks.id and e.batch_index = ${batch}::int
+        )
+      )
+      and (
+        (${errorCode}::text is null and ${rowFrom}::int is null and ${rowTo}::int is null)
         or exists (
           select 1 from import_task_errors e
           where e.task_id = import_tasks.id
-            and e.error_code = ${errorCode}::text
+            and (${errorCode}::text is null or e.error_code = ${errorCode}::text)
             and (${rowFrom}::int is null or e.row_number >= ${rowFrom}::int)
             and (${rowTo}::int is null or e.row_number <= ${rowTo}::int)
         )

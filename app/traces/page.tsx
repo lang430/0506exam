@@ -54,10 +54,12 @@ function TracesContent() {
   const [taskId, setTaskId] = useState(searchParams.get("task_id") ?? "");
   const [fileName, setFileName] = useState("");
   const [errorCode, setErrorCode] = useState(searchParams.get("error_code") ?? "");
+  const [batchFilter, setBatchFilter] = useState(searchParams.get("batch") ?? "");
   const [rowFrom, setRowFrom] = useState("");
   const [rowTo, setRowTo] = useState("");
   const [hits, setHits] = useState<TraceHit[]>([]);
   const [activeTraceId, setActiveTraceId] = useState(searchParams.get("trace_id") ?? "");
+  const [taskInfo, setTaskInfo] = useState<{ id: string; file_name: string; status: string; rule_id: string | null; rule_name: string | null; degraded: boolean } | null>(null);
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
   const [traceErrors, setTraceErrors] = useState<TraceError[]>([]);
   const [traceBatches, setTraceBatches] = useState<TraceBatch[]>([]);
@@ -66,13 +68,16 @@ function TracesContent() {
   const loadTrace = useCallback(async (traceId: string): Promise<void> => {
     if (!traceId) return;
     try {
-      const response = await fetch(`/api/traces/${traceId}`);
+      const params = new URLSearchParams();
+      if (batchFilter.trim()) params.set("batch", batchFilter.trim());
+      const response = await fetch(`/api/traces/${traceId}${params.size ? `?${params.toString()}` : ""}`);
       const data = await response.json();
+      setTaskInfo(data.task ?? null);
       setTimeline(Array.isArray(data.timeline) ? data.timeline : []);
       setTraceErrors(Array.isArray(data.errors) ? data.errors : []);
       setTraceBatches(Array.isArray(data.batches) ? data.batches : []);
     } catch { /* 忽略 */ }
-  }, []);
+  }, [batchFilter]);
 
   useEffect(() => {
     if (activeTraceId) void loadTrace(activeTraceId);
@@ -82,6 +87,7 @@ function TracesContent() {
     const params = new URLSearchParams();
     if (taskId.trim()) params.set("task_id", taskId.trim());
     if (fileName.trim()) params.set("file_name", fileName.trim());
+    if (batchFilter.trim()) params.set("batch", batchFilter.trim());
     if (errorCode.trim()) params.set("error_code", errorCode.trim());
     if (rowFrom.trim()) params.set("row_from", rowFrom.trim());
     if (rowTo.trim()) params.set("row_to", rowTo.trim());
@@ -101,9 +107,10 @@ function TracesContent() {
         <V4Nav />
         <section className="panel">
           <div className="panel-title"><Search size={18} /> 全链路 Trace 检索（task_id / 文件名 / 错误码 / 行号范围）</div>
-          <div className="history-filters" style={{ gridTemplateColumns: "minmax(200px,2fr) minmax(160px,1fr) 120px 100px 100px auto" }}>
+          <div className="history-filters" style={{ gridTemplateColumns: "minmax(200px,2fr) minmax(150px,1fr) 90px 110px 90px 90px auto" }}>
             <input className="search" placeholder="task_id（精确）" value={taskId} onChange={(event) => setTaskId(event.target.value)} />
             <input className="search" placeholder="文件名（模糊）" value={fileName} onChange={(event) => setFileName(event.target.value)} />
+            <input className="search" placeholder="批次号" value={batchFilter} onChange={(event) => setBatchFilter(event.target.value)} />
             <select value={errorCode} onChange={(event) => setErrorCode(event.target.value)}>
               <option value="">全部错误码</option>
               {["E001", "E002", "E003", "E004", "E005", "E006", "E007", "E008"].map((code) => <option key={code} value={code}>{code}</option>)}
@@ -137,6 +144,14 @@ function TracesContent() {
         {activeTraceId && (
           <section className="panel wide">
             <div className="panel-title">时间线 · <span className="code-pill">{activeTraceId}</span></div>
+            {taskInfo && (
+              <div className="metric-grid" style={{ marginBottom: 8 }}>
+                <div className="metric-card"><div className="label">任务 / 文件</div><div className="value" style={{ fontSize: 13 }}>{taskInfo.file_name || taskInfo.id}</div></div>
+                <div className="metric-card"><div className="label">任务状态</div><div className="value" style={{ fontSize: 14 }}><span className={`badge ${taskInfo.status}`}>{taskInfo.status}</span></div></div>
+                <div className="metric-card accent"><div className="label">所属规则</div><div className="value" style={{ fontSize: 13 }}>{taskInfo.rule_name ?? "未知规则"}{taskInfo.rule_id ? <span className="muted">（{taskInfo.rule_id}）</span> : ""}</div></div>
+                <div className="metric-card"><div className="label">SKU 校验</div><div className="value" style={{ fontSize: 14 }}>{taskInfo.degraded ? "⚠️ 已降级" : "正常"}</div></div>
+              </div>
+            )}
             <div className="timeline">
               {timeline.map((event, index) => (
                 <div key={index} className={`timeline-item ${event.event_status === "error" ? "error" : event.event_status === "warn" ? "warn" : ""}`}>

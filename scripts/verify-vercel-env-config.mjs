@@ -5,7 +5,7 @@ const db = readFileSync("lib/db.ts", "utf-8");
 const aiRoute = readFileSync("app/api/ai-rules/route.ts", "utf-8");
 const rulesApi = readFileSync("app/api/rules/route.ts", "utf-8");
 const page = readFileSync("app/page.tsx", "utf-8");
-const docs = readFileSync("提交说明.md", "utf-8");
+const docs = readFileSync("SUBMISSION-NOTES.md", "utf-8");
 
 const requiredDatabaseVars = [
   "DATABASE_URL",

@@ -28,6 +28,19 @@ interface MonitorSummary {
     degraded: boolean;
     createdAt: string;
   }[];
+  slowBatches: {
+    taskId: string;
+    unitId: string;
+    batchIndex: number;
+    totalDurationMs: number;
+    parseDurationMs: number;
+    validateDurationMs: number;
+    insertDurationMs: number;
+    successRows: number;
+    failedRows: number;
+    createdAt: string;
+  }[];
+  failedTaskTrend: { day: string; count: number }[];
   alertLevel?: string;
   error?: string;
 }
@@ -169,6 +182,43 @@ export default function MonitorPage() {
                   </tbody>
                 </table>
               </div>
+            </section>
+
+            <section className="panel">
+              <div className="panel-title"><BarChart3 size={18} /> 慢批次 TOP 10（近 24 小时）</div>
+              {summary.slowBatches?.length ? (
+                <div className="table-wrap" style={{ maxHeight: 300 }}>
+                  <table className="v4-table">
+                    <thead><tr><th>#</th><th>任务</th><th>批次</th><th>解析</th><th>校验</th><th>写入</th><th>总耗时</th></tr></thead>
+                    <tbody>
+                      {summary.slowBatches.map((batch, index) => (
+                        <tr key={`${batch.taskId}-${batch.unitId}`}>
+                          <td>{index + 1}</td>
+                          <td><Link href={`/tasks/${batch.taskId}`}>{batch.taskId.slice(0, 10)}…</Link></td>
+                          <td>{batch.batchIndex}</td>
+                          <td>{batch.parseDurationMs}ms</td>
+                          <td>{batch.validateDurationMs}ms</td>
+                          <td>{batch.insertDurationMs}ms</td>
+                          <td><strong>{batch.totalDurationMs}ms</strong></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : <p className="muted">最近 24 小时没有批次性能记录。</p>}
+            </section>
+
+            <section className="panel">
+              <div className="panel-title"><AlertTriangle size={18} /> 失败任务趋势（近 7 天）</div>
+              {summary.failedTaskTrend?.length ? (
+                <div className="bar-chart" style={{ marginBottom: 26 }}>
+                  {summary.failedTaskTrend.map((item) => (
+                    <div key={item.day} className="bar" style={{ height: `${Math.max(6, (item.count / Math.max(1, ...summary.failedTaskTrend.map((trend) => trend.count))) * 100)}%`, background: "#f53f3f" }} title={`${item.day} → ${item.count} 个失败任务`}>
+                      <span>{item.day}·{item.count}</span>
+                    </div>
+                  ))}
+                </div>
+              ) : <p className="muted">最近 7 天没有失败任务。</p>}
             </section>
           </div>
         )}

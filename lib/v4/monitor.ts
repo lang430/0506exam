@@ -33,6 +33,19 @@ export interface MonitorSummary {
     createdAt: string;
     completedAt: string | null;
   }[];
+  slowBatches: {
+    taskId: string;
+    unitId: string;
+    batchIndex: number;
+    totalDurationMs: number;
+    parseDurationMs: number;
+    validateDurationMs: number;
+    insertDurationMs: number;
+    successRows: number;
+    failedRows: number;
+    createdAt: string;
+  }[];
+  failedTaskTrend: { day: string; count: number }[];
 }
 
 export const getMonitorSummary = async (sql: postgres.Sql): Promise<MonitorSummary> => {
@@ -84,6 +97,21 @@ export const getMonitorSummary = async (sql: postgres.Sql): Promise<MonitorSumma
     order by created_at desc
     limit 10
   `;
+  const slowBatchRows = await sql`
+    select task_id, unit_id, batch_index, total_duration_ms, parse_duration_ms,
+           validate_duration_ms, insert_duration_ms, success_rows, failed_rows, created_at
+    from batch_performance_log
+    where created_at > now() - interval '24 hours'
+    order by total_duration_ms desc
+    limit 10
+  `;
+  const failedTrendRows = await sql`
+    select to_char(date_trunc('day', created_at), 'MM-DD') as day, count(*)::int as c
+    from import_tasks
+    where status = 'failed' and created_at > now() - interval '7 days'
+    group by 1
+    order by 1
+  `;
 
   const depth = depthRows[0];
   const waitingRows = Number(depth?.waiting_rows ?? 0);
@@ -120,6 +148,19 @@ export const getMonitorSummary = async (sql: postgres.Sql): Promise<MonitorSumma
       degraded: Boolean(row.degraded),
       createdAt: new Date(row.created_at as unknown as string).toISOString(),
       completedAt: row.completed_at ? new Date(row.completed_at as unknown as string).toISOString() : null
-    }))
+    })),
+    slowBatches: slowBatchRows.map((row) => ({
+      taskId: row.task_id,
+      unitId: row.unit_id,
+      batchIndex: Number(row.batch_index),
+      totalDurationMs: Number(row.total_duration_ms),
+      parseDurationMs: Number(row.parse_duration_ms),
+      validateDurationMs: Number(row.validate_duration_ms),
+      insertDurationMs: Number(row.insert_duration_ms),
+      successRows: Number(row.success_rows),
+      failedRows: Number(row.failed_rows),
+      createdAt: new Date(row.created_at as unknown as string).toISOString()
+    })),
+    failedTaskTrend: failedTrendRows.map((row) => ({ day: row.day, count: Number(row.c) }))
   };
 };

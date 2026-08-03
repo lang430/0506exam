@@ -49,5 +49,15 @@ export async function GET(
     where b.task_id in (select task_id from trace_events where trace_id = ${traceId} limit 1)
     order by b.batch_index
   `;
-  return NextResponse.json({ trace_id: traceId, timeline, errors, batches });
+  // 任务与所属规则（失败节点上下文：规则名/规则 ID）
+  const taskRows = await sql`
+    select t.id, t.file_name, t.status, t.rule_id, t.degraded, t.created_at, t.completed_at,
+           r.payload->>'name' as rule_name
+    from import_tasks t
+    left join parse_rules r on r.id = t.rule_id
+    where t.trace_id = ${traceId}
+    order by t.created_at desc
+    limit 1
+  `;
+  return NextResponse.json({ trace_id: traceId, task: taskRows[0] ?? null, timeline, errors, batches });
 }
