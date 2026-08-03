@@ -85,3 +85,46 @@ tr.bad td { background: #fff8f7; }
   .sticky-actions { overflow-x: auto; flex-wrap: nowrap; justify-content: flex-start; }
   .pager { justify-content: flex-start; flex-wrap: wrap; }
 }
+
+/* ===== V4 异步导入链路页面 ===== */
+.v4-nav { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 16px; padding: 10px 14px; background: #fff; border: 1px solid #d8eeee; border-radius: 8px; box-shadow: 0 10px 30px rgba(15, 198, 194, .08); }
+.v4-nav strong { color: #0b6e6e; margin-right: 8px; }
+.v4-nav a { padding: 6px 12px; border-radius: 999px; color: #0b8f8c; text-decoration: none; font-size: 14px; border: 1px solid transparent; transition: background .15s ease, border-color .15s ease; }
+.v4-nav a:hover { background: #ecfafa; }
+.v4-nav a.active { background: #0fc6c2; color: #fff; }
+.metric-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin: 12px 0; }
+.metric-card { padding: 12px; border: 1px solid #e5e6eb; border-radius: 8px; background: #fbfefe; }
+.metric-card .label { font-size: 12px; color: #6b7785; }
+.metric-card .value { font-size: 20px; font-weight: 700; color: #1d2129; margin-top: 2px; word-break: break-all; }
+.metric-card.accent .value { color: #0b8f8c; }
+.badge { display: inline-block; padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+.badge.pending { background: #f2f3f5; color: #4e5969; }
+.badge.processing { background: #e8fafa; color: #0b6e6e; }
+.badge.completed { background: #f1fff7; color: #087443; border: 1px solid #9fe6c0; }
+.badge.partial_success { background: #fff7e8; color: #d97b00; border: 1px solid #ffe4ba; }
+.badge.failed { background: #fff1f0; color: #cf1322; border: 1px solid #ffccc7; }
+.badge.ready { background: #e8fafa; color: #0b6e6e; }
+.degrade-banner { display: flex; align-items: center; gap: 8px; margin: 12px 0; padding: 12px 14px; border-radius: 8px; border: 1px solid #ffe4ba; background: #fff7e8; color: #d97b00; font-size: 14px; }
+.bar-chart { display: flex; align-items: flex-end; gap: 6px; height: 120px; padding: 8px 0; }
+.bar-chart .bar { flex: 1; min-width: 18px; background: #0fc6c2; border-radius: 4px 4px 0 0; position: relative; transition: height .3s ease; }
+.bar-chart .bar span { position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%); font-size: 11px; color: #6b7785; white-space: nowrap; }
+.hbar-row { display: grid; grid-template-columns: 150px 1fr 70px; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 13px; }
+.hbar-row .hbar { height: 14px; border-radius: 999px; background: #e5e6eb; overflow: hidden; }
+.hbar-row .hbar span { display: block; height: 100%; border-radius: 999px; background: #0fc6c2; }
+.hbar-row .hbar.warn span { background: #ff7d00; }
+.hbar-row .hbar.danger span { background: #f53f3f; }
+.timeline { display: grid; gap: 0; margin-top: 12px; }
+.timeline-item { display: grid; grid-template-columns: 90px 24px 1fr; gap: 8px; align-items: start; padding: 6px 0; font-size: 13px; }
+.timeline-item .time { color: #6b7785; font-variant-numeric: tabular-nums; }
+.timeline-item .dot { width: 10px; height: 10px; border-radius: 50%; background: #0fc6c2; margin-top: 4px; justify-self: center; }
+.timeline-item.error .dot { background: #f53f3f; }
+.timeline-item.warn .dot { background: #ff7d00; }
+.section-title { display: flex; align-items: center; gap: 8px; font-weight: 700; color: #0b6e6e; margin: 18px 0 10px; }
+.alert-box { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-bottom: 12px; }
+.alert-box.ok { border: 1px solid #b5e8e8; background: #e8fafa; color: #0b6e6e; }
+.alert-box.warn { border: 1px solid #ffe4ba; background: #fff7e8; color: #d97b00; }
+.alert-box.critical { border: 1px solid #ffccc7; background: #fff1f0; color: #cf1322; }
+.v4-table { width: 100%; }
+.v4-table th, .v4-table td { min-width: 90px; }
+.muted { color: #6b7785; font-size: 13px; }
+.code-pill { font-family: Consolas, monospace; font-size: 12px; background: #f2f3f5; border-radius: 4px; padding: 1px 6px; color: #0b6e6e; }

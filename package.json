@@ -8,7 +8,10 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "verify:v3-contract": "node --import tsx scripts/verify-v3-contract.mjs"
+    "verify:v3-contract": "node --import tsx scripts/verify-v3-contract.mjs",
+    "seed": "node --import tsx scripts/seed-data.ts",
+    "loadtest": "node scripts/loadtest.mjs",
+    "worker-loop": "node scripts/worker-loop.mjs"
   },
   "dependencies": {
     "@e965/xlsx": "^0.20.3",
