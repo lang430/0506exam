@@ -55,3 +55,11 @@ export async function POST(request: Request) {
     elapsed_ms: result.elapsedMs
   });
 }
+
+/**
+ * GET /api/import-dispatcher —— 供 Vercel Cron 调用（Cron 只发 GET，不发 POST）。
+ * 鉴权复用 verifyDispatcherToken：Vercel 在项目配置了 CRON_SECRET 时，
+ * 会以 `Authorization: Bearer $CRON_SECRET` 调用本端点。
+ * 语义与 POST 完全一致，直接委托，避免逻辑分叉。
+ */
+export const GET = POST;

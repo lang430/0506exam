@@ -114,4 +114,4 @@ gh workflow run deploy-vercel.yml --repo lang430/0506exam -f target=preview
 
 ## 六、与本项目 cron 的关系
 
-`vercel.json` 里的 `crons`（每分钟调用 `/api/import-dispatcher`）由 Vercel 平台在**部署生效后**自动接管，与本工作流无关，无需额外配置。注意 Vercel Hobby 计划对 cron 频率有限制，实际触发间隔可能低于配置值——项目已有 `after()` 自链与轮询内联调度作为主驱动，cron 仅作兜底。
+`vercel.json` 里的 `crons`（每日 03:00 调用 `/api/import-dispatcher`，`0 3 * * *`）由 Vercel 平台在**部署生效后**自动接管，与本工作流无关，无需额外配置。注意 Vercel Hobby 计划对 cron 频率的限制（每个项目 cron 每天仅允许触发一次），故 cron 仅作兜底；主驱动仍是 `after()` 自链与轮询内联调度。
