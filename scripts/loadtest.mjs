@@ -149,7 +149,7 @@ const main = async () => {
   const report = {
     test_time: new Date().toISOString(),
     deploy_env: BASE_URL,
-    worker_config: "Vercel Serverless（上传 after() 即时触发 + Dispatcher 自链 after() 续跑 + cron 兜底恢复；PG 原生队列 SKIP LOCKED 串行单处理器，单批 1000 行）",
+    worker_config: "Vercel Serverless 三路径互补调度（① 上传接口 after() 触发 /api/import-dispatcher 为主路径；② 调度端点每轮结束仍有积压时 after() 自链续跑，单轮预算 30 批/50s；③ 任务进度轮询在响应前内联执行一轮调度，预算 4 批/8s，请求生命周期内必然释放租约；vercel.json cron 与本地 worker-loop 兜底宕机恢复）；PG 原生队列 FOR UPDATE SKIP LOCKED，全局租约 dispatch_lease 保证同一时刻单处理器串行消费；处理单元行数由 V4_BATCH_SIZE 决定（默认 1000，生产设为 2500），实际生效值以本报告 observed_batching 字段为准",
     database: "Supabase Postgres（连接池 max=1/函数实例，批量 IN 校验 + 250 行/批 UPSERT）",
     file_path: FILE_PATH
   };
@@ -254,6 +254,49 @@ const main = async () => {
       unit_id: batch.unit_id, status: batch.status, retry_count: batch.retry_count,
       success_rows: Number(batch.success_rows), failed_rows: Number(batch.failed_rows)
     }));
+
+    // 运行时批次口径证据：用实际观测值取代文档写死的“单批 N 行”，消除 1000/2500 口径争议
+    const batchRowCounts = report.batches.map((batch) => batch.success_rows + batch.failed_rows);
+    const nonEmptyBatches = batchRowCounts.filter((rows) => rows > 0);
+    report.observed_batching = {
+      batch_count: report.batches.length,
+      rows_per_batch: batchRowCounts,
+      max_rows_per_batch: nonEmptyBatches.length ? Math.max(...nonEmptyBatches) : 0,
+      total_rows_in_batches: batchRowCounts.reduce((sum, rows) => sum + rows, 0),
+      retried_batches: report.batches.filter((batch) => Number(batch.retry_count) > 0).length
+    };
+    console.log(`[loadtest] 实际批次口径：${report.observed_batching.batch_count} 批，单批最大 ${report.observed_batching.max_rows_per_batch} 行，合计 ${report.observed_batching.total_rows_in_batches} 行（重试批次 ${report.observed_batching.retried_batches} 个）`);
+  }
+
+  // 3b. 监控看板聚合快照（作为压测报告“监控看板日志”的机器可读证据，替代截图）
+  try {
+    const monitorResponse = await fetch(`${BASE_URL}/api/import-monitor/summary`);
+    if (monitorResponse.ok) {
+      const monitorData = await monitorResponse.json();
+      // 看板四大强制区全量落盘：吞吐量 / 队列积压预警 / 阶段耗时分位 / 错误分布（+ 慢批次与失败趋势）
+      // 注意：监控接口在数据库异常时会降级返回 { alertLevel: "critical", ... }，此时各聚合字段缺失，需逐个兜底。
+      const throughput = monitorData.throughput ?? [];
+      report.monitor_summary = {
+        generatedAt: monitorData.generatedAt ?? null,
+        alertLevel: monitorData.alertLevel ?? monitorData.queueDepth?.alertLevel ?? null,
+        throughput,
+        peak_throughput_rows_per_min: throughput.length
+          ? Math.max(...throughput.map((point) => Number(point.rows) || 0))
+          : 0,
+        queueDepth: monitorData.queueDepth ?? null,
+        stagePercentiles: monitorData.stagePercentiles ?? null,
+        errorDistribution: monitorData.errorDistribution ?? [],
+        slowBatches: (monitorData.slowBatches ?? []).slice(0, 10),
+        failedTaskTrend: monitorData.failedTaskTrend ?? [],
+        recentTasks: (monitorData.recentTasks ?? []).slice(0, 5)
+      };
+      const snapshot = report.monitor_summary;
+      console.log(`[loadtest] 已采集监控看板快照：峰值吞吐 ${snapshot.peak_throughput_rows_per_min} 行/分钟，队列等待 ${snapshot.queueDepth?.waitingRows ?? "?"} 行（预警 ${snapshot.queueDepth?.alertLevel ?? "?"}），错误分布 ${snapshot.errorDistribution.length} 类，慢批次 ${snapshot.slowBatches.length} 条`);
+    } else {
+      console.warn(`[loadtest] 监控聚合快照采集失败（不影响结果）：HTTP ${monitorResponse.status}`);
+    }
+  } catch (error) {
+    console.warn(`[loadtest] 监控聚合快照采集失败（不影响结果）：${error.message}`);
   }
 
   mkdirSync(join(process.cwd(), "test-data"), { recursive: true });

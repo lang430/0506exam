@@ -13,7 +13,7 @@ POST /api/import-tasks（≤1s 返回 task_id）
       │  import_task_batches（处理单元，N 个）
       │  event_outbox（Transactional Outbox 事件）
       │
-      ├─ after() 直调调度循环（主路径）
+      ├─ after() 触发 POST /api/import-dispatcher（主路径，零延迟）
       │
       ▼
 runDispatchCycle（全局租约锁，单处理器）
@@ -48,7 +48,7 @@ runDispatchCycle（全局租约锁，单处理器）
 | 文件存储 | Postgres bytea（import_task_files） | 零额外凭据；10k 行文件仅 ~500KB；Worker 复读原始文件保证批次自包含与幂等 |
 | 解析执行 | 首批读全文件 + 规则引擎，按批截取行区间 | 批次完全自包含：任何批次可独立重试/恢复；规则引擎 10k 行解析仅 ~0.9s |
 | 解析缓存 | 实例级 LRU（上限 3 任务）缓存规则引擎解析结果 | 单处理器串行消费时后续批次命中缓存（parse=0），单批 1.9s→0.5s |
-| 触发机制 | 轮询内联调度（主）+ 手动 Dispatcher/worker-loop（兜底） | Hobby 计划 after() 随实例挂起且持租约阻塞其他循环（实测 90s 停滞）；内联调度在请求生命周期内必然执行并释放租约 |
+| 触发机制 | 三路径互补：① 上传 after() 触发调度端点（主路径）；② 调度端点 after() 自链续跑（30 批/50s）；③ 进度轮询响应前内联调度（4 批/8s）；cron + worker-loop 兜底 | Hobby 计划 after() 随实例挂起且持租约阻塞其他循环（实测 90s 停滞）；三路径互补保证"上传即启动、有人看进度就推进、宕机有兜底"，且请求生命周期内必然释放租约 |
 | 幂等 | 认领互斥 + 状态门闩 + 业务键 UPSERT | 四层防线，重复投递/重复消费零副作用 |
 
 ## 3. 数据模型（database-v4.sql 增量）

@@ -9,7 +9,7 @@ All deliverable file names follow English naming conventions.
 | 2 | Source repository (GitHub) | https://github.com/lang430/0506exam | ✅ Pushed |
 | 3 | Load-test data seed script (20,000 SKUs) | `scripts/seed-data.ts` | ✅ Idempotent, verified |
 | 4 | 10,000-row load-test Excel file | `test-data/10000-orders.xlsx` | ✅ Committed (170 seeded errors) |
-| 5 | Load-test report (≤60s proof) | `docs/load-test-report.md` (+ raw JSON: `test-data/loadtest-report.json`) | ✅ 5.6s measured |
+| 5 | Load-test report (≤60s proof) | `docs/load-test-report.md` (+ raw JSON: `test-data/loadtest-report.json`) | ✅ 11s 端到端（服务端处理 ≤400ms） |
 | 6 | Architecture design document (async flow / Outbox / batching) | `docs/architecture-design.md` | ✅ Complete |
 | 7 | Refactoring assumptions (Module-11, 12 required points) | `docs/refactoring-assumptions.md` | ✅ Complete |
 | 8 | API documentation (upload / task / errors / trace / monitor) | `docs/api-documentation.md` | ✅ Complete |
@@ -36,7 +36,7 @@ Manual dispatch (ops fallback): `POST /api/import-dispatcher` with `Authorizatio
 npm install
 npm run seed      # 20,000 SKUs + 10,000-row Excel (idempotent)
 npm run loadtest -- --base-url https://0807v4.vercel.app
-# Expected: PARTIAL_SUCCESS, success 9830 / failed 170, total ≤ 60s (measured 5.6s)
+# Expected: PARTIAL_SUCCESS, success 9830 / failed 170, total ≤ 60s (report: 11s 端到端，服务端 upload_ms 150~400ms)
 npm test          # 29 automated tests (Module 10.1 scenarios)
 ```
 
