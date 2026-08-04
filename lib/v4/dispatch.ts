@@ -1,4 +1,5 @@
 import type postgres from "postgres";
+import { leaseSeconds } from "@/lib/v4/http";
 import { claimReadyBatches, dispatchOutbox, recoverStuckBatches } from "@/lib/v4/queue";
 import { recordTraceEvents } from "@/lib/v4/trace";
 import { processBatch, type BatchOutcome } from "@/lib/v4/worker";
@@ -22,8 +23,6 @@ export interface DispatchCycleResult {
   skippedByLock?: boolean;
 }
 
-const LEASE_SECONDS = 30;
-
 /**
  * 租约锁：INSERT ... ON CONFLICT 条件更新实现 CAS 抢占。
  * 只有“租约已过期”或“自己是当前持有者”时才能写入成功；
@@ -32,7 +31,7 @@ const LEASE_SECONDS = 30;
 const acquireOrRenewLease = async (sql: postgres.Sql, owner: string): Promise<boolean> => {
   const rows = await sql`
     insert into dispatch_lease (key, owner, expires_at)
-    values (1, ${owner}, now() + make_interval(secs => ${LEASE_SECONDS}))
+    values (1, ${owner}, now() + make_interval(secs => ${leaseSeconds()}))
     on conflict (key) do update
       set owner = excluded.owner, expires_at = excluded.expires_at, acquired_at = now()
       where dispatch_lease.expires_at < now() or dispatch_lease.owner = excluded.owner

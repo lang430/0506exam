@@ -12,6 +12,8 @@ interface MonitorSummary {
     pendingBatches: number;
     readyBatches: number;
     processingBatches: number;
+    stuckBatches: number;
+    stuckThresholdSeconds: number;
     waitingRows: number;
     outboxPending: number;
     alertLevel: "ok" | "warn" | "critical";
@@ -96,7 +98,6 @@ export default function MonitorPage() {
 
   const maxThroughput = Math.max(1, ...((summary?.throughput ?? []).map((item) => item.rows).length ? (summary?.throughput ?? []).map((item) => item.rows) : [1]));
   const maxErrorCount = Math.max(1, ...((summary?.errorDistribution ?? []).length ? (summary?.errorDistribution ?? []).map((item) => item.count) : [1]));
-  const backlogWarn = summary ? (summary.queueDepth?.waitingRows ?? 0) >= 5000 : false;
   const maxStageMs = summary?.stagePercentiles
     ? Math.max(1, ...Object.values(summary.stagePercentiles).flatMap((stage) => [stage.p50, stage.p95, stage.p99]))
     : 1;
@@ -138,16 +139,23 @@ export default function MonitorPage() {
 
             <section className="panel">
               <div className="panel-title"><Layers size={18} /> 队列积压深度</div>
-              <div className={`alert-box ${summary.queueDepth.alertLevel === "warn" ? "warn" : "ok"}`}>
-                {backlogWarn
-                  ? <>⚠️ 橙色预警：等待处理行数 {summary.queueDepth.waitingRows} 已超过阈值 5000</>
-                  : <>队列运行正常，等待处理 {summary.queueDepth.waitingRows} 行</>}
+              <div className={`alert-box ${summary.queueDepth.alertLevel}`}>
+                {summary.queueDepth.alertLevel === "critical" ? (
+                  <><AlertTriangle size={16} /> 🚨 红色告警：{summary.queueDepth.stuckBatches > 0
+                    ? `发现 ${summary.queueDepth.stuckBatches} 个卡死批次（Hobby 函数被 kill），等待 ${summary.queueDepth.waitingRows} 行`
+                    : `等待处理行数 ${summary.queueDepth.waitingRows} 已严重积压`}</>
+                ) : summary.queueDepth.alertLevel === "warn" ? (
+                  <>⚠️ 橙色预警：等待处理行数 {summary.queueDepth.waitingRows}，{(summary.queueDepth.stuckBatches ?? 0) > 0 ? `含 ${summary.queueDepth.stuckBatches} 个卡死批次` : "请关注队列推进"}</>
+                ) : (
+                  <>队列运行正常，等待处理 {summary.queueDepth.waitingRows} 行</>
+                )}
               </div>
               <div className="metric-grid">
                 <div className="metric-card"><div className="label">待投递 Outbox</div><div className="value">{summary.queueDepth.outboxPending}</div></div>
                 <div className="metric-card"><div className="label">待入队批次</div><div className="value">{summary.queueDepth.pendingBatches}</div></div>
                 <div className="metric-card accent"><div className="label">就绪待消费</div><div className="value">{summary.queueDepth.readyBatches}</div></div>
                 <div className="metric-card"><div className="label">处理中</div><div className="value">{summary.queueDepth.processingBatches}</div></div>
+                <div className="metric-card" style={{ gridColumn: "1 / -1" }}><div className="label">卡死批次（locked &gt; {summary.queueDepth.stuckThresholdSeconds}s）</div><div className="value" style={{ color: summary.queueDepth.stuckBatches > 0 ? "#d97706" : "inherit" }}>{summary.queueDepth.stuckBatches ?? 0}</div></div>
               </div>
             </section>
 

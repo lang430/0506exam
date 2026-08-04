@@ -1,5 +1,5 @@
 import { NextResponse, after } from "next/server";
-import { dbUnavailable, getV4Sql, verifyDispatcherToken } from "@/lib/v4/http";
+import { dbUnavailable, dispatcherBudgetMs, dispatcherMaxBatches, getV4Sql, verifyDispatcherToken } from "@/lib/v4/http";
 import { runDispatchCycle } from "@/lib/v4/dispatch";
 
 export const runtime = "nodejs";
@@ -19,7 +19,12 @@ export async function POST(request: Request) {
   const sql = await getV4Sql();
   if (!sql) return dbUnavailable();
 
-  const result = await runDispatchCycle(sql, { maxBatches: 30, timeBudgetMs: 50_000 });
+  // Hobby 函数实际约 10s 硬顶，单轮预算必须预留安全余量；
+  // 默认 8s/3 批，靠 after() 自链 + 轮询内联 + cron 兜底清空积压。
+  const result = await runDispatchCycle(sql, {
+    maxBatches: dispatcherMaxBatches(),
+    timeBudgetMs: dispatcherBudgetMs()
+  });
 
   // 仍有积压 → 自链式触发下一轮。
   // 用 after() 保证续跑不被 Lambda 冻结打断（fire-and-forget 在 Vercel 可能被杀）。

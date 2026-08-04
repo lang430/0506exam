@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { runDispatchCycle } from "@/lib/v4/dispatch";
-import { dbUnavailable, getV4Sql, notFound } from "@/lib/v4/http";
+import { dbUnavailable, getV4Sql, notFound, stuckBatchSeconds } from "@/lib/v4/http";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -17,8 +17,12 @@ export const maxDuration = 60;
  * 主驱动仍是上传 after() → 调度端点自链 → cron 兜底，本接口只做自愈补位。
  */
 
-/** 停滞判定窗口：批次 locked_at 超过该时长仍在 processing，视为无人推进 */
-const ACTIVE_PROCESSING_WINDOW_SECONDS = 30;
+/**
+ * 停滞判定窗口：批次 locked_at 超过该时长仍在 processing，视为无人推进。
+ * 与卡死恢复阈值保持一致（默认 30s），保证轮询一旦检测到“无活跃处理”时，
+ * 调度循环里的 recoverStuckBatches 已经可以把该批次回收。
+ */
+const ACTIVE_PROCESSING_WINDOW_SECONDS = stuckBatchSeconds();
 /** 轮询内联调度预算：仅推进 1 批，硬上限 2.5s，避免拖慢轮询 */
 const INLINE_DISPATCH_MAX_BATCHES = 1;
 const INLINE_DISPATCH_BUDGET_MS = 2_500;

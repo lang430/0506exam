@@ -1,5 +1,6 @@
 import type postgres from "postgres";
 import { ImportEvents, type EventEnvelope } from "@/lib/v4/events";
+import { stuckBatchSeconds } from "@/lib/v4/http";
 
 /**
  * PG 原生任务队列（等效异步任务系统）：
@@ -43,7 +44,6 @@ export type OutboxRow = {
 
 export const MAX_OUTBOX_RETRY = 5;
 export const MAX_BATCH_RETRY = 3;
-export const STUCK_BATCH_MINUTES = 2;
 
 /** 与任务创建同事务写入 Outbox（event_id 幂等） */
 export const enqueueEvents = async (
@@ -159,11 +159,12 @@ export const claimReadyBatches = async (sql: postgres.Sql, limit = 1, taskId?: s
 
 /** 卡死恢复：processing 超时的批次重置为 ready（重试）或标记 failed（死信） */
 export const recoverStuckBatches = async (sql: postgres.Sql): Promise<{ recovered: number; deadLettered: number }> => {
+  const stuckSecs = stuckBatchSeconds();
   const recovered = await sql`
     update import_task_batches
     set status = 'ready', locked_at = null
     where status = 'processing'
-      and locked_at < now() - make_interval(mins => ${STUCK_BATCH_MINUTES})
+      and locked_at < now() - make_interval(secs => ${stuckSecs})
       and retry_count < ${MAX_BATCH_RETRY}
     returning id
   `;
@@ -171,7 +172,7 @@ export const recoverStuckBatches = async (sql: postgres.Sql): Promise<{ recovere
     update import_task_batches
     set status = 'failed', completed_at = now()
     where status = 'processing'
-      and locked_at < now() - make_interval(mins => ${STUCK_BATCH_MINUTES})
+      and locked_at < now() - make_interval(secs => ${stuckSecs})
       and retry_count >= ${MAX_BATCH_RETRY}
     returning id
   `;

@@ -1,11 +1,10 @@
 import type postgres from "postgres";
+import { queueBacklogWarnRows, stuckBatchSeconds } from "@/lib/v4/http";
 
 /**
  * 监控聚合查询：吞吐、队列积压、阶段耗时百分位、错误分布。
  * 数据来源均为任务/批次/错误/性能日志的真实聚合。
  */
-
-export const QUEUE_BACKLOG_WARN_ROWS = 5000;
 
 export interface MonitorSummary {
   generatedAt: string;
@@ -14,6 +13,8 @@ export interface MonitorSummary {
     pendingBatches: number;
     readyBatches: number;
     processingBatches: number;
+    stuckBatches: number;
+    stuckThresholdSeconds: number;
     waitingRows: number;
     outboxPending: number;
     alertLevel: "ok" | "warn" | "critical";
@@ -57,11 +58,13 @@ export const getMonitorSummary = async (sql: postgres.Sql): Promise<MonitorSumma
     group by 1
     order by 1
   `;
+  const stuckSecs = stuckBatchSeconds();
   const depthRows = await sql`
     select
       count(*) filter (where status = 'pending')::int as pending_batches,
       count(*) filter (where status = 'ready')::int as ready_batches,
       count(*) filter (where status = 'processing')::int as processing_batches,
+      count(*) filter (where status = 'processing' and locked_at < now() - make_interval(secs => ${stuckSecs}))::int as stuck_batches,
       coalesce(sum(case when status in ('pending','ready','processing') then greatest(end_row - start_row, 0) end), 0)::bigint as waiting_rows
     from import_task_batches
   `;
@@ -115,6 +118,12 @@ export const getMonitorSummary = async (sql: postgres.Sql): Promise<MonitorSumma
 
   const depth = depthRows[0];
   const waitingRows = Number(depth?.waiting_rows ?? 0);
+  const stuckBatches = Number(depth?.stuck_batches ?? 0);
+  const warnRows = queueBacklogWarnRows();
+  const alertLevel: MonitorSummary["queueDepth"]["alertLevel"] =
+    stuckBatches > 0 || waitingRows >= warnRows * 2 ? "critical" :
+    waitingRows >= warnRows || Number(outboxRows[0]?.c ?? 0) > 50 ? "warn" :
+    "ok";
   const percentile = percentileRows[0];
   const stagePercentiles: MonitorSummary["stagePercentiles"] = {
     parse: { p50: Number(percentile?.parse_p50 ?? 0), p95: Number(percentile?.parse_p95 ?? 0), p99: Number(percentile?.parse_p99 ?? 0) },
@@ -130,9 +139,11 @@ export const getMonitorSummary = async (sql: postgres.Sql): Promise<MonitorSumma
       pendingBatches: Number(depth?.pending_batches ?? 0),
       readyBatches: Number(depth?.ready_batches ?? 0),
       processingBatches: Number(depth?.processing_batches ?? 0),
+      stuckBatches,
+      stuckThresholdSeconds: stuckSecs,
       waitingRows,
       outboxPending: Number(outboxRows[0]?.c ?? 0),
-      alertLevel: waitingRows >= QUEUE_BACKLOG_WARN_ROWS ? "warn" : "ok"
+      alertLevel: alertLevel
     },
     stagePercentiles,
     errorDistribution: errorRows.map((row) => ({ errorCode: row.error_code, count: Number(row.c) })),

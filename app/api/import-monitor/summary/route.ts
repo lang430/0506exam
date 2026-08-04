@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import postgres from "postgres";
 import { getDatabaseUrl } from "@/lib/db";
-import { dbUnavailable, getV4Sql } from "@/lib/v4/http";
-import { getMonitorSummary, QUEUE_BACKLOG_WARN_ROWS } from "@/lib/v4/monitor";
+import { dbUnavailable, getV4Sql, queueBacklogWarnRows } from "@/lib/v4/http";
+import { getMonitorSummary } from "@/lib/v4/monitor";
 
 export const runtime = "nodejs";
 
@@ -38,7 +38,7 @@ export async function GET() {
       alertLevel: "critical",
       error: error instanceof Error ? error.message : "监控聚合失败",
       hint: "数据库或队列不可用，请检查连接配置",
-      backlogWarnThreshold: QUEUE_BACKLOG_WARN_ROWS
+      backlogWarnThreshold: queueBacklogWarnRows()
     }, { status: 503 });
   }
 }
