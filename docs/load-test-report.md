@@ -4,103 +4,71 @@
 
 | 项目 | 值 |
 |---|---|
-| 测试时间 | 2026-08-03 20:10 ~ 20:30（UTC+8） |
-| 部署环境 | Vercel Production：https://0807v4.vercel.app （us-east-1，Serverless，maxDuration=60s） |
-| 数据库 | Supabase Postgres（us-east-1，Vercel Marketplace 集成，连接池模式 6543 + 直连 5432） |
-| Worker 配置 | Vercel Serverless 三路径互补：上传接口 after() 触发 `/api/import-dispatcher`（主路径）+ 调度端点 after() 自链续跑（3 批/8s 一轮，适配 Hobby 约 10s 硬上限）+ 进度轮询响应前停滞门控内联调度（仅无批次处理中时，1 批/2.5s）；cron（每日 03:00）与本地 worker-loop 兜底；卡死恢复窗口 30s；全局租约锁（dispatch_lease）保证同一时刻单处理器串行消费 |
-| 并发与连接控制 | 每个函数实例 postgres 客户端 max=1；批次认领 FOR UPDATE SKIP LOCKED；禁止多实例并行消费（实测并行会压垮小规格数据库，详见重构假设说明） |
-| SKU 主数据 | 20,000 条（SKU_00001~SKU_20000，scripts/seed-data.ts 灌入） |
-| 压测文件 | test-data/10000-orders.xlsx，10,000 行运单（2,000 个外部编码 × 5 SKU 行） |
-| 故意错误 | 120 行非法 SKU（E001）+ 30 行非法电话（E003）+ 20 行非正数量（E004），共 170 行 |
-| 处理单元 | 500 行/批 × 20 批 + 1 个尾部开放批（V4_BATCH_SIZE=500，Hobby 约束下优先保证单批不被 kill） |
+| 测试时间 | 2026-08-04 19:48（UTC+8） |
+| 部署环境 | Vercel Production：`https://0807v4.vercel.app` |
+| 任务 ID | `task_9eafbf6b7fe249fcb3f4d2e8` |
+| 数据库 | Supabase Postgres；应用连接 `max=1`、`prepare=false` |
+| SKU 主数据 | 20,000 条 |
+| 压测文件 | `test-data/10000-orders.xlsx`，10,000 行 |
+| 故意错误 | E001 非法 SKU 120 行 + E003 非法电话 30 行 + E004 非正数量 20 行，共 170 行 |
+| 处理单元 | 生产 `V4_BATCH_SIZE=2500`，共 5 批（最后一批为空尾批） |
+| Dispatcher | 单轮最多 6 批、预算 9 秒；内部触发超时最高 10 秒 |
 
-## 压测结果
+机器可读原始报告见 `test-data/loadtest-report.json`。
 
-| 指标 | 结果 | 目标 | 结论 |
-|---|---:|---|---|
-| 10,000 行全链路耗时（上传返回 → 任务终态） | **11 秒**为 `V4_BATCH_SIZE=2500` 旧配置实测；当前 `V4_BATCH_SIZE=500` 后单批 2~4s，20 批靠调度端点（3 批/8s）+ 轮询兜底预计 **30~50 秒** | ≤ 60 秒 | ✅ 达标（需重新跑 `npm run loadtest` 刷新本表） |
-| 任务终态 | PARTIAL_SUCCESS | completed / partial_success | ✅ |
-| 成功行数 | 9,830 | 9,830 | ✅ 与预期完全一致 |
-| 失败行数 | 170 | 170 | ✅ 与预埋错误完全一致 |
-| 500 / 504 错误 | 无 | 无 | ✅ |
-| SKU 校验降级 | 未触发 | — | 主数据查询 <3s，正常校验 |
+## 验收结果
 
-### 上传接口响应时间（考点 1：P95 ≤ 1 秒）
+| 指标 | 实测 | 目标 | 结论 |
+|---|---:|---:|---|
+| 10,000 行全链路耗时 | 38.509 秒 | ≤ 60 秒 | 通过 |
+| 任务终态 | PARTIAL_SUCCESS | COMPLETED / PARTIAL_SUCCESS | 通过 |
+| 成功行数 | 9,830 | 9,830 | 通过 |
+| 失败行数 | 170 | 170 | 通过 |
+| 500 / 504 | 0 | 0 | 通过 |
+| 批次重试 | 0 | 无异常重试 | 通过 |
+| SKU 校验降级 | 否 | 正常校验 | 通过 |
+| 服务端 `upload_ms` P95 | 100ms | ≤ 1 秒 | 通过 |
+| 压测机端到端上传 P95 | 14,151ms | ≤ 1 秒 | **未通过** |
 
-压测机位于中国，Vercel/Supabase 位于美东，每次请求包含约 300~700ms 的跨洋 TCP/TLS 往返。采样数据反映"压测机视角"端到端时间；服务端耗时以接口返回的 `upload_ms` 字段为准：
+脚本综合结果为 `PASS`，其上传 P95 验收采用接口返回的服务端 `upload_ms`，并要求 10 次样本全部成功。压测机位于中国、Vercel 与数据库位于美东；公网端到端 P95 明显不满足 1 秒，因此不能据本报告宣称任意地域客户端均达到 P95 ≤1 秒。若评分统一按发压机端到端时间，本项应判未通过；需在同区域压测机复测或迁移部署区域后再验收。
 
-| 口径 | 小文件（50 行 × 10 次） | 10,000 行大文件 |
-|---|---|---|
-| 压测机视角 P95（含跨洋网络） | 1051ms | 1191ms（单次） |
-| **服务端处理 upload_ms** | **300~450ms** | **150~260ms**（3 轮实测） |
+主文件请求从发起到取得 `task_id` 为 33.786 秒，取得 `task_id` 后约 5 秒进入终态，总计 38.509 秒。该次仍满足唯一硬性吞吐目标，但上传等待偏高，是当前明确风险。
 
-优化后上传关键路径：`formData 接收 → SHA256 → 规则/查重/活跃任务合并预检（1 次查询）→ zip 级行数统计（10k 行 26ms）→ 单事务写入文件+任务+批次+Outbox → 返回`。10,000 行文件的服务端处理从优化前 1016~1207ms 降至 150~260ms，满足 P95 ≤1s。
+## 批次性能
 
-### 处理单元阶段耗时（batch_performance_log 真实记录）
+| 批次 | 解析 | 规则 | 校验 | 写入 | 总耗时 | 行数 |
+|---|---:|---:|---:|---:|---:|---:|
+| unit_001 | 966ms | 147ms | 34ms | 317ms | 1,511ms | 2,500 |
+| unit_002 | 0ms | 0ms | 30ms | 332ms | 408ms | 2,500 |
+| unit_003 | 0ms | 0ms | 29ms | 278ms | 345ms | 2,500 |
+| unit_004 | 0ms | 0ms | 29ms | 286ms | 354ms | 2,500 |
+| unit_005 | 0ms | 0ms | 0ms | 9ms | 48ms | 0 |
 
-| 批次 | 文件解析 | 规则引擎 | 批量校验 | 批量写入 | 总耗时 |
-|---:|---:|---:|---:|---:|---:|
-| unit_001 | 939ms | 134ms | 43ms | 613ms | 1873ms |
-| unit_002 | 0ms（缓存） | 0ms（缓存） | 28ms | 444ms | 500ms |
-| unit_003 | 0ms（缓存） | 0ms（缓存） | 22ms | 591ms | 640ms |
-| unit_004 | 0ms（缓存） | 0ms（缓存） | 23ms | 326ms | 378ms |
-| unit_005 | 0ms（空尾批） | 0ms | 0ms | 3ms | 28ms |
+首批完成文件解析与 V2 规则执行，后续批次命中实例级解析缓存。SKU 与重复键均按批查询；有效数据以 250 行为一个多行 UPSERT 块写入，不执行逐行查询或逐行 INSERT。
 
-- 首批完整执行"读原始文件 + V2 规则引擎"并写入实例级解析缓存，后续批次命中缓存直接截取行区间（解析成本 0）；
-- 批量校验：收集本批 SKU 去重后单次 `IN` 查询 sku_master，外部编码重复检测同为单次批量查询，无逐行查询；
-- 批量写入：250 行/块的多行 VALUES UPSERT（on conflict 稳定业务键），无逐行 INSERT。
+## 可观测性证据
 
-### 阶段耗时 P50/P95/P99
+最终快照：
 
-监控聚合接口 `/api/import-monitor/summary` 基于 batch_performance_log 的 percentile_cont 实时计算（近 24 小时窗口）。本次压测样本代表值：
+- 峰值吞吐：10,180 行/分钟。
+- 队列：`pending=0`、`ready=0`、`processing=0`、`stuck=0`、`outboxPending=0`。
+- 阶段 P95：解析 965ms、规则 147ms、校验 63ms、写入 372ms。
+- 错误明细：成功 9,830 行、失败 170 行，与预埋数量完全一致。
+- Trace、批次性能、错误分布和队列快照均由数据库与线上接口采集，不是前端造数。
 
-| 阶段 | P50 | P95 | P99 |
-|---|---:|---:|---:|
-| 文件解析 | 0ms（缓存命中为主） | ~939ms（首批） | ~939ms |
-| 规则引擎 | 0ms | ~134ms | ~134ms |
-| 批量校验 | ~23ms | ~43ms | ~43ms |
-| 批量写入 | ~444ms | ~613ms | ~613ms |
+## 本轮修复记录
 
-### 错误明细验证（错误定位能力）
+1. 应用数据库客户端统一设置 `prepare=false`，兼容 Supabase transaction pooler，消除 PostgreSQL `26000 prepared statement does not exist`。
+2. 卡死批次达到重试上限转死信后，主动聚合所属任务终态，避免任务永久停在 PROCESSING。
+3. 上传后的首次 Dispatcher 触发及 Dispatcher 自链均设置最高 10 秒超时，避免后台阻塞耗尽上传函数 60 秒生命周期。
+4. 压测前作废未终态任务并清理 `LT%` 运单；P95 样本在主任务终态后执行，避免争抢主任务 Worker。
+5. 报告将首次认领 `retry_count=1` 与真实重试区分，仅 `retry_count>1` 计为重试批次。
 
-170 条行级错误全部写入 import_task_errors，含批次号、文件全局行号、字段名、脱敏原始值、错误码、原因与修复建议；可通过 `/api/import-tasks/:taskId/errors?batch=&error_code=&page=` 筛选分页，任务页一键导出 CSV，Trace 页按行号/错误码检索直达失败节点。
-
-### 监控看板证据（考点 5 / 提交物"监控看板日志"）
-
-看板页面 `/monitor` 与聚合接口 `GET /api/import-monitor/summary` 同源，四大强制区数据均由 SQL 实时聚合，无前端造数。压测窗口内读数如下：
-
-| 看板区域 | 数据来源 | 压测期间读数 | 说明 |
-|---|---|---|---|
-| **① 吞吐量** | `imported_orders` 按分钟聚合（近 60 分钟） | 峰值 **≈55,000 行/分钟**（10,000 行 / 11 秒） | 远超 10,000 单/分钟目标 |
-| **② 队列积压预警** | `import_task_batches` 未终态批次 + `event_outbox` 待投递 | 任务创建瞬时 `waitingRows≈10,000`、`pendingBatches=5` → **触发 `warn` 橙色预警**（阈值 `QUEUE_BACKLOG_WARN_ROWS=5000`）；11 秒后归零转 `ok` | 预警链路在本次压测中真实触发并自动恢复 |
-| **③ 阶段耗时 P50/P95/P99** | `batch_performance_log` 的 `percentile_cont`（近 24h） | 见上文"阶段耗时 P50/P95/P99"表：解析 P95≈939ms、规则 P95≈134ms、校验 P95≈43ms、写入 P95≈613ms | 四阶段独立计时，非估算 |
-| **④ 错误分布** | `import_task_errors` 按 `error_code` 分组 | **E001 非法SKU 120 / E003 非法电话 30 / E004 非正数量 20**，合计 170 | 与预埋错误逐类精确吻合 |
-| 慢批次 TOP10（增强） | `batch_performance_log` 按 `total_duration_ms` 倒序 | unit_001 1873ms > unit_003 640ms > unit_002 500ms > unit_004 378ms > unit_005 28ms | 首批含解析冷启动，符合预期 |
-| 失败任务趋势（增强） | `import_tasks` 按天聚合失败数 | 压测窗口内 0 条 `FAILED` 终态 | 无 5xx、无批次耗尽重试 |
-
-**机器可读证据**：`scripts/loadtest.mjs` 在任务达终态后自动拉取一次 `/api/import-monitor/summary`，将上述四大区完整快照（含 `throughput`、`queueDepth`、`stagePercentiles`、`errorDistribution`、`slowBatches`、`failedTaskTrend`、`peak_throughput_rows_per_min`）写入 `test-data/loadtest-report.json` 的 `monitor_summary` 字段；同时将实际批次口径写入 `observed_batching` 字段（批次数、单批行数、最大单批行数、重试批次数），用运行时观测值取代文档写死的批大小，避免口径歧义。重跑 `npm run loadtest` 即可再生成该证据，无需人工截图。
-
-### 稳定性增强（本轮优化记录）
-
-1. **上传幂等窗口**：60 秒内同文件哈希的活跃任务直接复用返回（`reused_task: true`），杜绝跨洋网络请求重放产生孪生任务；
-2. **压测前静默**：loadtest 先把未终态任务及其批次/Outbox 标记失败再清理数据，避免前序任务延迟批次污染本轮结果；
-3. **解析缓存 LRU**：上限 3 个任务，防止实例内存膨胀。
-4. **调度模型演进**：早期仅依赖单一 `after()` 后台调度，实测 Vercel Hobby 计划的挂起实例会持有调度租约并阻塞后续循环（造成 90s 停滞）。最终收敛为**三路径互补**：① 上传接口 `after()` 触发 `POST /api/import-dispatcher`（主路径，零延迟）；② 调度端点单轮预算 3 批 / 8s，结束时仍有积压则 `after()` 自链续跑；③ 任务进度轮询在响应前**内联**执行一轮调度（停滞门控：仅当无批次正在处理时，预算 1 批 / 2.5s，请求生命周期内必然释放租约，"只要有人看进度就推进"），彻底规避挂起实例长期持租约的风险。`vercel.json` cron 与本地 `scripts/worker-loop.mjs` 作为宕机/冻结兜底；卡死恢复窗口 30s，租约 TTL 15s。
-
-## 结论与已知瓶颈
-
-1. **结论**：`V4_BATCH_SIZE=2500` 时 10,000 行实测 11 秒；当前 `V4_BATCH_SIZE=500` 后单批 2~4s，20 批预计 30~50 秒（仍 ≤60s），无 5xx，错误数与预埋完全一致，行级错误可定位、可导出、可检索。10,000 单/分钟目标仍可达成。
-2. **已知瓶颈 1**：首批仍需完整读文件+解析（~1s）。若进一步提升，可在上传事务后增加 prepare 阶段把解析结果分片持久化，本次为控制复杂度未做。
-3. **已知瓶颈 2**：全局单处理器串行消费。10k 行规模下余量充足；吞吐目标提升至 5 万单/分钟时，应改为受控并发（租约分片 + 并发度上限）并升级数据库规格，详见重构假设说明第 12 节。
-4. **已知瓶颈 3**：Vercel Hobby 函数虽然声明 maxDuration=60s，但平台实际常在约 10s 硬顶 kill 实例。因此单批必须控制在 500 行（2~4s 完成），调度端点单轮预算仅 8s/3 批；通过"上传 after() 触发 + 调度端点自链 + 轮询自愈 + cron 兜底"四重路径 + 30s 卡死恢复保证任务最终完成。
-
-## 复现命令
+## 复现
 
 ```bash
-npm run seed     # 幂等：20,000 SKU + 10,000 行压测 Excel（含 170 预埋错误）
+npm run seed
 npm run loadtest -- --base-url https://0807v4.vercel.app
-# 报告输出：test-data/loadtest-report.json
-#   ├─ monitor_summary   监控看板四大区快照（吞吐/积压预警/阶段分位/错误分布 + 慢批次 + 失败趋势）
-#   ├─ observed_batching 运行时批次口径（批次数/单批行数/最大单批行数/重试批次数）
-#   └─ batch_performance 各处理单元四阶段耗时明细
 ```
+
+脚本会更新 `test-data/loadtest-report.json`，并以非零退出码显式报告未通过项。

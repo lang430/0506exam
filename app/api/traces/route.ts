@@ -12,11 +12,38 @@ export async function GET(request: Request) {
   if (!sql) return dbUnavailable();
   const { searchParams } = new URL(request.url);
   const taskId = searchParams.get("task_id")?.trim() || null;
+  const traceId = searchParams.get("trace_id")?.trim() || null;
   const fileName = searchParams.get("file_name")?.trim() || null;
   const errorCode = searchParams.get("error_code")?.trim() || null;
   const batch = searchParams.get("batch")?.trim() || null;
   const rowFrom = searchParams.get("row_from")?.trim() || null;
   const rowTo = searchParams.get("row_to")?.trim() || null;
+
+  if (traceId) {
+    const taskTraces = await sql`
+      select id as task_id, file_name, trace_id, status, total_rows, success_rows, failed_rows, created_at
+      from import_tasks where trace_id = ${traceId}
+      order by created_at desc limit 20
+    `;
+    return NextResponse.json({ traces: taskTraces });
+  }
+
+  if (taskId && !fileName && !errorCode && !batch && !rowFrom && !rowTo) {
+    const taskTraces = await sql`
+      select id as task_id, file_name, trace_id, status, total_rows, success_rows, failed_rows, created_at
+      from import_tasks where id = ${taskId}
+      limit 1
+    `;
+    return NextResponse.json({ traces: taskTraces });
+  }
+
+  if (!taskId && !fileName && !errorCode && !batch && !rowFrom && !rowTo) {
+    const taskTraces = await sql`
+      select id as task_id, file_name, trace_id, status, total_rows, success_rows, failed_rows, created_at
+      from import_tasks order by created_at desc limit 20
+    `;
+    return NextResponse.json({ traces: taskTraces });
+  }
 
   const taskTraces = await sql`
     select id as task_id, file_name, trace_id, status, total_rows, success_rows, failed_rows, created_at

@@ -59,9 +59,13 @@ export const leaseSeconds = (): number =>
 export const dispatcherBudgetMs = (): number =>
   Math.max(3000, Math.min(9_000, Number(process.env.V4_DISPATCHER_BUDGET_MS || 8_000)));
 
-/** Dispatcher 端点单轮最大批次数：与 budget 配套，确保在预算内完成。 */
+/** Dispatcher 端点单轮最大批次数：生产 2500 行/批时一次覆盖 5 个有效批次和空尾批。 */
 export const dispatcherMaxBatches = (): number =>
-  Math.max(1, Number(process.env.V4_DISPATCHER_MAX_BATCHES || 3));
+  Math.max(1, Number(process.env.V4_DISPATCHER_MAX_BATCHES || 6));
+
+/** 内部调度 HTTP 触发超时：避免后台阻塞耗尽上传接口的 60 秒生命周期。 */
+export const dispatcherTriggerTimeoutMs = (): number =>
+  Math.max(1_000, Math.min(10_000, Number(process.env.V4_DISPATCHER_TRIGGER_TIMEOUT_MS || 10_000)));
 
 /** 队列积压橙色预警阈值：默认 1000 行，让 500 行/批的 stuck 也能被看见。 */
 export const queueBacklogWarnRows = (): number =>

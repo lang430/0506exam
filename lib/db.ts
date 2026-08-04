@@ -4,6 +4,15 @@ import { getDatabaseConfig } from "@/lib/runtime-config";
 export const getDatabaseUrl = (): string | undefined =>
   getDatabaseConfig().url;
 
+/** Supabase transaction pooler 不支持跨后端复用 prepared statements。 */
+export const getPostgresOptions = () => ({
+  ssl: "require" as const,
+  max: 1,
+  idle_timeout: 20,
+  connect_timeout: 10,
+  prepare: false
+});
+
 /**
  * 每个 Serverless 实例复用一个 postgres 客户端（单例），空闲 20s 自动释放连接。
  * 历史实现每次请求新建客户端且不关闭，高频轮询下会耗尽 Supabase 连接池（EMAXCONN 200）。
@@ -16,12 +25,7 @@ export const getSql = (): postgres.Sql | null => {
   if (!url) return null;
   if (!cachedSql || cachedUrl !== url) {
     cachedUrl = url;
-    cachedSql = postgres(url, {
-      ssl: "require",
-      max: 1,
-      idle_timeout: 20,
-      connect_timeout: 10
-    });
+    cachedSql = postgres(url, getPostgresOptions());
   }
   return cachedSql;
 };
@@ -38,12 +42,7 @@ export const getBackgroundSql = (): postgres.Sql | null => {
   if (!url) return null;
   if (!cachedBgSql || cachedBgUrl !== url) {
     cachedBgUrl = url;
-    cachedBgSql = postgres(url, {
-      ssl: "require",
-      max: 1,
-      idle_timeout: 20,
-      connect_timeout: 10
-    });
+    cachedBgSql = postgres(url, getPostgresOptions());
   }
   return cachedBgSql;
 };

@@ -93,9 +93,14 @@ const buildFileRows = (): OrderFileRow[] => {
     const receiverName = randomItem(surnames) + randomItem(givenNames);
     const receiverPhone = randomPhone();
     const receiverAddress = `${randomItem(cities)}${Math.floor(Math.random() * 900) + 100}号`;
+    const usedSkuOrdinals = new Set<number>();
     for (let lineIndex = 0; lineIndex < ROWS_PER_ORDER; lineIndex += 1) {
       const globalIndex = orderIndex * ROWS_PER_ORDER + lineIndex;
-      const skuOrdinal = Math.floor(Math.random() * SKU_COUNT) + 1;
+      let skuOrdinal = Math.floor(Math.random() * SKU_COUNT) + 1;
+      while (usedSkuOrdinals.has(skuOrdinal)) {
+        skuOrdinal = Math.floor(Math.random() * SKU_COUNT) + 1;
+      }
+      usedSkuOrdinals.add(skuOrdinal);
       const skuCode = invalidSkuAt.has(globalIndex)
         ? `SKU_BAD_${String(globalIndex).padStart(5, "0")}`
         : `SKU_${String(skuOrdinal).padStart(5, "0")}`;

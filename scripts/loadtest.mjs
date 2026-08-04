@@ -138,43 +138,92 @@ const uploadFile = async (buffer, fileName) => {
   return { status: response.status, elapsed, body };
 };
 
+const silenceSampleTask = async (sql, taskId, reason) => {
+  if (!sql || !taskId) return;
+  await sql.begin(async (tx) => {
+    await tx`
+      update import_task_batches set status = 'failed', completed_at = now()
+      where task_id = ${taskId} and status in ('pending', 'ready', 'processing')
+    `;
+    await tx`
+      update event_outbox set status = 'failed'
+      where aggregate_id = ${taskId} and status = 'pending'
+    `;
+    await tx`
+      update import_tasks
+      set status = 'failed', completed_at = now(), error_message = ${reason}
+      where id = ${taskId} and status in ('pending', 'processing')
+    `;
+  });
+};
+
+const measureUploadP95 = async (sql, report) => {
+  const uploadSamples = [];
+  const uploadResults = [];
+  report.upload_failures = [];
+  for (let round = 0; round < 10; round += 1) {
+    const smallBuffer = await buildSmallFile();
+    const result = await uploadFile(smallBuffer, `p95-sample-${round}.xlsx`);
+    uploadSamples.push(result.elapsed);
+    uploadResults.push(result);
+    if (result.status >= 400) report.upload_failures.push({ round, status: result.status, body: result.body });
+    if (result.status >= 500) report.http_500_504 = [...(report.http_500_504 ?? []), result.status];
+    await silenceSampleTask(sql, result.body?.task_id, "压测 P95 样本：仅测上传响应，不进入 Worker");
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+  }
+  const serverUploadSamples = uploadResults.map((result) => Number(result.body?.upload_ms)).filter(Number.isFinite);
+  report.upload_latency_samples_ms = uploadSamples;
+  report.upload_p95_ms = percentile(uploadSamples, 95);
+  report.upload_server_latency_samples_ms = serverUploadSamples;
+  report.upload_server_p95_ms = percentile(serverUploadSamples, 95);
+  console.log(`[loadtest]    客户端采样(ms): ${uploadSamples.join(", ")} → P95=${report.upload_p95_ms}ms；服务端 upload_ms P95=${report.upload_server_p95_ms}ms`);
+  return { uploadResults, serverUploadSamples };
+};
+
 const pollTask = async (taskId, timeoutMs = 300000) => {
   const startedAt = Date.now();
   let last = null;
   const httpErrors = [];
+  const networkErrors = [];
   while (Date.now() - startedAt < timeoutMs) {
-    const response = await fetch(`${BASE_URL}/api/import-tasks/${taskId}`, { signal: AbortSignal.timeout(15_000) });
-    if (response.status >= 500) httpErrors.push(response.status);
-    const data = await response.json().catch(() => null);
-    if (data?.task_id) {
-      last = data;
-      process.stdout.write(`\r  轮询：${data.status} ${data.processed_rows}/${data.total_rows} 成功${data.success_rows} 失败${data.failed_rows} 批次${data.completed_batches}/${data.total_batches}`);
-      if (["COMPLETED", "PARTIAL_SUCCESS", "FAILED"].includes(data.status)) {
-        process.stdout.write("\n");
-        return { task: data, httpErrors, elapsedMs: Date.now() - startedAt };
+    try {
+      const response = await fetch(`${BASE_URL}/api/import-tasks/${taskId}`, { signal: AbortSignal.timeout(20_000) });
+      if (response.status >= 500) httpErrors.push(response.status);
+      const data = await response.json().catch(() => null);
+      if (data?.task_id) {
+        last = data;
+        process.stdout.write(`\r  轮询：${data.status} ${data.processed_rows}/${data.total_rows} 成功${data.success_rows} 失败${data.failed_rows} 批次${data.completed_batches}/${data.total_batches}`);
+        if (["COMPLETED", "PARTIAL_SUCCESS", "FAILED"].includes(data.status)) {
+          process.stdout.write("\n");
+          return { task: data, httpErrors, networkErrors, elapsedMs: Date.now() - startedAt };
+        }
       }
+    } catch (error) {
+      networkErrors.push(error instanceof Error ? error.message : String(error));
+      process.stdout.write(`\r  轮询网络超时 ${networkErrors.length} 次，继续等待任务终态`);
     }
     await new Promise((resolve) => setTimeout(resolve, 1000));
   }
   process.stdout.write("\n");
-  return { task: last, httpErrors, elapsedMs: Date.now() - startedAt, timeout: true };
+  return { task: last, httpErrors, networkErrors, elapsedMs: Date.now() - startedAt, timeout: true };
 };
 
 const main = async () => {
     const report = {
     test_time: new Date().toISOString(),
     deploy_env: BASE_URL,
-    worker_config: "Vercel Serverless 三路径互补调度（① 上传接口 after() 触发 /api/import-dispatcher 为主路径；② 调度端点每轮结束仍有积压时 after() 自链续跑，单轮预算 30 批/50s；③ 任务进度轮询在响应前内联执行一轮调度，预算 4 批/8s，请求生命周期内必然释放租约；vercel.json cron 与本地 worker-loop 兜底宕机恢复）；PG 原生队列 FOR UPDATE SKIP LOCKED，全局租约 dispatch_lease 保证同一时刻单处理器串行消费；处理单元行数由 V4_BATCH_SIZE 决定（默认 1000，生产设为 2500），实际生效值以本报告 observed_batching 字段为准",
+    worker_config: "Vercel Serverless 三路径互补调度（① 上传接口 after() 触发 /api/import-dispatcher，默认单轮 6 批/9s，可覆盖生产 5 个有效批次和空尾批；②仍有积压时 after() 自链续跑；③任务进度轮询停滞时内联推进 1 批/2.5s；vercel.json cron 与本地 worker-loop 兜底宕机恢复）；PG 原生队列 FOR UPDATE SKIP LOCKED，全局租约 dispatch_lease 保证同一时刻单处理器串行消费；V4_BATCH_SIZE 代码默认 500，生产环境基于实测覆盖为 2500，实际生效值以本报告 observed_batching 字段为准",
     database: "Supabase Postgres（连接池 max=1/函数实例，批量 IN 校验 + 250 行/批 UPSERT）",
       file_path: FILE_PATH
     };
   activeReport = report;
   console.log(`[loadtest] 目标环境：${BASE_URL}`);
 
-  const databaseUrl = envValue("DATABASE_URL") || envValue("POSTGRES_URL") || envValue("POSTGRES_URL_NON_POOLING");
+  const databaseUrl = envValue("POSTGRES_URL_NON_POOLING") || envValue("DATABASE_URL") || envValue("POSTGRES_URL");
   let sql = null;
   if (databaseUrl) {
-    sql = postgres(databaseUrl, { ssl: "require", max: 1 });
+    // 压测脚本包含多次短事务；优先直连，并关闭 prepared statement，兼容 Supabase 事务池回退。
+    sql = postgres(databaseUrl, { ssl: "require", max: 1, prepare: false });
     // 静默：先作废所有未终态任务（含批次与 Outbox），避免前序任务的僵尸批次在压测窗口内提交污染结果
     const voidedTasks = await sql`
       update import_tasks set status = 'failed', completed_at = now(),
@@ -206,32 +255,15 @@ const main = async () => {
   for (let warm = 0; warm < 2; warm += 1) {
     try {
       const warmBuffer = await buildSmallFile();
-      await uploadFile(warmBuffer, `warmup-${warm}.xlsx`);
+      const result = await uploadFile(warmBuffer, `warmup-${warm}.xlsx`);
+      await silenceSampleTask(sql, result.body?.task_id, "压测预热样本：仅测上传响应，不进入 Worker");
     } catch {
       /* 预热失败不阻断主流程 */
     }
   }
 
-  // 1. 上传接口 P95 采样（50 行小文件 × 10 次；每轮重建保证业务键唯一，不产生 E005 噪音）
-  console.log("[loadtest] 1/3 上传接口 P95 采样（小文件 × 10）…");
-  const uploadSamples = [];
-  const uploadResults = [];
-  for (let round = 0; round < 10; round += 1) {
-    const smallBuffer = await buildSmallFile();
-    const result = await uploadFile(smallBuffer, `p95-sample-${round}.xlsx`);
-    uploadSamples.push(result.elapsed);
-    uploadResults.push(result);
-    if (result.status >= 500) report.http_500_504 = [...(report.http_500_504 ?? []), result.status];
-  }
-  report.upload_latency_samples_ms = uploadSamples;
-  report.upload_p95_ms = percentile(uploadSamples, 95);
-  const serverUploadSamples = uploadResults.map((result) => Number(result.body?.upload_ms)).filter(Number.isFinite);
-  report.upload_server_latency_samples_ms = serverUploadSamples;
-  report.upload_server_p95_ms = percentile(serverUploadSamples, 95);
-  console.log(`[loadtest]    客户端采样(ms): ${uploadSamples.join(", ")} → P95=${report.upload_p95_ms}ms；服务端 upload_ms P95=${report.upload_server_p95_ms}ms`);
-
-  // 2. 主压测：10,000 行
-  console.log("[loadtest] 2/3 上传 10,000 行压测文件…");
+  // 1. 主压测：10,000 行。先完成主链路，再测上传 P95，避免样本任务争抢 Worker。
+  console.log("[loadtest] 1/2 上传 10,000 行压测文件…");
   const fileBuffer = readFileSync(FILE_PATH);
   report.file_rows = 10000;
   const upload = await uploadFile(fileBuffer, "10000-orders.xlsx");
@@ -243,9 +275,10 @@ const main = async () => {
   if (!taskId) throw new Error(`上传响应缺少 task_id：HTTP ${upload.status}`);
   console.log(`[loadtest]    上传返回 task_id=${taskId}，耗时 ${upload.elapsed}ms，预估 ${upload.body.total_rows} 行 / ${upload.body.total_batches} 批`);
 
-  console.log("[loadtest] 3/3 轮询任务直到终态…");
+  console.log("[loadtest] 2/2 轮询任务直到终态…");
   const pollStartedAt = Date.now();
-  const { task, httpErrors, elapsedMs, timeout } = await pollTask(taskId);
+  const { task, httpErrors, networkErrors, elapsedMs, timeout } = await pollTask(taskId);
+  report.poll_network_errors = networkErrors;
   if (timeout) {
     console.error("[loadtest] ✗ 轮询超时，任务未完成");
     report.result = "FAIL(timeout)";
@@ -260,16 +293,19 @@ const main = async () => {
     report.http_errors = httpErrors;
     const totalElapsedMs = upload.elapsed + sincePoll;
     const rowsMatch = Number(task.success_rows) === EXPECTED_SUCCESS && Number(task.failed_rows) === EXPECTED_FAILED;
+    console.log("[loadtest] 追加采集上传接口 P95（主任务已完成，不影响主链路）…");
+    const { uploadResults, serverUploadSamples } = await measureUploadP95(sql, report);
     const allHttpErrors = [...(report.http_500_504 ?? []), ...httpErrors];
     report.http_errors = allHttpErrors;
     const noServerErrors = allHttpErrors.length === 0;
     const uploadPass = serverUploadSamples.length === uploadResults.length && report.upload_server_p95_ms <= 1000;
-    const pass = totalElapsedMs <= 60000 && task.status !== "FAILED" && rowsMatch && noServerErrors && uploadPass;
+    const elapsedPass = totalElapsedMs <= 60000;
+    const pass = elapsedPass && task.status !== "FAILED" && rowsMatch && noServerErrors && uploadPass;
     report.acceptance = { total_elapsed_ms: totalElapsedMs, rows_match: rowsMatch, no_server_errors: noServerErrors, server_upload_p95_le_1s: uploadPass };
     report.result = pass ? "PASS" : "FAIL";
     console.log(`[loadtest] 任务终态：${task.status}（上传后 ${Math.round(sincePoll / 1000)}s；成功 ${task.success_rows}，失败 ${task.failed_rows}，降级 ${task.degraded ? "是" : "否"}）`);
     console.log(`[loadtest] 预期：成功 ${EXPECTED_SUCCESS}，失败 ${EXPECTED_FAILED}（120 非法SKU + 30 非法电话 + 20 非正数量）`);
-    console.log(`[loadtest] 目标 ≤60s：${pass ? "✓ 达标" : "✗ 未达标"}；500/504：${httpErrors.length ? httpErrors.join(",") : "无"}`);
+    console.log(`[loadtest] 全链路目标 ≤60s：${elapsedPass ? "✓ 达标" : "✗ 未达标"}；500/504：${allHttpErrors.length ? allHttpErrors.join(",") : "无"}；综合验收：${pass ? "PASS" : "FAIL"}`);
   }
 
   // 3. 批次性能采集（用于压测报告）
@@ -292,7 +328,7 @@ const main = async () => {
         rows_per_batch: batchRowCounts,
         max_rows_per_batch: nonEmptyBatches.length ? Math.max(...nonEmptyBatches) : 0,
         total_rows_in_batches: batchRowCounts.reduce((sum, rows) => sum + rows, 0),
-        retried_batches: report.batches.filter((batch) => Number(batch.retry_count) > 0).length
+        retried_batches: report.batches.filter((batch) => Number(batch.retry_count) > 1).length
       };
       console.log(`[loadtest] 实际批次口径：${report.observed_batching.batch_count} 批，单批最大 ${report.observed_batching.max_rows_per_batch} 行，合计 ${report.observed_batching.total_rows_in_batches} 行（重试批次 ${report.observed_batching.retried_batches} 个）`);
     } catch (error) {
@@ -306,7 +342,7 @@ const main = async () => {
 
   // 3b. 监控看板聚合快照（作为压测报告“监控看板日志”的机器可读证据，替代截图）
   try {
-    const monitorResponse = await fetch(`${BASE_URL}/api/import-monitor/summary`);
+    const monitorResponse = await fetch(`${BASE_URL}/api/import-monitor/summary`, { signal: AbortSignal.timeout(15_000) });
     if (monitorResponse.ok) {
       const monitorData = await monitorResponse.json();
       // 看板四大强制区全量落盘：吞吐量 / 队列积压预警 / 阶段耗时分位 / 错误分布（+ 慢批次与失败趋势）

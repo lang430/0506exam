@@ -1,5 +1,5 @@
 import { NextResponse, after } from "next/server";
-import { dbUnavailable, dispatcherBudgetMs, dispatcherMaxBatches, getV4Sql, verifyDispatcherToken } from "@/lib/v4/http";
+import { dbUnavailable, dispatcherBudgetMs, dispatcherMaxBatches, dispatcherTriggerTimeoutMs, getV4Sql, verifyDispatcherToken } from "@/lib/v4/http";
 import { runDispatchCycle } from "@/lib/v4/dispatch";
 
 export const runtime = "nodejs";
@@ -36,7 +36,8 @@ export async function POST(request: Request) {
       try {
         await fetch(`${origin}/api/import-dispatcher`, {
           method: "POST",
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
+          signal: AbortSignal.timeout(dispatcherTriggerTimeoutMs())
         });
       } catch {
         /* 下一轮 cron 兜底 */

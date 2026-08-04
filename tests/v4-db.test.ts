@@ -105,7 +105,7 @@ const cleanupTestArtifacts = async (): Promise<void> => {
 
 describeDb("V4 数据库集成测试", () => {
   beforeAll(async () => {
-    sql = postgres(databaseUrl as string, { ssl: "require", max: 1 });
+    sql = postgres(databaseUrl as string, { ssl: "require", max: 1, prepare: false });
     await ensureV4Schema(sql);
     await cleanupTestArtifacts();
     await seedRule();
@@ -148,6 +148,29 @@ describeDb("V4 数据库集成测试", () => {
     expect(batches[0].status).toBe("ready");
     const outbox = await sql`select status from event_outbox where aggregate_id = ${taskId} and event_type = 'ImportBatchCreated'`;
     expect(outbox[0].status).toBe("sent");
+  });
+
+  it("场景3b：卡死批次重试超限后，任务聚合为 failed", async () => {
+    const taskId = `${TASK_PREFIX}deadletter`;
+    const traceId = `${TRACE_PREFIX}deadletter`;
+    const buffer = await buildTestExcel();
+    await createTaskInOneTransaction(taskId, traceId, buffer);
+    await sql`update import_task_batches
+      set status = 'processing', retry_count = 3, locked_at = now() - interval '1 hour'
+      where task_id = ${taskId}`;
+    await sql`update import_tasks set status = 'processing' where id = ${taskId}`;
+
+    const { recoverStuckBatches } = await import("@/lib/v4/queue");
+    const result = await recoverStuckBatches(sql);
+    expect(result.deadLettered).toBe(1);
+
+    const task = await sql`select status, processed_rows, success_rows, failed_rows, completed_at
+      from import_tasks where id = ${taskId}`;
+    expect(task[0].status).toBe("failed");
+    expect(Number(task[0].processed_rows)).toBe(0);
+    expect(Number(task[0].success_rows)).toBe(0);
+    expect(Number(task[0].failed_rows)).toBe(0);
+    expect(task[0].completed_at).toBeTruthy();
   });
 
   it("场景4+7+8：Worker 处理成功；部分行失败不阻断成功行入库；错误按行记录", async () => {

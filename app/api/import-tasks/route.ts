@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import crypto from "node:crypto";
 import { after } from "next/server";
 import { buildEnvelope, ImportEvents } from "@/lib/v4/events";
-import { badRequest, batchSize, dbUnavailable, getV4Sql } from "@/lib/v4/http";
+import { badRequest, batchSize, dbUnavailable, dispatcherTriggerTimeoutMs, getV4Sql } from "@/lib/v4/http";
 import { getBackgroundSql } from "@/lib/db";
 import { enqueueEvents } from "@/lib/v4/queue";
 import { isSupportedFile, preCountRows } from "@/lib/v4/parse-file";
@@ -170,7 +170,8 @@ export async function POST(request: Request) {
         try {
           await fetch(`${origin}/api/import-dispatcher`, {
             method: "POST",
-            headers: { Authorization: `Bearer ${token}` }
+            headers: { Authorization: `Bearer ${token}` },
+            signal: AbortSignal.timeout(dispatcherTriggerTimeoutMs())
           });
         } catch {
           /* 下一轮 cron 兜底 */

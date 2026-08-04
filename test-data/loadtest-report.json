@@ -1,80 +1,101 @@
 {
-  "test_time": "2026-08-03T13:40:26.478Z",
+  "test_time": "2026-08-04T11:48:54.121Z",
   "deploy_env": "https://0807v4.vercel.app",
-  "worker_config": "Vercel Serverless（after() 进程内调度 + 自链式 Dispatcher，批次顺序消费，单批 1000 行）",
+  "worker_config": "Vercel Serverless 三路径互补调度（① 上传接口 after() 触发 /api/import-dispatcher，默认单轮 6 批/9s，可覆盖生产 5 个有效批次和空尾批；②仍有积压时 after() 自链续跑；③任务进度轮询停滞时内联推进 1 批/2.5s；vercel.json cron 与本地 worker-loop 兜底宕机恢复）；PG 原生队列 FOR UPDATE SKIP LOCKED，全局租约 dispatch_lease 保证同一时刻单处理器串行消费；V4_BATCH_SIZE 代码默认 500，生产环境基于实测覆盖为 2500，实际生效值以本报告 observed_batching 字段为准",
   "database": "Supabase Postgres（连接池 max=1/函数实例，批量 IN 校验 + 250 行/批 UPSERT）",
   "file_path": "D:\\AI\\0506exam\\test-data\\10000-orders.xlsx",
   "sku_master_count": 20000,
-  "upload_latency_samples_ms": [
-    1470,
-    502,
-    462,
-    701,
-    313,
-    468,
-    566,
-    441,
-    300,
-    290
-  ],
-  "upload_p95_ms": 1470,
   "file_rows": 10000,
-  "main_upload_ms": 2108,
+  "main_upload_ms": 33786,
+  "poll_network_errors": [],
   "task_status": "PARTIAL_SUCCESS",
   "success_rows": 9830,
   "failed_rows": 170,
-  "total_elapsed_seconds": 13.208,
+  "total_elapsed_seconds": 38.486000000000004,
   "degraded": false,
   "http_errors": [],
+  "upload_failures": [],
+  "upload_latency_samples_ms": [
+    680,
+    774,
+    997,
+    1599,
+    14151,
+    924,
+    1197,
+    4002,
+    5015,
+    4665
+  ],
+  "upload_p95_ms": 14151,
+  "upload_server_latency_samples_ms": [
+    54,
+    100,
+    41,
+    41,
+    48,
+    47,
+    39,
+    40,
+    41,
+    39
+  ],
+  "upload_server_p95_ms": 100,
+  "acceptance": {
+    "total_elapsed_ms": 38509,
+    "rows_match": true,
+    "no_server_errors": true,
+    "server_upload_p95_le_1s": true
+  },
   "result": "PASS",
   "batch_performance": [
     {
       "unit_id": "unit_001",
       "batch_index": 0,
-      "parse_duration_ms": 1087,
-      "rule_duration_ms": 206,
-      "validate_duration_ms": 80,
-      "insert_duration_ms": 286,
-      "total_duration_ms": 1727,
+      "parse_duration_ms": 966,
+      "rule_duration_ms": 147,
+      "validate_duration_ms": 34,
+      "insert_duration_ms": 317,
+      "total_duration_ms": 1511,
       "degraded": false,
       "status": "completed",
-      "created_at": "2026-08-03T13:40:44.052Z"
+      "created_at": "2026-08-04T11:50:03.019Z"
     },
     {
       "unit_id": "unit_002",
       "batch_index": 1,
       "parse_duration_ms": 0,
       "rule_duration_ms": 0,
-      "validate_duration_ms": 19,
-      "insert_duration_ms": 376,
-      "total_duration_ms": 428,
+      "validate_duration_ms": 30,
+      "insert_duration_ms": 332,
+      "total_duration_ms": 408,
       "degraded": false,
       "status": "completed",
-      "created_at": "2026-08-03T13:40:44.430Z"
+      "created_at": "2026-08-04T11:50:03.471Z"
     },
     {
       "unit_id": "unit_003",
       "batch_index": 2,
       "parse_duration_ms": 0,
       "rule_duration_ms": 0,
-      "validate_duration_ms": 19,
-      "insert_duration_ms": 310,
-      "total_duration_ms": 356,
+      "validate_duration_ms": 29,
+      "insert_duration_ms": 278,
+      "total_duration_ms": 345,
       "degraded": false,
       "status": "completed",
-      "created_at": "2026-08-03T13:40:44.888Z"
+      "created_at": "2026-08-04T11:50:03.924Z"
     },
     {
       "unit_id": "unit_004",
       "batch_index": 3,
       "parse_duration_ms": 0,
       "rule_duration_ms": 0,
-      "validate_duration_ms": 28,
-      "insert_duration_ms": 308,
-      "total_duration_ms": 370,
+      "validate_duration_ms": 29,
+      "insert_duration_ms": 286,
+      "total_duration_ms": 354,
       "degraded": false,
       "status": "completed",
-      "created_at": "2026-08-03T13:40:45.323Z"
+      "created_at": "2026-08-04T11:50:04.327Z"
     },
     {
       "unit_id": "unit_005",
@@ -82,11 +103,11 @@
       "parse_duration_ms": 0,
       "rule_duration_ms": 0,
       "validate_duration_ms": 0,
-      "insert_duration_ms": 4,
-      "total_duration_ms": 36,
+      "insert_duration_ms": 9,
+      "total_duration_ms": 48,
       "degraded": false,
       "status": "completed",
-      "created_at": "2026-08-03T13:40:47.033Z"
+      "created_at": "2026-08-04T11:50:04.730Z"
     }
   ],
   "batches": [
@@ -94,8 +115,8 @@
       "unit_id": "unit_001",
       "status": "completed",
       "retry_count": 1,
-      "success_rows": 2470,
-      "failed_rows": 30
+      "success_rows": 2456,
+      "failed_rows": 44
     },
     {
       "unit_id": "unit_002",
@@ -108,15 +129,15 @@
       "unit_id": "unit_003",
       "status": "completed",
       "retry_count": 1,
-      "success_rows": 2459,
-      "failed_rows": 41
+      "success_rows": 2458,
+      "failed_rows": 42
     },
     {
       "unit_id": "unit_004",
       "status": "completed",
       "retry_count": 1,
-      "success_rows": 2446,
-      "failed_rows": 54
+      "success_rows": 2461,
+      "failed_rows": 39
     },
     {
       "unit_id": "unit_005",
@@ -125,5 +146,290 @@
       "success_rows": 0,
       "failed_rows": 0
     }
-  ]
+  ],
+  "observed_batching": {
+    "batch_count": 5,
+    "rows_per_batch": [
+      2500,
+      2500,
+      2500,
+      2500,
+      0
+    ],
+    "max_rows_per_batch": 2500,
+    "total_rows_in_batches": 10000,
+    "retried_batches": 0
+  },
+  "monitor_summary": {
+    "generatedAt": "2026-08-04T11:51:41.785Z",
+    "alertLevel": "ok",
+    "throughput": [
+      {
+        "rows": 8,
+        "minute": "11:47"
+      },
+      {
+        "rows": 100,
+        "minute": "11:49"
+      },
+      {
+        "rows": 10180,
+        "minute": "11:50"
+      },
+      {
+        "rows": 150,
+        "minute": "11:51"
+      }
+    ],
+    "peak_throughput_rows_per_min": 10180,
+    "queueDepth": {
+      "pendingBatches": 0,
+      "readyBatches": 0,
+      "processingBatches": 0,
+      "stuckBatches": 0,
+      "stuckThresholdSeconds": 30,
+      "waitingRows": 0,
+      "outboxPending": 0,
+      "alertLevel": "ok"
+    },
+    "stagePercentiles": {
+      "rule": {
+        "p50": 1,
+        "p95": 147,
+        "p99": 210
+      },
+      "parse": {
+        "p50": 5,
+        "p95": 965,
+        "p99": 1211
+      },
+      "insert": {
+        "p50": 21,
+        "p95": 372,
+        "p99": 3627
+      },
+      "validate": {
+        "p50": 11,
+        "p95": 63,
+        "p99": 767
+      }
+    },
+    "errorDistribution": [
+      {
+        "count": 19904,
+        "errorCode": "E005"
+      },
+      {
+        "count": 1942,
+        "errorCode": "E001"
+      },
+      {
+        "count": 414,
+        "errorCode": "E003"
+      },
+      {
+        "count": 287,
+        "errorCode": "E004"
+      }
+    ],
+    "slowBatches": [
+      {
+        "taskId": "task_9419450b291e4e97aa0bb9dd",
+        "unitId": "unit_002",
+        "createdAt": "2026-08-03T14:44:30.087194+00:00",
+        "batchIndex": 1,
+        "failedRows": 45,
+        "successRows": 2455,
+        "parseDurationMs": 647,
+        "totalDurationMs": 18214,
+        "insertDurationMs": 9240,
+        "validateDurationMs": 2180
+      },
+      {
+        "taskId": "task_9419450b291e4e97aa0bb9dd",
+        "unitId": "unit_003",
+        "createdAt": "2026-08-03T14:45:00.074724+00:00",
+        "batchIndex": 2,
+        "failedRows": 41,
+        "successRows": 2459,
+        "parseDurationMs": 0,
+        "totalDurationMs": 13344,
+        "insertDurationMs": 8401,
+        "validateDurationMs": 1114
+      },
+      {
+        "taskId": "task_9419450b291e4e97aa0bb9dd",
+        "unitId": "unit_004",
+        "createdAt": "2026-08-03T14:45:22.55726+00:00",
+        "batchIndex": 3,
+        "failedRows": 54,
+        "successRows": 2446,
+        "parseDurationMs": 0,
+        "totalDurationMs": 13321,
+        "insertDurationMs": 7209,
+        "validateDurationMs": 1370
+      },
+      {
+        "taskId": "task_bee2222c241949b587ef292a",
+        "unitId": "unit_001",
+        "createdAt": "2026-08-04T05:06:05.985151+00:00",
+        "batchIndex": 0,
+        "failedRows": 0,
+        "successRows": 30,
+        "parseDurationMs": 192,
+        "totalDurationMs": 6027,
+        "insertDurationMs": 1699,
+        "validateDurationMs": 580
+      },
+      {
+        "taskId": "task_9419450b291e4e97aa0bb9dd",
+        "unitId": "unit_005",
+        "createdAt": "2026-08-03T14:45:41.932238+00:00",
+        "batchIndex": 4,
+        "failedRows": 0,
+        "successRows": 0,
+        "parseDurationMs": 0,
+        "totalDurationMs": 4505,
+        "insertDurationMs": 413,
+        "validateDurationMs": 0
+      },
+      {
+        "taskId": "task_51bf701bac304dfb8f0434aa",
+        "unitId": "unit_001",
+        "createdAt": "2026-08-04T09:12:22.607042+00:00",
+        "batchIndex": 0,
+        "failedRows": 15,
+        "successRows": 2485,
+        "parseDurationMs": 1219,
+        "totalDurationMs": 1965,
+        "insertDurationMs": 449,
+        "validateDurationMs": 91
+      },
+      {
+        "taskId": "task_15752fdb386c4869b1bdd5c6",
+        "unitId": "unit_001",
+        "createdAt": "2026-08-04T09:29:41.963335+00:00",
+        "batchIndex": 0,
+        "failedRows": 44,
+        "successRows": 2456,
+        "parseDurationMs": 1258,
+        "totalDurationMs": 1926,
+        "insertDurationMs": 301,
+        "validateDurationMs": 62
+      },
+      {
+        "taskId": "task_9878b3d76a624a3d8482805f",
+        "unitId": "unit_001",
+        "createdAt": "2026-08-04T09:48:10.470787+00:00",
+        "batchIndex": 0,
+        "failedRows": 2500,
+        "successRows": 0,
+        "parseDurationMs": 1224,
+        "totalDurationMs": 1868,
+        "insertDurationMs": 353,
+        "validateDurationMs": 98
+      },
+      {
+        "taskId": "task_9878b3d76a624a3d8482805f",
+        "unitId": "unit_003",
+        "createdAt": "2026-08-04T09:48:43.212968+00:00",
+        "batchIndex": 2,
+        "failedRows": 2500,
+        "successRows": 0,
+        "parseDurationMs": 1207,
+        "totalDurationMs": 1852,
+        "insertDurationMs": 286,
+        "validateDurationMs": 35
+      },
+      {
+        "taskId": "task_10e8bcdd4ce946618c6c600d",
+        "unitId": "unit_001",
+        "createdAt": "2026-08-04T09:42:21.882124+00:00",
+        "batchIndex": 0,
+        "failedRows": 44,
+        "successRows": 2456,
+        "parseDurationMs": 1089,
+        "totalDurationMs": 1792,
+        "insertDurationMs": 460,
+        "validateDurationMs": 37
+      }
+    ],
+    "failedTaskTrend": [
+      {
+        "day": "08-03",
+        "count": 1
+      },
+      {
+        "day": "08-04",
+        "count": 25
+      }
+    ],
+    "recentTasks": [
+      {
+        "id": "task_cbfb94e799474b4bb4ee9547",
+        "status": "completed",
+        "degraded": false,
+        "fileName": "p95-sample-9.xlsx",
+        "createdAt": "2026-08-04T11:51:28.184359+00:00",
+        "totalRows": 50,
+        "failedRows": 0,
+        "completedAt": "2026-08-04T11:51:28.402661+00:00",
+        "successRows": 50,
+        "totalBatches": 1,
+        "processedRows": 50
+      },
+      {
+        "id": "task_8921f943b8774d0a85fe62e9",
+        "status": "completed",
+        "degraded": false,
+        "fileName": "p95-sample-8.xlsx",
+        "createdAt": "2026-08-04T11:51:14.145398+00:00",
+        "totalRows": 50,
+        "failedRows": 0,
+        "completedAt": "2026-08-04T11:51:14.370532+00:00",
+        "successRows": 50,
+        "totalBatches": 1,
+        "processedRows": 50
+      },
+      {
+        "id": "task_899243ec487243f2bd6a36b6",
+        "status": "completed",
+        "degraded": false,
+        "fileName": "p95-sample-7.xlsx",
+        "createdAt": "2026-08-04T11:51:01.067289+00:00",
+        "totalRows": 50,
+        "failedRows": 0,
+        "completedAt": "2026-08-04T11:51:01.289692+00:00",
+        "successRows": 50,
+        "totalBatches": 1,
+        "processedRows": 50
+      },
+      {
+        "id": "task_48f5fea328ef47529b62a7bb",
+        "status": "completed",
+        "degraded": false,
+        "fileName": "p95-sample-6.xlsx",
+        "createdAt": "2026-08-04T11:50:52.541222+00:00",
+        "totalRows": 50,
+        "failedRows": 0,
+        "completedAt": "2026-08-04T11:50:52.762309+00:00",
+        "successRows": 50,
+        "totalBatches": 1,
+        "processedRows": 50
+      },
+      {
+        "id": "task_73e3d0b5a81a4fa99e8439ea",
+        "status": "completed",
+        "degraded": false,
+        "fileName": "p95-sample-5.xlsx",
+        "createdAt": "2026-08-04T11:50:47.251746+00:00",
+        "totalRows": 50,
+        "failedRows": 0,
+        "completedAt": "2026-08-04T11:50:47.499379+00:00",
+        "successRows": 50,
+        "totalBatches": 1,
+        "processedRows": 50
+      }
+    ]
+  }
 }

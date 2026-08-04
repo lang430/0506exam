@@ -40,8 +40,9 @@ npm run dev          # http://127.0.0.1:3000
 | V4_SKU_CHECK_TIMEOUT_MS | SKU 主数据查询超时（默认 3000，超时触发降级） |
 | V4_STUCK_BATCH_SECONDS | 卡死批次恢复窗口（默认 30s；Hobby 下函数被 kill 后在此时间内回收重试） |
 | V4_DISPATCHER_LEASE_SECONDS | 调度租约 TTL（默认 15s，必须 < stuck 阈值） |
-| V4_DISPATCHER_BUDGET_MS | Dispatcher 端点单轮时间预算（默认 8000ms，Hobby 下必须 < 10s） |
-| V4_DISPATCHER_MAX_BATCHES | Dispatcher 端点单轮最大批次数（默认 3，与 budget 配套） |
+| V4_DISPATCHER_BUDGET_MS | Dispatcher 端点单轮时间预算（生产 9000ms，Hobby 下必须 < 10s） |
+| V4_DISPATCHER_MAX_BATCHES | Dispatcher 端点单轮最大批次数（默认 6，可覆盖 5 个有效批次和空尾批） |
+| V4_DISPATCHER_TRIGGER_TIMEOUT_MS | 内部调度 HTTP 触发超时（默认且最高 10000ms，防止后台阻塞拖垮上传响应） |
 | V4_QUEUE_BACKLOG_WARN_ROWS | 队列积压橙色预警阈值（默认 1000） |
 | V2_API_TOKEN | V3 契约接口鉴权令牌（V2 既有，勿动） |
 | AI_API_KEY / AI_BASE_URL / AI_MODEL | V2 AI 规则生成（可选，不在 V4 主链路） |

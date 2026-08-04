@@ -168,14 +168,19 @@ export const recoverStuckBatches = async (sql: postgres.Sql): Promise<{ recovere
       and retry_count < ${MAX_BATCH_RETRY}
     returning id
   `;
-  const deadLettered = await sql`
+  const deadLettered = await sql<{ task_id: string }[]>`
     update import_task_batches
     set status = 'failed', completed_at = now()
     where status = 'processing'
       and locked_at < now() - make_interval(secs => ${stuckSecs})
       and retry_count >= ${MAX_BATCH_RETRY}
-    returning id
+    returning task_id
   `;
+  // 死信批次不会再进入 Worker，因此必须主动聚合所属任务终态。
+  // 若同一任务仍有其他未终态批次，聚合函数会安全地保持非终态。
+  for (const taskId of new Set(deadLettered.map((row) => row.task_id))) {
+    await finalizeTaskIfNeeded(sql, taskId);
+  }
   return { recovered: recovered.length, deadLettered: deadLettered.length };
 };
 

@@ -52,6 +52,7 @@ interface TraceBatch {
 function TracesContent() {
   const searchParams = useSearchParams();
   const [taskId, setTaskId] = useState(searchParams.get("task_id") ?? "");
+  const [traceId, setTraceId] = useState(searchParams.get("trace_id") ?? "");
   const [fileName, setFileName] = useState("");
   const [errorCode, setErrorCode] = useState(searchParams.get("error_code") ?? "");
   const [batchFilter, setBatchFilter] = useState(searchParams.get("batch") ?? "");
@@ -87,6 +88,7 @@ function TracesContent() {
   const search = async (): Promise<void> => {
     const params = new URLSearchParams();
     if (taskId.trim()) params.set("task_id", taskId.trim());
+    if (traceId.trim()) params.set("trace_id", traceId.trim());
     if (fileName.trim()) params.set("file_name", fileName.trim());
     if (batchFilter.trim()) params.set("batch", batchFilter.trim());
     if (errorCode.trim()) params.set("error_code", errorCode.trim());
@@ -115,9 +117,10 @@ function TracesContent() {
     <V4Shell title="Trace 检索" subtitle="task_id / 文件名 / 批次号 / 错误码 / 行号范围 → 时间线与失败节点">
       <section className="shell">
         <section className="panel">
-          <div className="panel-title"><Search size={18} /> 全链路 Trace 检索（task_id / 文件名 / 错误码 / 行号范围）</div>
-          <div className="history-filters" style={{ gridTemplateColumns: "minmax(200px,2fr) minmax(150px,1fr) 90px 110px 90px 90px auto" }} onKeyDown={(event) => { if (event.key === "Enter") void search(); }}>
+          <div className="panel-title"><Search size={18} /> 全链路 Trace 检索（task_id / trace_id / 文件名 / 错误码 / 行号范围）</div>
+          <div className="history-filters" style={{ gridTemplateColumns: "minmax(180px,1.5fr) minmax(180px,1.5fr) minmax(140px,1fr) 80px 105px 80px 80px auto" }} onKeyDown={(event) => { if (event.key === "Enter") void search(); }}>
             <input className="search" placeholder="task_id（精确）" value={taskId} onChange={(event) => setTaskId(event.target.value)} />
+            <input className="search" placeholder="trace_id（精确）" value={traceId} onChange={(event) => setTraceId(event.target.value)} />
             <input className="search" placeholder="文件名（模糊）" value={fileName} onChange={(event) => setFileName(event.target.value)} />
             <input className="search" placeholder="批次号" value={batchFilter} onChange={(event) => setBatchFilter(event.target.value)} />
             <select value={errorCode} onChange={(event) => setErrorCode(event.target.value)}>
