@@ -75,7 +75,7 @@ export default function MonitorPage() {
       const data = await response.json();
       if (!response.ok) {
         setCritical(true);
-        setSummary(data);
+        setSummary(null); // 503 JSON 不是数据，绝不能进入渲染
         return;
       }
       setCritical(false);
@@ -83,6 +83,7 @@ export default function MonitorPage() {
       setLastUpdated(new Date().toLocaleTimeString("zh-CN"));
     } catch {
       setCritical(true);
+      setSummary(null);
     }
   };
 
@@ -93,10 +94,10 @@ export default function MonitorPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const maxThroughput = Math.max(1, ...(summary?.throughput.map((item) => item.rows) ?? [1]));
-  const maxErrorCount = Math.max(1, ...(summary?.errorDistribution.map((item) => item.count) ?? [1]));
-  const backlogWarn = summary ? summary.queueDepth.waitingRows >= 5000 : false;
-  const maxStageMs = summary
+  const maxThroughput = Math.max(1, ...((summary?.throughput ?? []).map((item) => item.rows).length ? (summary?.throughput ?? []).map((item) => item.rows) : [1]));
+  const maxErrorCount = Math.max(1, ...((summary?.errorDistribution ?? []).length ? (summary?.errorDistribution ?? []).map((item) => item.count) : [1]));
+  const backlogWarn = summary ? (summary.queueDepth?.waitingRows ?? 0) >= 5000 : false;
+  const maxStageMs = summary?.stagePercentiles
     ? Math.max(1, ...Object.values(summary.stagePercentiles).flatMap((stage) => [stage.p50, stage.p95, stage.p99]))
     : 1;
 

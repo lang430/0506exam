@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import postgres from "postgres";
+import { getDatabaseUrl } from "@/lib/db";
 import { dbUnavailable, getV4Sql } from "@/lib/v4/http";
 import { getMonitorSummary, QUEUE_BACKLOG_WARN_ROWS } from "@/lib/v4/monitor";
 
@@ -16,7 +18,21 @@ export async function GET() {
     console.log("[monitor] summary done", Date.now() - t0, "ms");
     return NextResponse.json(summary);
   } catch (error) {
-    console.error("[monitor] failed", Date.now() - t0, "ms", error);
+    console.error("[monitor] first attempt failed", Date.now() - t0, "ms", error);
+    // 重试一次：独立新建连接，规避单例客户端连接中断/重连竞态
+    const url = getDatabaseUrl();
+    if (url) {
+      const fresh = postgres(url, { ssl: "require", max: 1, connect_timeout: 5 });
+      try {
+        const summary = await getMonitorSummary(fresh);
+        console.log("[monitor] retry done", Date.now() - t0, "ms");
+        return NextResponse.json(summary);
+      } catch (retryError) {
+        console.error("[monitor] retry failed", Date.now() - t0, "ms", retryError);
+      } finally {
+        await fresh.end().catch(() => undefined);
+      }
+    }
     // 队列/数据库不可用 → 红色告警（考点 5 告警能力）
     return NextResponse.json({
       alertLevel: "critical",

@@ -146,7 +146,8 @@ export async function POST(request: Request) {
     await enqueueEvents(tx, [taskCreatedEvent, ...batchEvents]);
   });
 
-  // 响应先行：trace 记录放后台（轻量、不持租约）；调度由轮询内联/调度端点可靠推进
+  // 响应先行：trace 记录 + 首轮调度均在后台（after()，Next.js 保证执行，不阻塞 ≤1s 响应）。
+  // 调度端点会自链式（after()）续跑，直到积压清空；vercel.json 的 cron 作为宕机/冻结的兜底恢复。
   const uploadMs = Date.now() - startedAt;
   after(async () => {
     try {
@@ -157,8 +158,22 @@ export async function POST(request: Request) {
         eventName: "UploadAccepted",
         message: `用户上传 ${file.name}（${buffer.length} 字节），预估 ${estimatedRows} 行，创建 ${totalBatches} 个处理单元，上传耗时 ${uploadMs}ms`
       });
+      const token = process.env.DISPATCHER_TOKEN;
+      const origin = new URL(request.url).origin;
+      if (token) {
+        // 首轮调度触发：await 保证首轮在 after() 保证执行的上下文中跑完，
+        // 剩余批次由调度端点自链式 after() 续跑，cron 兜底宕机/冻结恢复。
+        try {
+          await fetch(`${origin}/api/import-dispatcher`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}` }
+          });
+        } catch {
+          /* 下一轮 cron 兜底 */
+        }
+      }
     } catch (error) {
-      console.error("[v4] post-upload trace failed", error instanceof Error ? error.message : error);
+      console.error("[v4] post-upload background failed", error instanceof Error ? error.message : error);
     }
   });
 

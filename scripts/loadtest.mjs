@@ -149,7 +149,7 @@ const main = async () => {
   const report = {
     test_time: new Date().toISOString(),
     deploy_env: BASE_URL,
-    worker_config: "Vercel Serverless（after() 进程内调度 + 自链式 Dispatcher，批次顺序消费，单批 1000 行）",
+    worker_config: "Vercel Serverless（上传 after() 即时触发 + Dispatcher 自链 after() 续跑 + cron 兜底恢复；PG 原生队列 SKIP LOCKED 串行单处理器，单批 1000 行）",
     database: "Supabase Postgres（连接池 max=1/函数实例，批量 IN 校验 + 250 行/批 UPSERT）",
     file_path: FILE_PATH
   };
@@ -184,6 +184,17 @@ const main = async () => {
   if (!existsSync(FILE_PATH)) {
     console.error(`[loadtest] 压测文件不存在：${FILE_PATH}（请先 npm run seed）`);
     process.exit(1);
+  }
+
+  // 0. 预热：先上传 2 个抛弃样本，消除 Serverless 冷启动对 P95 的污染（P95 反映稳态，非首包冷启动）
+  console.log("[loadtest] 0/3 预热上传 × 2（消除冷启动）…");
+  for (let warm = 0; warm < 2; warm += 1) {
+    try {
+      const warmBuffer = await buildSmallFile();
+      await uploadFile(warmBuffer, `warmup-${warm}.xlsx`);
+    } catch {
+      /* 预热失败不阻断主流程 */
+    }
   }
 
   // 1. 上传接口 P95 采样（50 行小文件 × 10 次；每轮重建保证业务键唯一，不产生 E005 噪音）

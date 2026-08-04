@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import { dbUnavailable, getV4Sql, verifyDispatcherToken } from "@/lib/v4/http";
 import { runDispatchCycle } from "@/lib/v4/dispatch";
 
@@ -21,15 +21,22 @@ export async function POST(request: Request) {
 
   const result = await runDispatchCycle(sql, { maxBatches: 30, timeBudgetMs: 50_000 });
 
-  // 仍有积压 → 自链式触发下一轮（fire-and-forget，不受响应生命周期影响）
+  // 仍有积压 → 自链式触发下一轮。
+  // 用 after() 保证续跑不被 Lambda 冻结打断（fire-and-forget 在 Vercel 可能被杀）。
   const hasBacklog = result.outbox.scanned > 0 || result.processed.length > 0;
   if (hasBacklog) {
     const origin = new URL(request.url).origin;
     const token = process.env.DISPATCHER_TOKEN;
-    fetch(`${origin}/api/import-dispatcher`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}` }
-    }).catch(() => undefined);
+    after(async () => {
+      try {
+        await fetch(`${origin}/api/import-dispatcher`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` }
+        });
+      } catch {
+        /* 下一轮 cron 兜底 */
+      }
+    });
   }
 
   return NextResponse.json({

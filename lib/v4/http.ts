@@ -31,13 +31,16 @@ export const badRequest = (error: string) =>
 export const notFound = (error: string) =>
   NextResponse.json({ error }, { status: 404 });
 
-/** 内部调度端点鉴权：DISPATCHER_TOKEN 共享密钥（Vercel 环境变量） */
+/** 内部调度端点鉴权：DISPATCHER_TOKEN（手动/自链/after 触发）或 CRON_SECRET（Vercel Cron 自动携带） */
 export const verifyDispatcherToken = (request: Request): boolean => {
   const expected = process.env.DISPATCHER_TOKEN;
-  if (!expected) return false;
+  const cronSecret = process.env.CRON_SECRET;
   const header = request.headers.get("authorization") ?? "";
   const [scheme, token] = header.split(" ");
-  return scheme?.toLowerCase() === "bearer" && token === expected;
+  if (scheme?.toLowerCase() !== "bearer" || !token) return false;
+  if (expected && token === expected) return true;
+  if (cronSecret && token === cronSecret) return true;
+  return false;
 };
 
 export const batchSize = (): number =>
