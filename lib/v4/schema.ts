@@ -170,4 +170,20 @@ export const ensureV4Schema = async (sql: postgres.Sql): Promise<void> => {
       expires_at timestamptz not null
     )
   `;
+
+  // ----------------------------------------------------------
+  // 查询性能索引补充（与 database-v4.sql 保持一致，按接口真实查询模式补齐）
+  // ----------------------------------------------------------
+  // 监控吞吐查询扫描 imported_orders（全库最大表）的 created_at range —— 此前无索引，全表扫描
+  await sql`create index if not exists imported_orders_created_at_idx on public.imported_orders (created_at desc)`;
+  // 监控错误分布按 created_at 24h 过滤（原 error_code 单列索引无法服务）
+  await sql`create index if not exists import_task_errors_created_at_idx on public.import_task_errors (created_at desc)`;
+  // 错误明细分页 where task_id order by row_number（原索引不提供 row_number 有序性）
+  await sql`create index if not exists import_task_errors_task_row_idx on public.import_task_errors (task_id, row_number)`;
+  // 任务列表/监控 recentTasks 全局按时间倒序（原 (status, created_at) 前导列为 status）
+  await sql`create index if not exists import_tasks_created_at_idx on public.import_tasks (created_at desc)`;
+  // 慢批次 TOP10：created_at 过滤 + total_duration_ms 排序
+  await sql`create index if not exists batch_performance_log_created_duration_idx on public.batch_performance_log (created_at desc, total_duration_ms desc)`;
+  // 任务详情批次聚合 where task_id 按 status 分类计数（原 (status, task_id) 前导列为 status）
+  await sql`create index if not exists import_task_batches_task_status_idx on public.import_task_batches (task_id, status)`;
 };

@@ -214,6 +214,54 @@ create trigger imported_orders_set_updated_at
   for each row execute function public.set_updated_at();
 
 -- ------------------------------------------------------------
+-- 查询性能索引补充（按接口真实查询模式补齐，消除全表扫描）
+-- ------------------------------------------------------------
+-- 监控看板「实时吞吐」：select ... from imported_orders where created_at > now() - interval '5 minutes'
+-- imported_orders 是全库最大表（每次导入 1 万行且持续增长），此前仅有业务键唯一索引，
+-- 该查询退化为全表扫描 —— 监控接口最主要的性能瓶颈。
+create index if not exists imported_orders_created_at_idx
+  on public.imported_orders (created_at desc);
+
+-- 监控看板「错误类型分布」：where created_at > now() - interval '24 hours' group by error_code
+-- 原 error_code 单列索引无法服务 created_at range 过滤。
+create index if not exists import_task_errors_created_at_idx
+  on public.import_task_errors (created_at desc);
+
+-- 错误明细分页：where task_id = ? [and batch_index/error_code] order by row_number limit/offset
+-- 原 (task_id, unit_id) / (task_id, batch_index) 均不提供 row_number 有序性，需额外排序。
+create index if not exists import_task_errors_task_row_idx
+  on public.import_task_errors (task_id, row_number);
+
+-- 任务列表 order by created_at desc limit 50 / 监控 recentTasks limit 10（无 status 过滤）
+-- 原 (status, created_at desc) 前导列为 status，无法服务全局按时间排序。
+create index if not exists import_tasks_created_at_idx
+  on public.import_tasks (created_at desc);
+
+-- 慢批次 TOP10：where created_at > now() - interval '24 hours' order by total_duration_ms desc limit 10
+create index if not exists batch_performance_log_created_duration_idx
+  on public.batch_performance_log (created_at desc, total_duration_ms desc);
+
+-- 任务详情页批次聚合：where task_id = ? 并按 status 分类计数
+-- 原 (status, task_id) 前导列为 status，不服务单任务查询。
+create index if not exists import_task_batches_task_status_idx
+  on public.import_task_batches (task_id, status);
+
+-- ------------------------------------------------------------
+-- 移除无效索引（减轻写入路径负担）
+-- ------------------------------------------------------------
+-- imported_orders_payload_gin_idx 由 V2 的 database.sql 创建（gin(payload)）。
+-- 判定为无效并移除的依据：
+--   1) pg_stat_user_indexes.idx_scan = 0 —— 上线至今从未被任何查询命中；
+--   2) 全代码检索无 imported_orders.payload 的 jsonb 包含/存在性查询
+--      （@> ? ?| 等）；现存 payload->> 查询均作用于 parse_rules 表；
+--   3) 索引体积 8.6 MB > 堆体积 6.9 MB，索引比数据还大；
+--   4) GIN 是写入维护代价最高的索引类型，需对整个 jsonb 分词并更新 posting list，
+--      而 imported_orders 正是单次导入写入 1 万行的主写入路径。
+-- 若后续确需按 payload 做 jsonb 检索，应针对具体键建表达式索引（如
+-- gin((payload->'指定字段')) 或 btree((payload->>'指定字段'))），而非对整列建 GIN。
+drop index if exists public.imported_orders_payload_gin_idx;
+
+-- ------------------------------------------------------------
 -- RLS：与 V2 一致，启用并收回 anon/authenticated 直接访问
 -- ------------------------------------------------------------
 alter table public.sku_master enable row level security;

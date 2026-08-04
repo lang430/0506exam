@@ -12,6 +12,11 @@
     "seed": "node --import tsx scripts/seed-data.ts",
     "loadtest": "node scripts/loadtest.mjs",
     "worker-loop": "node scripts/worker-loop.mjs",
+    "db:indexes": "node scripts/apply-indexes.mjs",
+    "db:health": "node scripts/db-health.mjs",
+    "db:vacuum": "node scripts/db-health.mjs --vacuum",
+    "db:inspect-idx": "node scripts/db-inspect-idx.mjs",
+    "db:bench-insert": "node scripts/bench-insert.mjs",
     "test": "vitest run"
   },
   "dependencies": {

@@ -1,0 +1,261 @@
+name: Deploy to Vercel
+
+# =============================================================
+# 提交即部署：push main → 质量门禁 → Vercel 生产部署
+#              PR      → 质量门禁 → Vercel 预览部署 + 评论预览地址
+#
+# 需要在仓库 Settings → Secrets and variables → Actions 配置 3 个 Secret：
+#   VERCEL_TOKEN       Vercel 个人访问令牌（https://vercel.com/account/tokens）
+#   VERCEL_ORG_ID      团队/账号 ID（取自本地 .vercel/project.json 的 orgId）
+#   VERCEL_PROJECT_ID  项目 ID（取自本地 .vercel/project.json 的 projectId）
+#
+# 详细配置见 docs/ci-cd-vercel.md
+# =============================================================
+
+on:
+  push:
+    branches: [main]
+    # 如需「纯文档提交不触发部署」，取消下面两行注释：
+    # paths-ignore:
+    #   - "**/*.md"
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "部署目标环境"
+        type: choice
+        options: [production, preview]
+        default: production
+      skip_gate:
+        description: "跳过质量门禁（仅紧急发布使用）"
+        type: boolean
+        default: false
+
+# 同一分支的新提交自动取消上一次未完成的运行，避免部署乱序
+concurrency:
+  group: vercel-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  NODE_VERSION: "22"
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+jobs:
+  # -----------------------------------------------------------
+  # 1) 质量门禁：类型检查 + 单元测试
+  #    DB/HTTP 测试在无数据库、无本地服务时会自动跳过，CI 中安全
+  # -----------------------------------------------------------
+  gate:
+    name: 质量门禁
+    if: ${{ github.event_name != 'workflow_dispatch' || inputs.skip_gate == false }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: 安装依赖
+        run: npm ci
+
+      - name: TypeScript 类型检查
+        run: npm run typecheck
+
+      - name: 单元测试
+        run: npm test
+        env:
+          CI: "true"
+
+      - name: 门禁结果摘要
+        if: always()
+        run: |
+          {
+            echo "### 质量门禁"
+            echo ""
+            echo "- 类型检查：\`tsc --noEmit\`"
+            echo "- 单元测试：\`vitest run\`（无 DB / 无本地服务的用例自动跳过）"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # -----------------------------------------------------------
+  # 2) 部署到 Vercel（CLI 预构建方式，构建失败不会产生半成品部署）
+  # -----------------------------------------------------------
+  deploy:
+    name: 部署到 Vercel
+    needs: [gate]
+    # gate 被跳过（紧急发布）时仍允许继续；gate 失败则中止
+    if: >-
+      always() &&
+      (needs.gate.result == 'success' || needs.gate.result == 'skipped') &&
+      (github.event_name != 'pull_request' ||
+       github.event.pull_request.head.repo.full_name == github.repository)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    outputs:
+      url: ${{ steps.deploy.outputs.url }}
+      environment: ${{ steps.target.outputs.vercel_env }}
+    steps:
+      - name: 校验 Secrets 是否齐全
+        env:
+          # 经 env 传入，避免 secret 内容被内插进脚本文本（含特殊字符会破坏引号）
+          TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          missing=""
+          if [ -z "$TOKEN" ];      then missing="$missing VERCEL_TOKEN"; fi
+          if [ -z "$ORG_ID" ];     then missing="$missing VERCEL_ORG_ID"; fi
+          if [ -z "$PROJECT_ID" ]; then missing="$missing VERCEL_PROJECT_ID"; fi
+          if [ -n "$missing" ]; then
+            echo "::error::缺少必需的 Secret：$missing —— 配置方法见 docs/ci-cd-vercel.md"
+            exit 1
+          fi
+          echo "Secrets 校验通过"
+
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 安装 Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: 判定部署环境
+        id: target
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ] \
+             || [ "${{ inputs.target }}" = "preview" ]; then
+            echo "vercel_env=preview"  >> "$GITHUB_OUTPUT"
+            echo "prod_flag="          >> "$GITHUB_OUTPUT"
+          else
+            echo "vercel_env=production" >> "$GITHUB_OUTPUT"
+            echo "prod_flag=--prod"      >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 安装 Vercel CLI
+        run: npm install --global vercel@latest
+
+      - name: 拉取 Vercel 项目配置与环境变量
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ENV_TARGET: ${{ steps.target.outputs.vercel_env }}
+          GIT_BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          vercel pull --yes \
+            --environment="$VERCEL_ENV_TARGET" \
+            --git-branch="$GIT_BRANCH" \
+            --token="$VERCEL_TOKEN"
+
+      - name: 构建（在 CI 内完成，产物为 .vercel/output）
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          PROD_FLAG: ${{ steps.target.outputs.prod_flag }}
+        run: vercel build $PROD_FLAG --token="$VERCEL_TOKEN"
+
+      - name: 部署预构建产物
+        id: deploy
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          PROD_FLAG: ${{ steps.target.outputs.prod_flag }}
+        run: |
+          set -o pipefail
+          url=$(vercel deploy --prebuilt $PROD_FLAG --token="$VERCEL_TOKEN" | tail -n 1)
+          if [ -z "$url" ]; then
+            echo "::error::未能获取部署 URL"
+            exit 1
+          fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "部署地址：$url"
+
+      - name: 冒烟校验（部署后可用性）
+        id: smoke
+        env:
+          DEPLOY_URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          url="$DEPLOY_URL"
+          ok=0
+          for i in 1 2 3 4 5 6; do
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 20 "$url/api/import-tasks" || echo "000")
+            echo "第 $i 次探测 /api/import-tasks → HTTP $code"
+            if [ "$code" = "200" ]; then ok=1; break; fi
+            sleep 5
+          done
+          if [ "$ok" != "1" ]; then
+            echo "::warning::冒烟校验未通过（最后一次 HTTP $code）。部署已完成，但接口未返回 200，请手工确认环境变量与数据库连通性。"
+            echo "status=warn" >> "$GITHUB_OUTPUT"
+          else
+            echo "status=ok" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: 部署结果摘要
+        if: always()
+        run: |
+          {
+            echo "### 部署结果"
+            echo ""
+            echo "| 项 | 值 |"
+            echo "|---|---|"
+            echo "| 环境 | \`${{ steps.target.outputs.vercel_env }}\` |"
+            echo "| 地址 | ${{ steps.deploy.outputs.url }} |"
+            echo "| 提交 | \`${{ github.sha }}\` |"
+            echo "| 冒烟 | ${{ steps.smoke.outputs.status == 'ok' && '✅ 通过' || '⚠️ 未通过（见日志）' }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: 在 PR 中评论预览地址
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        env:
+          # 经 env 传入，避免把表达式结果直接拼进 JS 源码
+          DEPLOY_URL: ${{ steps.deploy.outputs.url }}
+          SMOKE_STATUS: ${{ steps.smoke.outputs.status }}
+        with:
+          script: |
+            const url = process.env.DEPLOY_URL;
+            const smoke = process.env.SMOKE_STATUS === 'ok' ? '✅ 通过' : '⚠️ 未通过';
+            const marker = '<!-- vercel-preview-comment -->';
+            const body = [
+              marker,
+              '### 🚀 Vercel 预览部署已就绪',
+              '',
+              `| 项 | 值 |`,
+              `|---|---|`,
+              `| 预览地址 | ${url} |`,
+              `| 提交 | \`${context.sha.slice(0, 7)}\` |`,
+              `| 冒烟校验 | ${smoke} |`,
+              '',
+              `常用页面：[任务列表](${url}/tasks) · [监控看板](${url}/monitor) · [Trace 检索](${url}/traces)`
+            ].join('\n');
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number
+            });
+            const existing = comments.find((c) => c.body && c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body
+              });
+            }

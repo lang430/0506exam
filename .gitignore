@@ -8,3 +8,8 @@ dev.log
 
 .vercel
 dev-v4.log
+
+# 本地工具/助手产物，不入库
+.workbuddy/
+.playwright-cli/
+output/
