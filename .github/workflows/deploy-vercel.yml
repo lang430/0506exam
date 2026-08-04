@@ -153,10 +153,18 @@ jobs:
           VERCEL_ENV_TARGET: ${{ steps.target.outputs.vercel_env }}
           GIT_BRANCH: ${{ github.head_ref || github.ref_name }}
         run: |
-          vercel pull --yes \
-            --environment="$VERCEL_ENV_TARGET" \
-            --git-branch="$GIT_BRANCH" \
-            --token="$VERCEL_TOKEN"
+          # Vercel 限制：指定 --git-branch 时 target 必须为 preview，
+          # 对 production 传分支会报 `target must be "preview" when specifying a gitBranch`。
+          if [ "$VERCEL_ENV_TARGET" = "preview" ]; then
+            vercel pull --yes \
+              --environment=preview \
+              --git-branch="$GIT_BRANCH" \
+              --token="$VERCEL_TOKEN"
+          else
+            vercel pull --yes \
+              --environment=production \
+              --token="$VERCEL_TOKEN"
+          fi
 
       - name: 构建（在 CI 内完成，产物为 .vercel/output）
         env:

@@ -105,6 +105,7 @@ gh workflow run deploy-vercel.yml --repo lang430/0506exam -f target=preview
 | 现象 | 原因与处理 |
 |---|---|
 | `缺少必需的 Secret：VERCEL_TOKEN` | 按第二节创建令牌 |
+| `Invalid request: target must be "preview" when specifying a gitBranch` | Vercel API 限制：`vercel pull` 传了 `--git-branch` 时 `--environment` 只能是 `preview`。工作流已按环境分支处理（production 不传分支），若自行改动此处需保留该判断 |
 | `Error: Project not found` | 令牌 Scope 选成了 Personal，而 `VERCEL_ORG_ID` 是 team。重建令牌并选对 Team |
 | 构建报缺少环境变量 | 该变量没在 Vercel 项目里配，或只配了 Production 没配 Preview。`vercel pull` 按环境拉取，两个环境要分别配 |
 | 冒烟校验 warn 但部署成功 | 部署本身没问题，是 `/api/import-tasks` 未返回 200。多为数据库连接串未配或库不可达，查 Vercel 运行时日志 |
