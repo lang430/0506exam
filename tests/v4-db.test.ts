@@ -152,7 +152,7 @@ describeDb("V4 数据库集成测试", () => {
 
   it("场景4+7+8：Worker 处理成功；部分行失败不阻断成功行入库；错误按行记录", async () => {
     const taskId = `${TASK_PREFIX}atomic`;
-    const claimed = await claimReadyBatches(sql, 1);
+    const claimed = await claimReadyBatches(sql, 1, taskId);
     expect(claimed.length).toBe(1);
     expect(claimed[0].task_id).toBe(taskId);
     const outcome = await processBatch(sql, claimed[0]);
@@ -172,10 +172,12 @@ describeDb("V4 数据库集成测试", () => {
 
   it("场景5：重复消费幂等——已完成批次不再被认领，强制重放不重复累计", async () => {
     const taskId = `${TASK_PREFIX}atomic`;
-    const readyAgain = await claimReadyBatches(sql, 1);
+    const readyAgain = await claimReadyBatches(sql, 1, taskId);
     expect(readyAgain.length).toBe(0); // 已完成批次不会再次入队认领
     const before = await sql`select processed_rows, success_rows from import_tasks where id = ${taskId}`;
     const ordersBefore = await sql`select count(*)::int as c from imported_orders where external_code like 'V4T-%'`;
+    const errorsBefore = await sql`select count(*)::int as c from import_task_errors where task_id = ${taskId}`;
+    const performanceBefore = await sql`select count(*)::int as c from batch_performance_log where task_id = ${taskId}`;
     const batchRows = await sql`select * from import_task_batches where task_id = ${taskId}`;
     const batch = batchRows[0] as unknown as BatchRow;
     batch.status = "processing";
@@ -185,6 +187,10 @@ describeDb("V4 数据库集成测试", () => {
     const ordersAfter = await sql`select count(*)::int as c from imported_orders where external_code like 'V4T-%'`;
     expect(String(after[0].processed_rows)).toBe(String(before[0].processed_rows)); // 进度不重复累计
     expect(Number(ordersAfter[0].c)).toBe(Number(ordersBefore[0].c)); // 运单不重复写入
+    const errorsAfter = await sql`select count(*)::int as c from import_task_errors where task_id = ${taskId}`;
+    const performanceAfter = await sql`select count(*)::int as c from batch_performance_log where task_id = ${taskId}`;
+    expect(Number(errorsAfter[0].c)).toBe(Number(errorsBefore[0].c));
+    expect(Number(performanceAfter[0].c)).toBe(Number(performanceBefore[0].c));
     await sql`update import_task_batches set status = 'completed' where task_id = ${taskId}`;
   });
 
@@ -218,7 +224,7 @@ describeDb("V4 数据库集成测试", () => {
     const originalTimeout = process.env.V4_SKU_CHECK_TIMEOUT_MS;
     process.env.V4_SKU_CHECK_TIMEOUT_MS = "1"; // 1ms 必然超时 → 降级
     try {
-      const claimed = await claimReadyBatches(sql, 1);
+      const claimed = await claimReadyBatches(sql, 1, taskId);
       const outcome = await processBatch(sql, claimed[0]);
       expect(outcome.degraded).toBe(true);
       expect(outcome.failedRows).toBe(2); // 仅电话/数量错误；SKU 校验被跳过

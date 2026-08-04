@@ -144,6 +144,10 @@ export async function POST(request: Request) {
       ${tx(batchRows, "task_id", "unit_id", "batch_index", "start_row", "end_row")}
     `;
     await enqueueEvents(tx, [taskCreatedEvent, ...batchEvents]);
+    await tx`
+      insert into trace_events (trace_id, task_id, unit_id, event_name, event_status, message)
+      values (${traceId}, ${taskId}, '', ${ImportEvents.ImportTaskCreated}, 'ok', '任务已创建，Outbox 事件已写入')
+    `;
   });
 
   // 响应先行：trace 记录 + 首轮调度均在后台（after()，Next.js 保证执行，不阻塞 ≤1s 响应）。

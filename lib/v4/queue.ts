@@ -90,6 +90,7 @@ export const dispatchOutbox = async (sql: postgres.Sql, batchSize = 50): Promise
     let failed = 0;
     for (const event of events) {
       try {
+        let traceUnitId = "";
         if (event.event_type === ImportEvents.ImportBatchCreated) {
           let rawPayload: unknown = event.payload;
           if (typeof rawPayload === "string") {
@@ -102,6 +103,7 @@ export const dispatchOutbox = async (sql: postgres.Sql, batchSize = 50): Promise
           const payload = (envelopeLike.payload ?? envelopeLike) as { task_id?: string; unit_id?: string };
           const taskId = payload.task_id ?? "";
           const unitId = payload.unit_id ?? "";
+          traceUnitId = unitId;
           if (taskId && unitId) {
             await tx`
               update import_task_batches
@@ -111,6 +113,13 @@ export const dispatchOutbox = async (sql: postgres.Sql, batchSize = 50): Promise
           }
         }
         await tx`update event_outbox set status = 'sent', sent_at = now() where id = ${event.id}`;
+        await tx`
+          insert into trace_events (trace_id, task_id, unit_id, event_name, event_status, message)
+          values (
+            ${event.trace_id}, ${event.aggregate_id}, ${traceUnitId}, ${event.event_type}, 'ok',
+            ${event.event_type === ImportEvents.ImportBatchCreated ? "批次事件已投递，处理单元进入就绪队列" : "任务事件已投递"}
+          )
+        `;
         sent += 1;
       } catch {
         failed += 1;
@@ -132,13 +141,14 @@ export const dispatchOutbox = async (sql: postgres.Sql, batchSize = 50): Promise
 };
 
 /** Worker 认领就绪批次：FOR UPDATE SKIP LOCKED 保证并发安全、不重复领取 */
-export const claimReadyBatches = async (sql: postgres.Sql, limit = 1): Promise<BatchRow[]> => {
+export const claimReadyBatches = async (sql: postgres.Sql, limit = 1, taskId?: string): Promise<BatchRow[]> => {
   return sql<BatchRow[]>`
     update import_task_batches
     set status = 'processing', locked_at = now(), retry_count = retry_count + 1
     where id in (
       select id from import_task_batches
       where status = 'ready'
+        and (${taskId ?? null}::text is null or task_id = ${taskId ?? null}::text)
       order by task_id, batch_index
       for update skip locked
       limit ${limit}

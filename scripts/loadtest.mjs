@@ -200,15 +200,20 @@ const main = async () => {
   // 1. 上传接口 P95 采样（50 行小文件 × 10 次；每轮重建保证业务键唯一，不产生 E005 噪音）
   console.log("[loadtest] 1/3 上传接口 P95 采样（小文件 × 10）…");
   const uploadSamples = [];
+  const uploadResults = [];
   for (let round = 0; round < 10; round += 1) {
     const smallBuffer = await buildSmallFile();
     const result = await uploadFile(smallBuffer, `p95-sample-${round}.xlsx`);
     uploadSamples.push(result.elapsed);
+    uploadResults.push(result);
     if (result.status >= 500) report.http_500_504 = [...(report.http_500_504 ?? []), result.status];
   }
   report.upload_latency_samples_ms = uploadSamples;
   report.upload_p95_ms = percentile(uploadSamples, 95);
-  console.log(`[loadtest]    采样(ms): ${uploadSamples.join(", ")} → P95=${report.upload_p95_ms}ms ${report.upload_p95_ms <= 1000 ? "✓ ≤1s" : "✗ >1s"}`);
+  const serverUploadSamples = uploadResults.map((result) => Number(result.body?.upload_ms)).filter(Number.isFinite);
+  report.upload_server_latency_samples_ms = serverUploadSamples;
+  report.upload_server_p95_ms = percentile(serverUploadSamples, 95);
+  console.log(`[loadtest]    客户端采样(ms): ${uploadSamples.join(", ")} → P95=${report.upload_p95_ms}ms；服务端 upload_ms P95=${report.upload_server_p95_ms}ms`);
 
   // 2. 主压测：10,000 行
   console.log("[loadtest] 2/3 上传 10,000 行压测文件…");
@@ -230,7 +235,6 @@ const main = async () => {
     console.error("[loadtest] ✗ 轮询超时，任务未完成");
     report.result = "FAIL(timeout)";
   } else {
-    const totalElapsedMs = (upload.body.upload_ms ?? upload.elapsed) + elapsedMs;
     const sincePoll = Date.now() - pollStartedAt;
     report.task_status = task.status;
     report.success_rows = task.success_rows;
@@ -238,7 +242,12 @@ const main = async () => {
     report.total_elapsed_seconds = Math.round(sincePoll / 100) / 10 + upload.elapsed / 1000;
     report.degraded = task.degraded;
     report.http_errors = httpErrors;
-    const pass = sincePoll <= 60000 && task.status !== "FAILED";
+    const totalElapsedMs = upload.elapsed + sincePoll;
+    const rowsMatch = Number(task.success_rows) === EXPECTED_SUCCESS && Number(task.failed_rows) === EXPECTED_FAILED;
+    const noServerErrors = httpErrors.length === 0;
+    const uploadPass = serverUploadSamples.length === uploadResults.length && report.upload_server_p95_ms <= 1000;
+    const pass = totalElapsedMs <= 60000 && task.status !== "FAILED" && rowsMatch && noServerErrors && uploadPass;
+    report.acceptance = { total_elapsed_ms: totalElapsedMs, rows_match: rowsMatch, no_server_errors: noServerErrors, server_upload_p95_le_1s: uploadPass };
     report.result = pass ? "PASS" : "FAIL";
     console.log(`[loadtest] 任务终态：${task.status}（上传后 ${Math.round(sincePoll / 1000)}s；成功 ${task.success_rows}，失败 ${task.failed_rows}，降级 ${task.degraded ? "是" : "否"}）`);
     console.log(`[loadtest] 预期：成功 ${EXPECTED_SUCCESS}，失败 ${EXPECTED_FAILED}（120 非法SKU + 30 非法电话 + 20 非正数量）`);

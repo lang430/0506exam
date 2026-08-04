@@ -103,17 +103,17 @@ interface LoadedContext {
   rule: ParseRule;
 }
 
-const loadContext = async (sql: postgres.Sql, batch: BatchRow): Promise<LoadedContext | { error: string }> => {
+const loadContext = async (sql: postgres.Sql, batch: BatchRow): Promise<LoadedContext | { error: string; traceId: string }> => {
   const tasks = await sql`select id, rule_id, trace_id, status from import_tasks where id = ${batch.task_id}`;
   const task = tasks[0];
-  if (!task) return { error: `任务 ${batch.task_id} 不存在` };
+  if (!task) return { error: `任务 ${batch.task_id} 不存在`, traceId: "" };
   const files = await sql`select file_name, data from import_task_files where task_id = ${batch.task_id}`;
   const file = files[0];
-  if (!file) return { error: "原始文件不存在" };
-  if (!task.rule_id) return { error: "任务未关联解析规则" };
+  if (!file) return { error: "原始文件不存在", traceId: task.trace_id };
+  if (!task.rule_id) return { error: "任务未关联解析规则", traceId: task.trace_id };
   const rules = await sql`select payload from parse_rules where id = ${task.rule_id}`;
   const rule = rules[0]?.payload as ParseRule | undefined;
-  if (!rule) return { error: `解析规则 ${task.rule_id} 不存在` };
+  if (!rule) return { error: `解析规则 ${task.rule_id} 不存在`, traceId: task.trace_id };
   return { task: { id: task.id, rule_id: task.rule_id, trace_id: task.trace_id, status: task.status }, file: { file_name: file.file_name, data: file.data as Uint8Array }, rule };
 };
 
@@ -226,7 +226,7 @@ export const processBatch = async (sql: postgres.Sql, batch: BatchRow): Promise<
       where id = ${batch.id} and status = 'processing'
     `;
     await sql`update import_tasks set error_message = ${context.error} where id = ${batch.task_id}`;
-    await recordTraceEvents(sql, [{ traceId: "", ...tracePrefix, eventName: ImportEvents.ImportBatchFailed, eventStatus: "error", message: context.error }]);
+    await recordTraceEvents(sql, [{ traceId: context.traceId, ...tracePrefix, eventName: ImportEvents.ImportBatchFailed, eventStatus: "error", message: context.error }]);
     await finalizeTaskIfNeeded(sql, batch.task_id);
     return {
       taskId: batch.task_id, unitId: batch.unit_id, batchIndex: batch.batch_index,
@@ -266,23 +266,27 @@ export const processBatch = async (sql: postgres.Sql, batch: BatchRow): Promise<
       errorReason: `${errorReasonDefaults[ErrorCodes.RULE_MAPPING_FAILED]}：规则 ${rule.name ?? rule.id} 未解析出任何 SKU 行`,
       suggestion: errorSuggestions[ErrorCodes.RULE_MAPPING_FAILED]
     }] : [];
+    let committed = false;
     await sql.begin(async (tx) => {
-      if (errors.length) {
-        await insertErrors(tx, task.id, batch, traceId, errors);
-      }
+      const locked = await tx<{ status: string }[]>`
+        select status from import_task_batches where id = ${batch.id} for update
+      `;
+      if (locked[0]?.status !== "processing") return;
+      if (errors.length) await insertErrors(tx, task.id, batch, traceId, errors);
       await tx`
         update import_task_batches set status = 'completed', completed_at = now()
         where id = ${batch.id} and status = 'processing'
       `;
+      committed = true;
     });
-    await recordTraceEvents(sql, [{ traceId, ...tracePrefix, eventName: ImportEvents.ImportBatchFailed, eventStatus: "error", message: "规则解析结果为空（E006）" }]);
+    if (committed) await recordTraceEvents(sql, [{ traceId, ...tracePrefix, eventName: ImportEvents.ImportBatchFailed, eventStatus: "error", message: "规则解析结果为空（E006）" }]);
     if (batch.batch_index === 0) {
       await sql`update import_tasks set error_message = '规则解析结果为空，请检查解析规则（E006）' where id = ${task.id}`;
     }
     await finalizeTaskIfNeeded(sql, task.id);
     return {
       taskId: task.id, unitId: batch.unit_id, batchIndex: batch.batch_index,
-      successRows: 0, failedRows: 0, degraded: false, skipped: false,
+      successRows: 0, failedRows: committed ? errors.length : 0, degraded: false, skipped: !committed,
       durations: { parse: parseDuration, rule: ruleDuration, validate: 0, insert: 0, total: Date.now() - startedAt }
     };
   }
@@ -325,6 +329,11 @@ export const processBatch = async (sql: postgres.Sql, batch: BatchRow): Promise<
   const insertStartedAt = Date.now();
   let committed = false;
   await sql.begin(async (tx) => {
+    // 先锁定处理单元并检查状态，重复投递只能快速返回，不能重复写错误/性能日志。
+    const locked = await tx<{ status: string }[]>`
+      select status from import_task_batches where id = ${batch.id} for update
+    `;
+    if (locked[0]?.status !== "processing") return;
     await upsertValidRows(tx, task.id, validRows);
     if (errors.length) await insertErrors(tx, task.id, batch, traceId, errors);
     await tx`
@@ -402,9 +411,9 @@ export const processBatch = async (sql: postgres.Sql, batch: BatchRow): Promise<
     taskId: task.id,
     unitId: batch.unit_id,
     batchIndex: batch.batch_index,
-    successRows: validRows.length,
-    failedRows: errors.length,
-    degraded,
+    successRows: committed ? validRows.length : 0,
+    failedRows: committed ? errors.length : 0,
+    degraded: committed ? degraded : Boolean(batch.sku_check_skipped),
     skipped: !committed,
     durations: { parse: parseDuration, rule: ruleDuration, validate: validateDuration, insert: insertDuration, total: Date.now() - startedAt },
     taskFinalStatus: finalization.finalized ? finalization.status : undefined
