@@ -53,6 +53,19 @@ interface BatchInfo {
 
 const TERMINAL_STATUS = ["COMPLETED", "PARTIAL_SUCCESS", "FAILED"];
 
+export const runSingleFlight = async <T,>(
+  state: { current: boolean },
+  operation: () => Promise<T>
+): Promise<T | undefined> => {
+  if (state.current) return undefined;
+  state.current = true;
+  try {
+    return await operation();
+  } finally {
+    state.current = false;
+  }
+};
+
 export default function TaskDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [task, setTask] = useState<TaskDetail | null>(null);
@@ -66,47 +79,51 @@ export default function TaskDetailPage() {
   const [loadError, setLoadError] = useState("");
   const terminalRef = useRef(false);
   const taskRequestInFlightRef = useRef(false);
+  const errorsRequestInFlightRef = useRef(false);
+  const batchesRequestInFlightRef = useRef(false);
 
   const loadTask = useCallback(async (): Promise<void> => {
-    if (taskRequestInFlightRef.current) return;
-    taskRequestInFlightRef.current = true;
-    try {
-      const response = await fetch(`/api/import-tasks/${id}`, {
-        signal: AbortSignal.timeout(5_000)
-      });
-      if (response.status === 404) return setNotFound(true);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const data = await response.json();
-      if (data.task_id) {
-        setTask(data);
-        setLoadError("");
-        if (["COMPLETED", "PARTIAL_SUCCESS", "FAILED"].includes(String(data.status))) terminalRef.current = true;
+    await runSingleFlight(taskRequestInFlightRef, async () => {
+      try {
+        const response = await fetch(`/api/import-tasks/${id}`, { cache: "no-store" });
+        if (response.status === 404) return setNotFound(true);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        if (data.task_id) {
+          setTask(data);
+          setLoadError("");
+          if (["COMPLETED", "PARTIAL_SUCCESS", "FAILED"].includes(String(data.status))) terminalRef.current = true;
+        }
+      } catch {
+        setLoadError("任务状态加载失败，请检查网络后重试");
       }
-    } catch {
-      setLoadError("任务状态加载失败，请检查网络后重试");
-    } finally {
-      taskRequestInFlightRef.current = false;
-    }
+    });
   }, [id]);
 
   const loadErrors = useCallback(async (): Promise<void> => {
-    const params = new URLSearchParams({ page: String(errorPage), page_size: "20" });
-    if (batchFilter) params.set("batch", batchFilter);
-    if (codeFilter) params.set("error_code", codeFilter);
-    try {
-      const response = await fetch(`/api/import-tasks/${id}/errors?${params.toString()}`);
-      const data = await response.json();
-      setErrors(Array.isArray(data.errors) ? data.errors : []);
-      setErrorTotal(Number(data.total ?? 0));
-    } catch { /* 忽略 */ }
+    await runSingleFlight(errorsRequestInFlightRef, async () => {
+      const params = new URLSearchParams({ page: String(errorPage), page_size: "20" });
+      if (batchFilter) params.set("batch", batchFilter);
+      if (codeFilter) params.set("error_code", codeFilter);
+      try {
+        const response = await fetch(`/api/import-tasks/${id}/errors?${params.toString()}`, { cache: "no-store" });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        setErrors(Array.isArray(data.errors) ? data.errors : []);
+        setErrorTotal(Number(data.total ?? 0));
+      } catch { /* 错误明细失败不影响任务主状态 */ }
+    });
   }, [id, errorPage, batchFilter, codeFilter]);
 
   const loadBatches = useCallback(async (): Promise<void> => {
-    try {
-      const response = await fetch(`/api/import-tasks/${id}/batches`);
-      const data = await response.json();
-      setBatches(Array.isArray(data.batches) ? data.batches : []);
-    } catch { /* 忽略 */ }
+    await runSingleFlight(batchesRequestInFlightRef, async () => {
+      try {
+        const response = await fetch(`/api/import-tasks/${id}/batches`, { cache: "no-store" });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        setBatches(Array.isArray(data.batches) ? data.batches : []);
+      } catch { /* 批次详情失败不影响任务主状态 */ }
+    });
   }, [id]);
 
   useEffect(() => {

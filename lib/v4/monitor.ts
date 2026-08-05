@@ -49,6 +49,18 @@ export interface MonitorSummary {
   failedTaskTrend: { day: string; count: number }[];
 }
 
+type RecoverableQueueDepth = Pick<
+  MonitorSummary["queueDepth"],
+  "pendingBatches" | "stuckBatches" | "processingBatches" | "readyBatches" | "outboxPending"
+>;
+
+/** 仅在消费已经停止时唤醒 Dispatcher；正常处理中的队列由现有自链继续推进。 */
+export const shouldWakeDispatcher = (depth: RecoverableQueueDepth): boolean =>
+  depth.stuckBatches > 0 || (
+    depth.processingBatches === 0 &&
+    (depth.pendingBatches > 0 || depth.readyBatches > 0 || depth.outboxPending > 0)
+  );
+
 export const getMonitorSummary = async (sql: postgres.Sql): Promise<MonitorSummary> => {
   const stuckSecs = stuckBatchSeconds();
   // 所有看板数据合并为一次 SQL 往返。生产数据库与函数跨区时，原先 8 次顺序查询
