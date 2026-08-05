@@ -77,7 +77,6 @@ export default function TasksPage() {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   // 用 ref 保存最新筛选值，避免 loadTasks 闭包捕获过期状态（修复关键词搜索失效的根本原因）
   const filtersRef = useRef({ page, pageSize, statusFilter, keyword });
@@ -118,31 +117,38 @@ export default function TasksPage() {
       .catch(() => undefined);
 
     void loadTasks();
-
-    // 自动刷新列表（3s 轮询，仅当前页，保持处理中任务状态实时）
-    const timer = setInterval(() => void loadTasks(), 3000);
-    return () => clearInterval(timer);
+    // 注意：导入任务列表不再自动刷新，需点击「查询」按钮或翻页后手动拉取
   }, [loadTasks]);
 
-  /** 筛选条件变化时立即重新拉取（不再等待 3s 轮询） */
+  /** 筛选条件仅更新状态，点击「查询」按钮或回车才真正拉取（列表不再自动刷新） */
   const handleStatusChange = (value: string) => {
     setStatusFilter(value);
     setPage(1);
-    setTimeout(() => void loadTasks(), 0);
   };
 
   const handleKeywordChange = (value: string) => {
     setKeyword(value);
     setPage(1);
-    // 防抖 400ms 后再查询，避免每次按键都打库
-    clearTimeout(searchTimerRef.current);
-    searchTimerRef.current = setTimeout(() => void loadTasks(), 400);
   };
 
   const handlePageSizeChange = (value: number) => {
     setPageSize(value);
     setPage(1);
-    setTimeout(() => void loadTasks(), 0);
+  };
+
+  /** 点击「查询」或回车：按当前筛选条件重新拉取列表（重置到第 1 页） */
+  const applyQuery = (): void => {
+    setPage(1);
+    void loadTasks();
+  };
+
+  /** 重置全部筛选条件并重新拉取 */
+  const resetFilters = (): void => {
+    setKeyword("");
+    setStatusFilter("");
+    setPageSize(DEFAULT_PAGE_SIZE);
+    setPage(1);
+    void loadTasks();
   };
 
   /** 翻页 */
@@ -361,72 +367,39 @@ export default function TasksPage() {
             </button>
           </div>
 
-          {/* 筛选条件栏 */}
-          <div
-            className="history-filters"
-            style={{
-              gridTemplateColumns: "200px 180px auto",
-              marginBottom: 12,
-              paddingBottom: 12,
-              borderBottom: "1px solid #eef1f4"
-            }}
-          >
-            {/* 关键词搜索 */}
-            <div>
-              <label className="muted" style={{ display: "block", marginBottom: 4, fontSize: 12 }}>
-                文件名搜索
-              </label>
-              <div style={{ position: "relative" }}>
-                <Search
-                  size={14}
-                  style={{
-                    position: "absolute",
-                    left: 10,
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    color: "#86909c",
-                    pointerEvents: "none"
-                  }}
-                />
-                <input
-                  type="text"
-                  className="search"
-                  placeholder="输入文件名关键词…"
-                  value={keyword}
-                  onChange={(e) => handleKeywordChange(e.target.value)}
-                  style={{ paddingLeft: 32 }}
-                />
-              </div>
+          {/* 筛选条件栏：统一工具栏，点击「查询」才拉取，不自动刷新 */}
+          <div className="v4-toolbar">
+            <div className="field has-icon">
+              <label>文件名搜索</label>
+              <Search size={14} className="search-icon" />
+              <input
+                type="text"
+                className="search"
+                placeholder="输入文件名关键词…"
+                value={keyword}
+                onChange={(e) => handleKeywordChange(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") applyQuery(); }}
+              />
             </div>
-
-            {/* 状态筛选 */}
-            <div>
-              <label className="muted" style={{ display: "block", marginBottom: 4, fontSize: 12 }}>
-                任务状态
-              </label>
-              <select
-                value={statusFilter}
-                onChange={(e) => handleStatusChange(e.target.value)}
-              >
+            <div className="field">
+              <label>任务状态</label>
+              <select value={statusFilter} onChange={(e) => handleStatusChange(e.target.value)}>
                 {STATUS_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
               </select>
             </div>
-
-            {/* 每页条数 */}
-            <div style={{ alignSelf: "flex-end" }}>
-              <select
-                value={String(pageSize)}
-                onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-                style={{ width: "auto", minWidth: 100 }}
-              >
+            <div className="field">
+              <label>每页条数</label>
+              <select value={String(pageSize)} onChange={(e) => handlePageSizeChange(Number(e.target.value))}>
                 {[10, 20, 50].map((s) => (
                   <option key={s} value={String(s)}>{s} 条/页</option>
                 ))}
               </select>
+            </div>
+            <div className="v4-toolbar-actions">
+              <button onClick={() => applyQuery()}><Search size={16} /> 查询</button>
+              <button className="btn-ghost" onClick={() => resetFilters()} disabled={loadingList}>重置</button>
             </div>
           </div>
 

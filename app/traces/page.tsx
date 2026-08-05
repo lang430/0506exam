@@ -125,20 +125,22 @@ function TracesContent() {
       <section className="shell">
         <section className="panel">
           <div className="panel-title"><Search size={18} /> 全链路 Trace 检索（task_id / trace_id / 文件名 / 错误码 / 行号范围）</div>
-          <div className="history-filters trace-filters" onKeyDown={(event) => { if (event.key === "Enter") void search(); }}>
-            <input className="search" placeholder="task_id（精确）" value={taskId} onChange={(event) => setTaskId(event.target.value)} />
-            <input className="search" placeholder="trace_id（精确）" value={traceId} onChange={(event) => setTraceId(event.target.value)} />
-            <input className="search" placeholder="文件名（模糊）" value={fileName} onChange={(event) => setFileName(event.target.value)} />
-            <input className="search" placeholder="批次号" value={batchFilter} onChange={(event) => setBatchFilter(event.target.value)} />
-            <select value={errorCode} onChange={(event) => setErrorCode(event.target.value)}>
-              <option value="">全部错误码</option>
-              {["E001", "E002", "E003", "E004", "E005", "E006", "E007", "E008"].map((code) => <option key={code} value={code}>{code}</option>)}
-            </select>
-            <input className="search" placeholder="行号起" value={rowFrom} onChange={(event) => setRowFrom(event.target.value)} />
-            <input className="search" placeholder="行号止" value={rowTo} onChange={(event) => setRowTo(event.target.value)} />
-            <div style={{ display: "flex", gap: 8 }} className="trace-actions">
+          <div className="v4-toolbar" onKeyDown={(event) => { if (event.key === "Enter") void search(); }}>
+            <div className="field"><label>任务 ID</label><input className="search" placeholder="task_id（精确）" value={taskId} onChange={(event) => setTaskId(event.target.value)} /></div>
+            <div className="field"><label>Trace ID</label><input className="search" placeholder="trace_id（精确）" value={traceId} onChange={(event) => setTraceId(event.target.value)} /></div>
+            <div className="field"><label>文件名</label><input className="search" placeholder="文件名（模糊）" value={fileName} onChange={(event) => setFileName(event.target.value)} /></div>
+            <div className="field"><label>批次号</label><input className="search" placeholder="批次号" value={batchFilter} onChange={(event) => setBatchFilter(event.target.value)} /></div>
+            <div className="field"><label>错误码</label>
+              <select value={errorCode} onChange={(event) => setErrorCode(event.target.value)}>
+                <option value="">全部错误码</option>
+                {["E001", "E002", "E003", "E004", "E005", "E006", "E007", "E008"].map((code) => <option key={code} value={code}>{code}</option>)}
+              </select>
+            </div>
+            <div className="field"><label>行号起</label><input className="search" placeholder="行号起" value={rowFrom} onChange={(event) => setRowFrom(event.target.value)} /></div>
+            <div className="field"><label>行号止</label><input className="search" placeholder="行号止" value={rowTo} onChange={(event) => setRowTo(event.target.value)} /></div>
+            <div className="v4-toolbar-actions">
               <button onClick={() => void search()} disabled={loading}><Search size={16} /> {loading ? "加载中" : "搜索"}</button>
-              <button className="btn-reset" onClick={() => resetFilters()} disabled={loading}>重置</button>
+              <button className="btn-ghost" onClick={() => resetFilters()} disabled={loading}>重置</button>
             </div>
           </div>
           {loading && (

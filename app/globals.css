@@ -215,6 +215,18 @@ button:focus-visible, .v4-sidebar nav a:focus-visible, input:focus-visible, sele
 /* 详情区加载骨架 */
 .panel-loading { display: grid; place-items: center; gap: 10px; padding: 36px 20px; color: #6b7785; font-size: 13px; }
 .section-sub { font-size: 12px; color: #6b7785; font-weight: 400; margin-left: 6px; }
+/* ===== 统一筛选 / 操作工具栏（导入任务 / Trace 检索 / 任务详情 三处共用，UI 风格统一） ===== */
+.v4-toolbar { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #eef1f4; }
+.v4-toolbar .field { display: flex; flex-direction: column; gap: 5px; min-width: 150px; }
+.v4-toolbar .field > label { font-size: 12px; color: #6b7785; }
+.v4-toolbar .field > input, .v4-toolbar .field > select { width: 100%; }
+.v4-toolbar .field.has-icon { position: relative; }
+.v4-toolbar .field.has-icon .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #86909c; pointer-events: none; }
+.v4-toolbar .field.has-icon input { padding-left: 32px; }
+.v4-toolbar-actions { display: flex; gap: 8px; align-items: flex-end; margin-left: auto; }
+@media (max-width: 1100px) {
+  .v4-toolbar .field { min-width: calc(50% - 6px); }
+}
 @media (max-width: 1100px) {
   .trace-filters { grid-template-columns: 1fr 1fr; }
   .trace-filters > :last-child { grid-column: 1 / -1; }

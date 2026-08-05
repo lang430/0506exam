@@ -369,13 +369,21 @@ export default function TaskDetailPage() {
 
         <section className="panel wide">
           <div className="panel-title">行级错误明细（共 {errorsLoaded ? errorTotal : "…"} 条，按批次/错误码筛选）</div>
-          <div className="history-filters" style={{ gridTemplateColumns: "140px 160px auto" }}>
-            <input className="search" placeholder="批次号，如 0" value={batchFilter} onChange={(event) => { setBatchFilter(event.target.value); setErrorPage(1); }} />
-            <select value={codeFilter} onChange={(event) => { setCodeFilter(event.target.value); setErrorPage(1); }}>
-              <option value="">全部错误码</option>
-              {["E001", "E002", "E003", "E004", "E005", "E006", "E007", "E008"].map((code) => <option key={code} value={code}>{code}</option>)}
-            </select>
-            <button onClick={() => void loadErrors()}><Search size={16} /> 筛选</button>
+          <div className="v4-toolbar">
+            <div className="field">
+              <label>批次号</label>
+              <input className="search" placeholder="批次号，如 0" value={batchFilter} onChange={(event) => { setBatchFilter(event.target.value); setErrorPage(1); }} />
+            </div>
+            <div className="field">
+              <label>错误码</label>
+              <select value={codeFilter} onChange={(event) => { setCodeFilter(event.target.value); setErrorPage(1); }}>
+                <option value="">全部错误码</option>
+                {["E001", "E002", "E003", "E004", "E005", "E006", "E007", "E008"].map((code) => <option key={code} value={code}>{code}</option>)}
+              </select>
+            </div>
+            <div className="v4-toolbar-actions">
+              <button onClick={() => void loadErrors()}><Search size={16} /> 筛选</button>
+            </div>
           </div>
           <div className="table-wrap" style={{ marginTop: 10 }}>
             <table className="v4-table">
