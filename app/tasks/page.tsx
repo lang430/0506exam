@@ -2,8 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FileUp, Loader2, Wand2 } from "lucide-react";
 import V4Shell from "@/app/v4-shell";
+import { writeTaskSeed } from "@/lib/task-seed";
 import type { ParseRule } from "@/lib/types";
 
 interface TaskSummary {
@@ -22,6 +24,7 @@ interface TaskSummary {
 }
 
 export default function TasksPage() {
+  const router = useRouter();
   const [rules, setRules] = useState<ParseRule[]>([]);
   const [ruleId, setRuleId] = useState("");
   const [tasks, setTasks] = useState<TaskSummary[]>([]);
@@ -72,16 +75,32 @@ export default function TasksPage() {
       const elapsed = Date.now() - startedAt;
       if (!response.ok) {
         setMessage(data.error ?? "上传失败");
+        setBusy(false);
         return;
       }
-      setMessage(`上传成功（${elapsed}ms）：task_id=${data.task_id}，预估 ${data.total_rows} 行，${data.total_batches} 个批次${data.duplicate_of ? `；检测到 24 小时内重复文件（${data.duplicate_of}），已按幂等策略处理` : ""}`);
+
+      // 上传响应已包含详情页首屏所需的基础字段，直接交接给详情页，
+      // 使其无需等待任何接口即可渲染出任务基础信息。
+      writeTaskSeed({
+        task_id: data.task_id,
+        trace_id: data.trace_id,
+        file_name: file.name,
+        status: data.status ?? "PENDING",
+        status_raw: String(data.status ?? "PENDING").toLowerCase(),
+        total_rows: Number(data.total_rows ?? 0),
+        total_batches: Number(data.total_batches ?? 0),
+        created_at: new Date().toISOString()
+      });
+
+      setMessage(`上传成功（${elapsed}ms），正在进入任务详情…${data.duplicate_of ? `（检测到 24 小时内重复文件 ${data.duplicate_of}，已按幂等策略处理）` : ""}`);
       setFileName("");
       if (fileInputRef.current) fileInputRef.current.value = "";
-      await loadTasks();
-      window.location.href = `/tasks/${data.task_id}`;
+
+      // 立即跳转：不再等待列表刷新（多一次往返），也不用整页刷新（重新下载 bundle）。
+      // 列表数据由详情页返回时的 3s 轮询自然补上。busy 保持 true 直到路由切换完成，防重复提交。
+      router.push(`/tasks/${data.task_id}`);
     } catch {
       setMessage("上传失败，请检查网络");
-    } finally {
       setBusy(false);
     }
   };

@@ -9,7 +9,18 @@ export const maxDuration = 60;
  *
  * 高频轮询接口必须保持只读，不能在请求内认领或处理批次。
  * Worker 由上传 after()、Dispatcher 自链和 cron 推进，查询链路与执行链路隔离。
+ *
+ * ?view=basic：首屏基础数据快路径，只做主键单行查询，
+ * 跳过批次聚合与错误分布，让详情页在后台补齐完整信息前就能先渲染。
  */
+
+const TASK_BASIC = (sql: Awaited<ReturnType<typeof getV4Sql>>, taskId: string) => sql!`
+  select
+    t.id, t.file_name, t.status, t.total_rows, t.processed_rows, t.success_rows, t.failed_rows,
+    t.total_batches, t.trace_id, t.degraded, t.error_message, t.created_at, t.completed_at
+  from import_tasks t
+  where t.id = ${taskId}
+`;
 
 const TASK_WITH_BATCH_SUMMARY = (sql: Awaited<ReturnType<typeof getV4Sql>>, taskId: string) => sql!`
   select
@@ -29,20 +40,23 @@ const TASK_WITH_BATCH_SUMMARY = (sql: Awaited<ReturnType<typeof getV4Sql>>, task
 `;
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ taskId: string }> }
 ) {
   const sql = await getV4Sql();
   if (!sql) return dbUnavailable();
   const { taskId } = await params;
+  const basicOnly = new URL(request.url).searchParams.get("view") === "basic";
 
-  const rows = await TASK_WITH_BATCH_SUMMARY(sql, taskId);
+  const rows = basicOnly
+    ? await TASK_BASIC(sql, taskId)
+    : await TASK_WITH_BATCH_SUMMARY(sql, taskId);
   const task = rows[0];
   if (!task) return notFound(`任务 ${taskId} 不存在`);
 
-  // 错误分布仅在确有失败行时查询，成功路径省去一次往返
+  // 错误分布仅在确有失败行时查询，成功路径省去一次往返；基础视图一律跳过
   const failedRows = Number(task.failed_rows);
-  const errorSummary = failedRows > 0
+  const errorSummary = !basicOnly && failedRows > 0
     ? await sql`
         select error_code, count(*)::int as c
         from import_task_errors where task_id = ${taskId}
@@ -57,6 +71,7 @@ export async function GET(
   const throughputPerSec = processedRows / elapsedSeconds;
   const remainingRows = Math.max(totalRows - processedRows, 0);
   return NextResponse.json({
+    view: basicOnly ? "basic" : "full",
     task_id: task.id,
     file_name: task.file_name,
     status: String(task.status).toUpperCase(),
@@ -66,8 +81,10 @@ export async function GET(
     success_rows: Number(task.success_rows),
     failed_rows: failedRows,
     total_batches: Number(task.batch_total ?? task.total_batches),
-    completed_batches: Number(task.completed_batches ?? 0),
-    failed_batches: Number(task.failed_batches ?? 0),
+    // 基础视图未做批次聚合：显式返回 null 而不是 0，
+    // 避免前端把“尚未统计”误合并成“已完成 0 批次”而覆盖已有的完整数据。
+    completed_batches: basicOnly ? null : Number(task.completed_batches ?? 0),
+    failed_batches: basicOnly ? null : Number(task.failed_batches ?? 0),
     degraded: Boolean(task.degraded),
     trace_id: task.trace_id,
     error_message: task.error_message,

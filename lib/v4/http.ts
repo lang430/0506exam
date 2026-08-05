@@ -1,24 +1,36 @@
 import { NextResponse } from "next/server";
 import type postgres from "postgres";
-import { getSql } from "@/lib/db";
+import { getBackgroundSql, getSql } from "@/lib/db";
 import { ensureV4Schema } from "@/lib/v4/schema";
 
 /** V4 API 共享辅助：数据库句柄（含幂等建表）、鉴权、错误响应 */
 
 let schemaReady = false;
 
+const ensureSchemaOnce = async (sql: postgres.Sql): Promise<void> => {
+  if (schemaReady) return;
+  const existing = await sql`select to_regclass('public.import_tasks') as r`;
+  if (!existing[0]?.r) await ensureV4Schema(sql);
+  schemaReady = true;
+};
+
+/** 请求链路句柄：面向用户的读写接口，必须与后台调度隔离，保证轮询低延迟。 */
 export const getV4Sql = async (): Promise<postgres.Sql | null> => {
   const sql = getSql();
   if (!sql) return null;
-  if (!schemaReady) {
-    const existing = await sql`select to_regclass('public.import_tasks') as r`;
-    if (existing[0]?.r) {
-      schemaReady = true;
-    } else {
-      await ensureV4Schema(sql);
-      schemaReady = true;
-    }
-  }
+  await ensureSchemaOnce(sql);
+  return sql;
+};
+
+/**
+ * 后台调度句柄：与请求链路物理隔离的连接池。
+ * 调度循环是长事务重负载（认领批次 → 解析 → 校验 → 批量入库），
+ * 一旦与任务详情等只读接口共池，用户侧轮询就会被排队至网关超时。
+ */
+export const getV4BackgroundSql = async (): Promise<postgres.Sql | null> => {
+  const sql = getBackgroundSql();
+  if (!sql) return null;
+  await ensureSchemaOnce(sql);
   return sql;
 };
 

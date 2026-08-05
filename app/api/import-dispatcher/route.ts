@@ -1,5 +1,5 @@
 import { NextResponse, after } from "next/server";
-import { dbUnavailable, dispatcherBudgetMs, dispatcherMaxBatches, dispatcherTriggerTimeoutMs, getV4Sql, verifyDispatcherToken } from "@/lib/v4/http";
+import { dbUnavailable, dispatcherBudgetMs, dispatcherMaxBatches, dispatcherTriggerTimeoutMs, getV4BackgroundSql, verifyDispatcherToken } from "@/lib/v4/http";
 import { runDispatchCycle } from "@/lib/v4/dispatch";
 
 export const runtime = "nodejs";
@@ -16,7 +16,8 @@ export async function POST(request: Request) {
   if (!verifyDispatcherToken(request)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401, headers: { "WWW-Authenticate": "Bearer" } });
   }
-  const sql = await getV4Sql();
+  // 后台连接池：调度是长事务重负载，与任务详情等只读接口共池会导致轮询排队超时。
+  const sql = await getV4BackgroundSql();
   if (!sql) return dbUnavailable();
 
   // Hobby 函数实际约 10s 硬顶，单轮预算必须预留安全余量；
