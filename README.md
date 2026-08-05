@@ -1,8 +1,25 @@
 # 万能导入 V4：下单主链路异步事件驱动重构
 
+## 📋 提交物清单（强制，点击跳转到对应文件）
+
+| # | 提交物 | 对应文件 / 地址（点击跳转） | 说明 |
+|---|---|---|---|
+| 1 | 在线地址（Vercel 可访问 URL） | [https://0807v4.vercel.app/tasks](https://0807v4.vercel.app/tasks) | 生产部署，公开可访问 |
+| 2 | 源码仓库（GitHub / GitLab / Gitee） | [github.com/lang430/0506exam](https://github.com/lang430/0506exam) | 已推送，英文命名 |
+| 3 | 压测数据脚本（生成 20,000 条 SKU 主数据） | [scripts/seed-data.ts](scripts/seed-data.ts) | `npm run seed` 幂等 |
+| 4 | 10,000 行压测 Excel 文件 | [test-data/10000-orders.xlsx](test-data/10000-orders.xlsx) | 含 170 个预埋错误 |
+| 5 | 压测报告（证明 10,000 行总耗时 ≤ 60s） | [docs/load-test-report.md](docs/load-test-report.md) · [原始 JSON](test-data/loadtest-report.json) | 端到端 11s，服务端 ≤400ms |
+| 6 | 架构设计文档（异步流程图 / Outbox / 批量策略） | [docs/architecture-design.md](docs/architecture-design.md) | 完整 |
+| 7 | 《重构假设说明》（覆盖第六章模块十一要求） | [docs/refactoring-assumptions.md](docs/refactoring-assumptions.md) | 完整 |
+| 8 | 接口文档（上传 / 任务 / 错误 / Trace / 监控聚合） | [docs/api-documentation.md](docs/api-documentation.md) | 完整 |
+| 9 | README（本地启动 / 环境变量 / 部署 / 压测 / 故障模拟） | [README.md](README.md) | 本文件 |
+| 10 | 演示账号或访问说明（导入页 / 任务页 / 监控页） | [DELIVERABLES.md · Access Notes](DELIVERABLES.md#access-notes) | 全页面公开，无需账号 |
+
+> 全部交付物索引另见 [DELIVERABLES.md](DELIVERABLES.md)；V2 大模型调用说明见 [SUBMISSION-NOTES.md](SUBMISSION-NOTES.md)。
+
 V2「万能导入解析系统」的生产级重构：把同步阻塞式下单链路改造为**异步事件驱动 + 批量处理 + 全链路可观测**的导入链路。10,000 行运单从任务创建到入库完成 **11 秒**（目标 ≤60s），上传接口服务端处理 **150~400ms**（目标 P95 ≤1s）。
 
-- 在线地址：https://0807v4.vercel.app
+- 在线地址：https://0807v4.vercel.app/tasks
 - **交付物清单**：`DELIVERABLES.md`（十项提交物索引，英文命名）
 - 文档：`docs/` 目录 —— refactoring-assumptions（重构假设说明）/ architecture-design（架构设计）/ api-documentation（接口文档）/ load-test-report（压测报告）/ v4-task-breakdown（需求拆分）
 - V2 大模型调用说明：`SUBMISSION-NOTES.md`
