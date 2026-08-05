@@ -12,8 +12,9 @@
 | 6 | 架构设计文档（异步流程图 / Outbox / 批量策略） | [docs/architecture-design.md](docs/architecture-design.md) | 完整 |
 | 7 | 《重构假设说明》（覆盖第六章模块十一要求） | [docs/refactoring-assumptions.md](docs/refactoring-assumptions.md) | 完整 |
 | 8 | 接口文档（上传 / 任务 / 错误 / Trace / 监控聚合） | [docs/api-documentation.md](docs/api-documentation.md) | 完整 |
-| 9 | README（本地启动 / 环境变量 / 部署 / 压测 / 故障模拟） | [README.md](README.md) | 本文件 |
-| 10 | 演示账号或访问说明（导入页 / 任务页 / 监控页） | [DELIVERABLES.md · Access Notes](DELIVERABLES.md#access-notes) | 全页面公开，无需账号 |
+| 9 | README（本地启动 / 环境变量 / 压测 / 故障模拟） | [README.md](README.md) | 本文件 |
+| 10 | 部署（Vercel：Git 集成 / GitHub Actions 自动部署 + 质量门禁） | [README · 部署](README.md#部署vercel) · [docs/ci-cd-vercel.md](docs/ci-cd-vercel.md) | 生产 https://0807v4.vercel.app |
+| 11 | 演示账号或访问说明（导入页 / 任务页 / 监控页） | [DELIVERABLES.md · Access Notes](DELIVERABLES.md#access-notes) | 全页面公开，无需账号 |
 
 > 全部交付物索引另见 [DELIVERABLES.md](DELIVERABLES.md)；V2 大模型调用说明见 [SUBMISSION-NOTES.md](SUBMISSION-NOTES.md)。
 
