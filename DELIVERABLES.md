@@ -6,7 +6,7 @@ All deliverable file names follow English naming conventions.
 | # | Deliverable | Location | Status |
 |---|---|---|---|
 | 1 | Online URL (Vercel deployment) | https://0807v4.vercel.app | ✅ Live |
-| 2 | Source repository (GitHub) | https://github.com/lang430/0506exam | ✅ Pushed |
+| 2 | Source repository (GitHub) | https://github.com/lang430/0807exam | ✅ Pushed |
 | 3 | Load-test data seed script (20,000 SKUs) | `scripts/seed-data.ts` | ✅ Idempotent, verified |
 | 4 | 10,000-row load-test Excel file | `test-data/10000-orders.xlsx` | ✅ Committed (170 seeded errors) |
 | 5 | Load-test report (≤60s proof) | `docs/load-test-report.md` (+ raw JSON: `test-data/loadtest-report.json`) | ✅ 11s 端到端（服务端处理 ≤400ms） |

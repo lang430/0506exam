@@ -5,7 +5,7 @@
 | # | 提交物 | 对应文件 / 地址（点击跳转） | 说明 |
 |---|---|---|---|
 | 1 | 在线地址（Vercel 可访问 URL） | [https://0807v4.vercel.app/tasks](https://0807v4.vercel.app/tasks) | 生产部署，公开可访问 |
-| 2 | 源码仓库（GitHub / GitLab / Gitee） | [github.com/lang430/0506exam](https://github.com/lang430/0506exam) | 已推送，英文命名 |
+| 2 | 源码仓库（GitHub / GitLab / Gitee） | [github.com/lang430/0807exam](https://github.com/lang430/0807exam) | 已推送，英文命名 |
 | 3 | 压测数据脚本（生成 20,000 条 SKU 主数据） | [scripts/seed-data.ts](scripts/seed-data.ts) | `npm run seed` 幂等 |
 | 4 | 10,000 行压测 Excel 文件 | [test-data/10000-orders.xlsx](test-data/10000-orders.xlsx) | 含 170 个预埋错误 |
 | 5 | 压测报告（证明 10,000 行总耗时 ≤ 60s） | [docs/load-test-report.md](docs/load-test-report.md) · [原始 JSON](test-data/loadtest-report.json) | 端到端 11s，服务端 ≤400ms |
