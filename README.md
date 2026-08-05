@@ -90,6 +90,25 @@ npm run dev          # http://127.0.0.1:3000
 
 数据库初始化：应用层首次访问自动幂等建表（`lib/v4/schema.ts`）；手工执行可用 `database.sql`（V2）+ `database-v4.sql`（V4 增量）。
 
+## 部署（Vercel）
+
+生产环境已上线：https://0807v4.vercel.app（任务页 `/tasks`）。两种部署方式，推荐方式二（带质量门禁）。
+
+### 方式一：Vercel Git 集成（一键）
+1. Vercel 导入 GitHub 仓库 `lang430/0807exam`，Framework 选 Next.js（自动识别），Build `npm run build`、Output `*.next`；
+2. 在 **Vercel 控制台 → Settings → Environment Variables** 配置上一节全部变量（`POSTGRES_URL` / `DISPATCHER_TOKEN` / `CRON_SECRET` / `V4_BATCH_SIZE` 等，仓库不含密钥）；
+3. push 到 `main` 即自动部署；`vercel.json` 已登记每日 03:00 cron（`0 3 * * *`，调用 `/api/import-dispatcher` 兜底，由 Vercel 平台接管）。
+
+### 方式二：GitHub Actions 自动部署（推荐，含质量门禁）
+工作流 `.github/workflows/deploy-vercel.yml`：`push main` → `npm run typecheck` + `npm test` 质量门禁 → `vercel build` + `vercel deploy --prebuilt` → 冒烟校验。**需配置 Secrets**：`VERCEL_ORG_ID` / `VERCEL_PROJECT_ID`（取自本地 `.vercel/project.json`）/ `VERCEL_TOKEN`（Vercel 账户令牌，Scope 必须选 `0807exam` 所属 Team）。完整步骤与排错见 [docs/ci-cd-vercel.md](docs/ci-cd-vercel.md)。
+
+> 运行期环境变量只放在 Vercel 控制台，**不进** GitHub Secrets；`vercel pull` 按环境拉取，生产与 Preview 需分别配置。
+
+### 部署后冒烟校验
+- `/tasks` 能打开上传页；
+- `POST /api/import-tasks` 返回 200（依赖 `POSTGRES_URL` 可达，失败多为库不可达，查 Vercel 运行时日志）；
+- 每日 cron 兜底由 Vercel 平台接管，与 Git / CI 部署无关。
+
 ## 压测与验收
 
 ```bash
