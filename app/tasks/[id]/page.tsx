@@ -63,18 +63,30 @@ export default function TaskDetailPage() {
   const [codeFilter, setCodeFilter] = useState("");
   const [batches, setBatches] = useState<BatchInfo[]>([]);
   const [notFound, setNotFound] = useState(false);
+  const [loadError, setLoadError] = useState("");
   const terminalRef = useRef(false);
+  const taskRequestInFlightRef = useRef(false);
 
   const loadTask = useCallback(async (): Promise<void> => {
+    if (taskRequestInFlightRef.current) return;
+    taskRequestInFlightRef.current = true;
     try {
-      const response = await fetch(`/api/import-tasks/${id}`);
+      const response = await fetch(`/api/import-tasks/${id}`, {
+        signal: AbortSignal.timeout(5_000)
+      });
       if (response.status === 404) return setNotFound(true);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       if (data.task_id) {
         setTask(data);
+        setLoadError("");
         if (["COMPLETED", "PARTIAL_SUCCESS", "FAILED"].includes(String(data.status))) terminalRef.current = true;
       }
-    } catch { /* 轮询容错 */ }
+    } catch {
+      setLoadError("任务状态加载失败，请检查网络后重试");
+    } finally {
+      taskRequestInFlightRef.current = false;
+    }
   }, [id]);
 
   const loadErrors = useCallback(async (): Promise<void> => {
@@ -126,7 +138,15 @@ export default function TaskDetailPage() {
   return (
     <V4Shell title="任务详情" subtitle="进度轮询 1.5s · 错误明细筛选导出 · 批次执行情况">
       <section className="shell">
-        {!task ? (
+        {!task && loadError ? (
+          <section className="panel">
+            <div className="empty-state compact">
+              <AlertTriangle size={28} />
+              <strong>{loadError}</strong>
+              <button onClick={() => void loadTask()}><RefreshCw size={14} /> 重试</button>
+            </div>
+          </section>
+        ) : !task ? (
           <section className="panel"><div className="empty-state compact"><Loader2 className="spinner" size={28} /><strong>加载任务中</strong></div></section>
         ) : (
           <>

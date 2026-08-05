@@ -7,6 +7,7 @@ import { dispatchOutbox, claimReadyBatches, enqueueEvents, finalizeTaskIfNeeded 
 import { processBatch, querySkuMasterSet } from "@/lib/v4/worker";
 import { buildEnvelope, ImportEvents } from "@/lib/v4/events";
 import type { BatchRow } from "@/lib/v4/queue";
+import { GET as getTaskDetail } from "@/app/api/import-tasks/[taskId]/route";
 
 /**
  * V4 数据库集成测试（题面 10.1 自动化测试场景 2~11）
@@ -19,6 +20,7 @@ const describeDb = RUN ? describe : describe.skip;
 
 const RULE_ID = "rule-v4test";
 const TASK_PREFIX = "task_v4test_";
+const READONLY_TASK_PREFIX = "task_000_v4test_";
 const TRACE_PREFIX = "trace_v4test_";
 
 let sql: postgres.Sql;
@@ -96,10 +98,10 @@ const createTaskInOneTransaction = async (taskId: string, traceId: string, fileB
 };
 
 const cleanupTestArtifacts = async (): Promise<void> => {
-  await sql`delete from batch_performance_log where task_id like ${`${TASK_PREFIX}%`}`;
-  await sql`delete from trace_events where task_id like ${`${TASK_PREFIX}%`} or trace_id like ${`${TRACE_PREFIX}%`}`;
-  await sql`delete from event_outbox where aggregate_id like ${`${TASK_PREFIX}%`}`;
-  await sql`delete from import_tasks where id like ${`${TASK_PREFIX}%`}`;
+  await sql`delete from batch_performance_log where task_id like ${`${TASK_PREFIX}%`} or task_id like ${`${READONLY_TASK_PREFIX}%`}`;
+  await sql`delete from trace_events where task_id like ${`${TASK_PREFIX}%`} or task_id like ${`${READONLY_TASK_PREFIX}%`} or trace_id like ${`${TRACE_PREFIX}%`}`;
+  await sql`delete from event_outbox where aggregate_id like ${`${TASK_PREFIX}%`} or aggregate_id like ${`${READONLY_TASK_PREFIX}%`}`;
+  await sql`delete from import_tasks where id like ${`${TASK_PREFIX}%`} or id like ${`${READONLY_TASK_PREFIX}%`}`;
   await sql`delete from imported_orders where external_code like 'V4T-%'`;
 };
 
@@ -148,6 +150,31 @@ describeDb("V4 数据库集成测试", () => {
     expect(batches[0].status).toBe("ready");
     const outbox = await sql`select status from event_outbox where aggregate_id = ${taskId} and event_type = 'ImportBatchCreated'`;
     expect(outbox[0].status).toBe("sent");
+  });
+
+  it("任务详情查询只读，不消费待处理批次", async () => {
+    const taskId = `${READONLY_TASK_PREFIX}readonly`;
+    const traceId = `${TRACE_PREFIX}readonly`;
+    const buffer = await buildTestExcel();
+    await createTaskInOneTransaction(taskId, traceId, buffer);
+    await sql`update event_outbox set status = 'sent' where aggregate_id = ${taskId}`;
+    await sql`update import_task_batches set status = 'ready' where task_id = ${taskId}`;
+    await sql`update dispatch_lease set expires_at = now() - interval '1 second' where key = 1`;
+
+    const response = await getTaskDetail(
+      new Request(`http://localhost/api/import-tasks/${taskId}`),
+      { params: Promise.resolve({ taskId }) }
+    );
+    const body = await response.json();
+    const task = await sql`select status, processed_rows from import_tasks where id = ${taskId}`;
+    const batch = await sql`select status, retry_count from import_task_batches where task_id = ${taskId}`;
+
+    expect(response.status).toBe(200);
+    expect(body.status).toBe("PENDING");
+    expect(task[0].status).toBe("pending");
+    expect(Number(task[0].processed_rows)).toBe(0);
+    expect(batch[0].status).toBe("ready");
+    expect(Number(batch[0].retry_count)).toBe(0);
   });
 
   it("场景3b：卡死批次重试超限后，任务聚合为 failed", async () => {
