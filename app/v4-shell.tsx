@@ -17,6 +17,14 @@ const MENU = [
   { href: "/traces", label: "Trace 检索", icon: Search, exact: false }
 ];
 
+const QUEUE_HEALTH_REFRESH_MS = 3_000;
+
+export const startQueueHealthPolling = (load: () => void): (() => void) => {
+  load();
+  const timer = setInterval(load, QUEUE_HEALTH_REFRESH_MS);
+  return () => clearInterval(timer);
+};
+
 interface V4ShellProps {
   title: string;
   subtitle?: string;
@@ -29,22 +37,34 @@ export default function V4Shell({ title, subtitle, children }: V4ShellProps) {
   const isActive = (item: (typeof MENU)[number]): boolean =>
     item.exact ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`);
 
-  // 打开任意页面即自动加载队列健康度（顶栏状态芯片）
+  // 顶栏状态持续刷新；慢请求未结束时跳过本轮，避免轮询叠加。
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/import-monitor/summary")
-      .then((response) => (response.ok ? response.json() : Promise.reject(new Error(String(response.status)))))
-      .then((data) => {
+    let inFlight = false;
+    const loadQueue = async (): Promise<void> => {
+      if (inFlight) return;
+      inFlight = true;
+      try {
+        const response = await fetch("/api/import-monitor/summary", {
+          cache: "no-store",
+          signal: AbortSignal.timeout(5_000)
+        });
+        if (!response.ok) throw new Error(String(response.status));
+        const data = await response.json();
         if (cancelled) return;
         const waiting = Number(data?.queueDepth?.waitingRows ?? 0);
         const level: "ok" | "warn" = data?.queueDepth?.alertLevel === "warn" ? "warn" : "ok";
         setQueue({ level, text: level === "warn" ? `队列积压 ${waiting} 行` : `队列正常 · 待处理 ${waiting} 行` });
-      })
-      .catch(() => {
+      } catch {
         if (!cancelled) setQueue({ level: "error", text: "监控不可用" });
-      });
+      } finally {
+        inFlight = false;
+      }
+    };
+    const stopPolling = startQueueHealthPolling(() => void loadQueue());
     return () => {
       cancelled = true;
+      stopPolling();
     };
   }, [pathname]);
 
@@ -79,7 +99,7 @@ export default function V4Shell({ title, subtitle, children }: V4ShellProps) {
             {subtitle ? <p>{subtitle}</p> : null}
           </div>
           <div className="v4-top-meta">
-            <span className={`v4-top-chip ${queue?.level === "warn" ? "warn" : queue?.level === "error" ? "error" : ""}`} title="打开页面时自动加载队列健康度">
+            <span className={`v4-top-chip ${queue?.level === "warn" ? "warn" : queue?.level === "error" ? "error" : ""}`} title="队列健康度">
               <span className="dot" />
               {queue ? queue.text : "状态加载中…"}
             </span>
