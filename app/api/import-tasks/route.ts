@@ -195,27 +195,143 @@ export async function POST(request: Request) {
 }
 
 /**
- * GET /api/import-tasks —— 任务列表（监控页/任务页用）
+ * GET /api/import-tasks —— 任务列表（分页 + 筛选）
+ *
+ * 查询参数：
+ *   page        页码（默认 1）
+ *   page_size   每页条数（默认 10，最大 50）
+ *   status      状态筛选（pending / processing / completed / partial_success / failed）
+ *   keyword     文件名模糊搜索
  *
  * 性能优化：
  * 1. 覆盖索引 import_tasks_list_cover_idx 让查询走 index-only scan，免堆回表；
  * 2. 边缘缓存：列表每 3s 轮询一次，但内容变化慢。用 s-maxage + stale-while-revalidate
  *    让 Vercel CDN 直接命中缓存（毫秒级返回），后台异步再校验，避免每次轮询都打到
- *    Supabase 事务连接池（单次往返约 600~800ms，是“列表慢”的主要来源）。
+ *    Supabase 事务连接池（单次往返约 600~800ms，是"列表慢"的主要来源）。
  *    任务进度等实时数据由详情页各自的轮询负责，列表 2~5s 的陈旧窗口在可接受范围。
  */
-export async function GET() {
+export async function GET(request: Request) {
   const sql = await getV4Sql();
   if (!sql) return dbUnavailable();
-  const rows = await sql`
-    select id, file_name, status, total_rows, processed_rows, success_rows, failed_rows,
-           total_batches, trace_id, degraded, created_at, completed_at
-    from import_tasks
-    order by created_at desc
-    limit 50
-  `;
+
+  const { searchParams } = new URL(request.url);
+  const page = Math.max(1, Number(searchParams.get("page") ?? "1"));
+  const pageSize = Math.min(50, Math.max(1, Number(searchParams.get("page_size") ?? "10")));
+  const status = (searchParams.get("status") ?? "").trim();
+  const keyword = (searchParams.get("keyword") ?? "").trim();
+  const offset = (page - 1) * pageSize;
+
+  // 动态构建 WHERE 条件：仅在有筛选值时追加谓词，避免全表扫描
+  const statusVal = status || null;
+  const keywordVal = keyword ? `%${keyword}%` : null;
+
+  // 并行查询总数与当前页数据，减少连接占用时长
+  const [countResult, rows] = await Promise.all([
+    sql`
+      select count(*)::int as total from import_tasks
+      where (${statusVal}::text is null or status = ${statusVal})
+        and (${keywordVal}::text is null or file_name ilike ${keywordVal})
+      order by created_at desc
+    `,
+    sql`
+      select id, file_name, status, total_rows, processed_rows, success_rows, failed_rows,
+             total_batches, trace_id, degraded, created_at, completed_at
+      from import_tasks
+      where (${statusVal}::text is null or status = ${statusVal})
+        and (${keywordVal}::text is null or file_name ilike ${keywordVal})
+      order by created_at desc
+      limit ${pageSize} offset ${offset}
+    `
+  ]);
+
+  const total = Number(countResult[0]?.total ?? 0);
+
   return NextResponse.json(
-    { tasks: rows },
-    { headers: { "Cache-Control": "public, s-maxage=2, stale-while-revalidate=5" } }
+    {
+      tasks: rows,
+      pagination: {
+        page,
+        page_size: pageSize,
+        total,
+        total_pages: Math.max(1, Math.ceil(total / pageSize))
+      },
+      filters: { status: status || null, keyword: keyword || null }
+    },
+    // 有筛选条件时不缓存，确保用户看到最新结果；无筛选时沿用边缘缓存
+    {
+      headers: (status || keyword)
+        ? {}
+        : { "Cache-Control": "public, s-maxage=2, stale-while-revalidate=5" }
+    }
   );
+}
+
+/**
+ * DELETE /api/import-tasks —— 清空任务数据
+ *
+ * 查询参数：
+ *   status  可选，仅删除指定状态的任务（不传则清空全部）
+ *
+ * 危险操作：级联删除 import_task_files、import_task_batches、import_task_errors、
+ * batch_performance_log、trace_events 等关联数据。前端需二次确认。
+ */
+export async function DELETE(request: Request) {
+  const sql = await getV4Sql();
+  if (!sql) return dbUnavailable();
+
+  const { searchParams } = new URL(request.url);
+  const statusFilter = (searchParams.get("status") ?? "").trim();
+
+  try {
+    await sql.begin(async (tx) => {
+      if (statusFilter) {
+        // 仅删除指定状态的任务及其关联数据
+        const taskIds = await tx`select id from import_tasks where status = ${statusFilter}`;
+        if (!taskIds.length) return;
+        const ids = taskIds.map((r) => String(r.id));
+        await tx.unsafe(
+          `delete from trace_events where task_id = any(array[${ids.map((_, i) => `$${i + 1}`).join(",")}])`,
+          ids
+        );
+        await tx.unsafe(
+          `delete from batch_performance_log where task_id = any(array[${ids.map((_, i) => `$${i + 1}`).join(",")}])`,
+          ids
+        );
+        await tx.unsafe(
+          `delete from import_task_errors where task_id = any(array[${ids.map((_, i) => `$${i + 1}`).join(",")}])`,
+          ids
+        );
+        await tx.unsafe(
+          `delete from import_task_batches where task_id = any(array[${ids.map((_, i) => `$${i + 1}`).join(",")}])`,
+          ids
+        );
+        await tx.unsafe(
+          `delete from import_task_files where task_id = any(array[${ids.map((_, i) => `$${i + 1}`).join(",")}])`,
+          ids
+        );
+        await tx`delete from import_tasks where id = any(${ids})`;
+      } else {
+        // 清空全部：按依赖顺序截断所有关联表
+        await tx`truncate table trace_events cascade`;
+        await tx`truncate table batch_performance_log cascade`;
+        await tx`truncate table import_task_errors cascade`;
+        await tx`truncate table import_task_batches cascade`;
+        await tx`truncate table import_task_files cascade`;
+        await tx`truncate table import_tasks cascade`;
+      }
+    });
+
+    return NextResponse.json({
+      ok: true,
+      message: statusFilter
+        ? `已删除状态为 "${statusFilter}" 的全部任务及关联数据`
+        : "已清空全部导入任务及相关数据"
+    });
+  } catch (error) {
+    console.error("[v4] clear tasks error", error);
+    return NextResponse.json(
+      { ok: false, error: "清空失败，请稍后重试" },
+      { status: 500 }
+    );
+  }
 }
