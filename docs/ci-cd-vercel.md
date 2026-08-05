@@ -36,12 +36,12 @@
 ### 创建并配置 VERCEL_TOKEN
 
 1. 打开 https://vercel.com/account/tokens
-2. Create Token → Scope 选择 **0506exam 所属的 Team**（不要选 Personal，否则 `VERCEL_ORG_ID` 对不上）→ 有效期建议 1 年
+2. Create Token → Scope 选择 **0807exam 所属的 Team**（不要选 Personal，否则 `VERCEL_ORG_ID` 对不上）→ 有效期建议 1 年
 3. 复制生成的令牌（只显示一次），然后任选一种方式写入：
 
 ```bash
 # 方式 A：命令行（会提示粘贴，不留 shell 历史）
-gh secret set VERCEL_TOKEN --repo lang430/0506exam
+gh secret set VERCEL_TOKEN --repo lang430/0807exam
 
 # 方式 B：网页
 # Settings → Secrets and variables → Actions → New repository secret
@@ -88,16 +88,16 @@ git commit -m "ci: 新增 GitHub Actions 自动部署到 Vercel"
 git push origin main
 
 # 2. 观察运行
-gh run watch --repo lang430/0506exam
+gh run watch --repo lang430/0807exam
 
 # 3. 查看结果（含部署地址，写在 Job Summary 里）
-gh run view --repo lang430/0506exam --log
+gh run view --repo lang430/0807exam --log
 ```
 
 也可以先不推送，直接手动触发一次预览部署验证配置：
 
 ```bash
-gh workflow run deploy-vercel.yml --repo lang430/0506exam -f target=preview
+gh workflow run deploy-vercel.yml --repo lang430/0807exam -f target=preview
 ```
 
 ## 五、排查

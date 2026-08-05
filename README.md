@@ -77,7 +77,7 @@ npm run dev          # http://127.0.0.1:3000
 | POSTGRES_URL / POSTGRES_PRISMA_URL / POSTGRES_URL_NON_POOLING / DATABASE_URL | Postgres 连接串（按此优先级读取；生产用 Supabase Pooler 6543） |
 | DISPATCHER_TOKEN | 调度端点 Bearer 令牌（必配；缺失时调度端点 fail-closed 返回 401） |
 | CRON_SECRET | Vercel Cron 调用 `/api/import-dispatcher` 的 Bearer 令牌（必配，否则每日 cron 兜底 401 不执行） |
-| V4_BATCH_SIZE | 处理单元行数（默认 500；Vercel Hobby 建议保持 500，避免单批被 10s 硬上限 kill） |
+| V4_BATCH_SIZE | 处理单元行数（默认 500；Vercel Hobby 建议保持 500 避免单批被 10s 硬上限 kill；本次压测/生产部署设为 2500，见压测报告） |
 | V4_SKU_CHECK_TIMEOUT_MS | SKU 主数据查询超时（默认 3000，超时触发降级） |
 | V4_STUCK_BATCH_SECONDS | 卡死批次恢复窗口（默认 30s；Hobby 下函数被 kill 后在此时间内回收重试） |
 | V4_DISPATCHER_LEASE_SECONDS | 调度租约 TTL（默认 15s，必须 < stuck 阈值） |

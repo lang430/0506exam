@@ -18,7 +18,7 @@
   "task_id": "task_3542c09d03194670ab1c31b8",
   "trace_id": "trace_b8f45ccc938a4d31",
   "status": "PENDING",
-  "total_rows": 10001,
+  "total_rows": 10000,
   "total_batches": 5,
   "batch_size": 2500,
   "duplicate_of": "task_xxx（24 小时内同哈希任务，可为 null）",
