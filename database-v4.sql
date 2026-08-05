@@ -237,6 +237,13 @@ create index if not exists import_task_errors_task_row_idx
 create index if not exists import_tasks_created_at_idx
   on public.import_tasks (created_at desc);
 
+-- 任务列表接口覆盖索引：使 order by created_at desc limit 50 走 index-only scan，
+-- 免去堆回表（import_tasks 行被高频更新 status/processed_rows，普通索引仍会触发堆取）。
+create index if not exists import_tasks_list_cover_idx
+  on public.import_tasks (created_at desc)
+  include (id, file_name, status, total_rows, processed_rows, success_rows, failed_rows,
+           total_batches, trace_id, degraded, completed_at);
+
 -- 慢批次 TOP10：where created_at > now() - interval '24 hours' order by total_duration_ms desc limit 10
 create index if not exists batch_performance_log_created_duration_idx
   on public.batch_performance_log (created_at desc, total_duration_ms desc);

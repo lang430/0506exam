@@ -194,7 +194,16 @@ export async function POST(request: Request) {
   }, { status: 202 });
 }
 
-/** GET /api/import-tasks —— 任务列表（监控页/任务页用） */
+/**
+ * GET /api/import-tasks —— 任务列表（监控页/任务页用）
+ *
+ * 性能优化：
+ * 1. 覆盖索引 import_tasks_list_cover_idx 让查询走 index-only scan，免堆回表；
+ * 2. 边缘缓存：列表每 3s 轮询一次，但内容变化慢。用 s-maxage + stale-while-revalidate
+ *    让 Vercel CDN 直接命中缓存（毫秒级返回），后台异步再校验，避免每次轮询都打到
+ *    Supabase 事务连接池（单次往返约 600~800ms，是“列表慢”的主要来源）。
+ *    任务进度等实时数据由详情页各自的轮询负责，列表 2~5s 的陈旧窗口在可接受范围。
+ */
 export async function GET() {
   const sql = await getV4Sql();
   if (!sql) return dbUnavailable();
@@ -205,5 +214,8 @@ export async function GET() {
     order by created_at desc
     limit 50
   `;
-  return NextResponse.json({ tasks: rows });
+  return NextResponse.json(
+    { tasks: rows },
+    { headers: { "Cache-Control": "public, s-maxage=2, stale-while-revalidate=5" } }
+  );
 }

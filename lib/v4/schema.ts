@@ -182,6 +182,12 @@ export const ensureV4Schema = async (sql: postgres.Sql): Promise<void> => {
   await sql`create index if not exists import_task_errors_task_row_idx on public.import_task_errors (task_id, row_number)`;
   // 任务列表/监控 recentTasks 全局按时间倒序（原 (status, created_at) 前导列为 status）
   await sql`create index if not exists import_tasks_created_at_idx on public.import_tasks (created_at desc)`;
+  // 列表接口覆盖索引：select 的 12 个列全部进 INCLUDE，使 order by created_at desc limit 50
+  // 走 index-only scan，免去堆回表（import_tasks 行被高频更新 status/processed_rows，
+  // 普通 (created_at) 索引仍会触发堆取，覆盖索引直接消除该往返）。
+  await sql`create index if not exists import_tasks_list_cover_idx on public.import_tasks (created_at desc)
+    include (id, file_name, status, total_rows, processed_rows, success_rows, failed_rows,
+             total_batches, trace_id, degraded, completed_at)`;
   // 慢批次 TOP10：created_at 过滤 + total_duration_ms 排序
   await sql`create index if not exists batch_performance_log_created_duration_idx on public.batch_performance_log (created_at desc, total_duration_ms desc)`;
   // 任务详情批次聚合 where task_id 按 status 分类计数（原 (status, task_id) 前导列为 status）
