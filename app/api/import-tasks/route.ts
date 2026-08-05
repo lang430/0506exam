@@ -225,45 +225,52 @@ export async function GET(request: Request) {
   const statusVal = status || null;
   const keywordVal = keyword ? `%${keyword}%` : null;
 
-  // 并行查询总数与当前页数据，减少连接占用时长
-  const [countResult, rows] = await Promise.all([
-    sql`
-      select count(*)::int as total from import_tasks
-      where (${statusVal}::text is null or status = ${statusVal})
-        and (${keywordVal}::text is null or file_name ilike ${keywordVal})
-      order by created_at desc
-    `,
-    sql`
-      select id, file_name, status, total_rows, processed_rows, success_rows, failed_rows,
-             total_batches, trace_id, degraded, created_at, completed_at
-      from import_tasks
-      where (${statusVal}::text is null or status = ${statusVal})
-        and (${keywordVal}::text is null or file_name ilike ${keywordVal})
-      order by created_at desc
-      limit ${pageSize} offset ${offset}
-    `
-  ]);
+  try {
+    // 并行查询总数与当前页数据，减少连接占用时长
+    const [countResult, rows] = await Promise.all([
+      sql`
+        select count(*)::int as total from import_tasks
+        where (${statusVal}::text is null or status = ${statusVal})
+          and (${keywordVal}::text is null or file_name ilike ${keywordVal})
+      `,
+      sql`
+        select id, file_name, status, total_rows, processed_rows, success_rows, failed_rows,
+               total_batches, trace_id, degraded, created_at, completed_at
+        from import_tasks
+        where (${statusVal}::text is null or status = ${statusVal})
+          and (${keywordVal}::text is null or file_name ilike ${keywordVal})
+        order by created_at desc
+        limit ${pageSize} offset ${offset}
+      `
+    ]);
 
-  const total = Number(countResult[0]?.total ?? 0);
+    const total = Number(countResult[0]?.total ?? 0);
 
-  return NextResponse.json(
-    {
-      tasks: rows,
-      pagination: {
-        page,
-        page_size: pageSize,
-        total,
-        total_pages: Math.max(1, Math.ceil(total / pageSize))
+    return NextResponse.json(
+      {
+        tasks: rows,
+        pagination: {
+          page,
+          page_size: pageSize,
+          total,
+          total_pages: Math.max(1, Math.ceil(total / pageSize))
+        },
+        filters: { status: status || null, keyword: keyword || null }
       },
-      filters: { status: status || null, keyword: keyword || null }
-    },
-    // 有筛选条件时不缓存，确保用户看到最新结果；无筛选时沿用边缘缓存
-    {
-      headers: (status || keyword)
-        ? {}
-        : { "Cache-Control": "public, s-maxage=2, stale-while-revalidate=5" }
-    }
-  );
+      // 有筛选条件时不缓存，确保用户看到最新结果；无筛选时沿用边缘缓存
+      {
+        headers: (status || keyword)
+          ? {}
+          : { "Cache-Control": "public, s-maxage=2, stale-while-revalidate=5" }
+      }
+    );
+  } catch (error) {
+    console.error("[v4] list tasks failed", error instanceof Error ? error.message : error);
+    return NextResponse.json(
+      { error: "列表查询失败", detail: error instanceof Error ? error.message : String(error) },
+      { status: 500 }
+    );
+  }
 }
 
 /**
