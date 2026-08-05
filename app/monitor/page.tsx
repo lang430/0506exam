@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Activity, AlertTriangle, BarChart3, Layers, RefreshCw } from "lucide-react";
+import { Activity, AlertTriangle, BarChart3, Layers, Pause, Play, RefreshCw } from "lucide-react";
 import V4Shell from "@/app/v4-shell";
 
 interface MonitorSummary {
@@ -68,10 +68,11 @@ const STAGE_LABELS: Record<string, string> = {
 export default function MonitorPage() {
   const [summary, setSummary] = useState<MonitorSummary | null>(null);
   const [critical, setCritical] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
 
-  const [lastUpdated, setLastUpdated] = useState("");
-
-  const load = async (): Promise<void> => {
+  const load = useCallback(async (): Promise<void> => {
     try {
       const response = await fetch("/api/import-monitor/summary");
       const data = await response.json();
@@ -82,19 +83,42 @@ export default function MonitorPage() {
       }
       setCritical(false);
       setSummary(data);
-      setLastUpdated(new Date().toLocaleTimeString("zh-CN"));
+      setLastUpdatedAt(Date.now());
     } catch {
       setCritical(true);
       setSummary(null);
     }
-  };
+  }, []);
 
   useEffect(() => {
+    if (paused) return;
     void load();
     const timer = setInterval(() => void load(), 5000);
     return () => clearInterval(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [load, paused]);
+
+  // 相对时间每秒刷新（仅用于展示"X秒前"）
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
   }, []);
+
+  const secondsAgo = lastUpdatedAt ? Math.max(0, Math.round((now - lastUpdatedAt) / 1000)) : null;
+  const lastUpdatedText =
+    secondsAgo === null ? "—"
+      : secondsAgo < 1 ? "刚刚"
+        : secondsAgo < 60 ? `${secondsAgo} 秒前`
+          : `${Math.floor(secondsAgo / 60)} 分 ${secondsAgo % 60} 秒前`;
+
+  // 总体健康度横幅（基于队列告警级别）
+  const healthBanner = (() => {
+    if (!summary) return null;
+    const level = summary.queueDepth.alertLevel;
+    const wait = summary.queueDepth.waitingRows ?? 0;
+    if (level === "critical") return { cls: "critical", icon: <AlertTriangle size={18} />, title: "严重告警", metric: `队列积压 ${wait} 行，存在卡死批次需介入` };
+    if (level === "warn") return { cls: "warn", icon: <AlertTriangle size={18} />, title: "队列积压预警", metric: `等待处理 ${wait} 行，请关注推进速度` };
+    return { cls: "ok", icon: <Activity size={18} />, title: "系统健康 · 运行正常", metric: `等待处理 ${wait} 行` };
+  })();
 
   const maxThroughput = Math.max(1, ...((summary?.throughput ?? []).map((item) => item.rows).length ? (summary?.throughput ?? []).map((item) => item.rows) : [1]));
   const maxErrorCount = Math.max(1, ...((summary?.errorDistribution ?? []).length ? (summary?.errorDistribution ?? []).map((item) => item.count) : [1]));
@@ -116,12 +140,26 @@ export default function MonitorPage() {
             <div className="skeleton-row"><span className="skeleton" style={{ height: 90 }} /><span className="skeleton" style={{ height: 90 }} /><span className="skeleton" style={{ height: 90 }} /></div>
           </section>
         )}
-        {summary && !critical && (
-          <div className="grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
+        {summary && !critical && healthBanner && (
+          <>
+            <div className={`health-banner ${healthBanner.cls}`}>
+              <span className="hb-icon">{healthBanner.icon}</span>
+              <span>{healthBanner.title}</span>
+              <span className="hb-metric">{healthBanner.metric}</span>
+            </div>
+            <div className="grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
             <section className="panel" style={{ gridColumn: "1 / -1", padding: "10px 18px" }}>
               <div className="refresh-meta" style={{ justifyContent: "space-between", width: "100%" }}>
-                <span>5 秒自动刷新 · 最后更新 {lastUpdated || "—"}</span>
-                <button style={{ minHeight: 30 }} onClick={() => void load()}><RefreshCw size={14} /> 立即刷新</button>
+                <span>
+                  <span className="pulse-dot" style={{ color: paused ? "#c9cdd4" : "#0b8f8c", marginRight: 6 }} />
+                  5 秒自动刷新 · 最后更新 {lastUpdatedText}
+                </span>
+                <span style={{ display: "inline-flex", gap: 8 }}>
+                  <button className="btn-ghost" style={{ minHeight: 30 }} onClick={() => setPaused((p) => !p)}>
+                    {paused ? <><Play size={14} /> 继续</> : <><Pause size={14} /> 暂停</>}
+                  </button>
+                  <button style={{ minHeight: 30 }} onClick={() => void load()} disabled={paused}><RefreshCw size={14} /> 立即刷新</button>
+                </span>
               </div>
             </section>
             <section className="panel">
@@ -245,6 +283,7 @@ export default function MonitorPage() {
               ) : <p className="muted">最近 7 天没有失败任务。</p>}
             </section>
           </div>
+          </>
         )}
       </section>
     </V4Shell>

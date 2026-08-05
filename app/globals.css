@@ -176,3 +176,46 @@ button:focus-visible, .v4-sidebar nav a:focus-visible, input:focus-visible, sele
 .v4-table th, .v4-table td { min-width: 90px; }
 .muted { color: #6b7785; font-size: 13px; }
 .code-pill { font-family: Consolas, monospace; font-size: 12px; background: #f2f3f5; border-radius: 4px; padding: 1px 6px; color: #0b6e6e; }
+
+/* ===== UI/交互优化（导入任务 / 监控看板 / Trace 检索 共用） ===== */
+/* 表格数字列右对齐 + 等宽数字 */
+.v4-table th.num, .v4-table td.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* 可点击整行 */
+.v4-table tr.tr-clickable { cursor: pointer; }
+.v4-table tr.tr-clickable:hover td { background: #f0fbfb; }
+/* 处理中/待处理行脉冲提示 */
+.v4-table tr.row-processing td:first-child { box-shadow: inset 3px 0 0 #0fc6c2; }
+@keyframes rowPulse { 0%, 100% { background: #fff; } 50% { background: #f0fbfb; } }
+.v4-table tr.row-processing td { animation: rowPulse 1.6s ease-in-out infinite; }
+/* 列表顶部摘要 chips */
+.list-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 2px 0 12px; }
+.summary-chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px; border-radius: 999px; background: #f2fbfb; border: 1px solid #d8eeee; color: #4e5969; font-size: 12px; }
+.summary-chip strong { color: #0b6e6e; font-variant-numeric: tabular-nums; }
+.summary-chip.warn { background: #fff7e8; border-color: #ffe4ba; color: #d97b00; }
+.summary-chip.warn strong { color: #d97b00; }
+.summary-chip.danger { background: #fff1f0; border-color: #ffccc7; color: #cf1322; }
+.summary-chip.danger strong { color: #cf1322; }
+/* 监控：总体健康度横幅 */
+.health-banner { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-radius: 10px; font-weight: 600; margin-bottom: 14px; }
+.health-banner .hb-icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 9px; background: rgba(255,255,255,.5); flex: none; }
+.health-banner .hb-metric { margin-left: auto; font-weight: 400; font-size: 13px; opacity: .9; }
+.health-banner.ok { background: linear-gradient(90deg, #e8fafa, #f1fff7); border: 1px solid #b5e8e8; color: #087443; }
+.health-banner.warn { background: linear-gradient(90deg, #fff7e8, #fff3da); border: 1px solid #ffe4ba; color: #d97b00; }
+.health-banner.critical { background: linear-gradient(90deg, #fff1f0, #ffe9e6); border: 1px solid #ffccc7; color: #cf1322; }
+/* 脉冲点（自动刷新 / 状态指示） */
+.pulse-dot { width: 9px; height: 9px; border-radius: 50%; background: currentColor; animation: pulseDot 1.6s infinite; }
+@keyframes pulseDot { 0% { box-shadow: 0 0 0 0 currentColor; } 70% { box-shadow: 0 0 0 7px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+/* 监控：暂停自动刷新 */
+.btn-ghost { background: #fff; color: #4e5969; border: 1px solid #c9cdd4; }
+.btn-ghost:hover { background: #f2f3f5; border-color: #b7bdc4; }
+/* Trace 检索：响应式筛选网格 + 重置 */
+.trace-filters { display: grid; grid-template-columns: minmax(160px,1.5fr) minmax(160px,1.5fr) minmax(120px,1fr) 90px 116px 78px 78px auto; gap: 8px; align-items: end; }
+.trace-filters .btn-reset { background: #fff; color: #4e5969; border: 1px solid #c9cdd4; }
+.trace-filters .btn-reset:hover { background: #f2f3f5; }
+/* 详情区加载骨架 */
+.panel-loading { display: grid; place-items: center; gap: 10px; padding: 36px 20px; color: #6b7785; font-size: 13px; }
+.section-sub { font-size: 12px; color: #6b7785; font-weight: 400; margin-left: 6px; }
+@media (max-width: 1100px) {
+  .trace-filters { grid-template-columns: 1fr 1fr; }
+  .trace-filters > :last-child { grid-column: 1 / -1; }
+}

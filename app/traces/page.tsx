@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Search } from "lucide-react";
+import { Loader2, Search } from "lucide-react";
 import V4Shell from "@/app/v4-shell";
 
 interface TraceHit {
@@ -66,9 +66,11 @@ function TracesContent() {
   const [traceBatches, setTraceBatches] = useState<TraceBatch[]>([]);
   const [searched, setSearched] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [traceLoading, setTraceLoading] = useState(false);
 
   const loadTrace = useCallback(async (traceId: string): Promise<void> => {
     if (!traceId) return;
+    setTraceLoading(true);
     try {
       const params = new URLSearchParams();
       if (batchFilter.trim()) params.set("batch", batchFilter.trim());
@@ -78,7 +80,7 @@ function TracesContent() {
       setTimeline(Array.isArray(data.timeline) ? data.timeline : []);
       setTraceErrors(Array.isArray(data.errors) ? data.errors : []);
       setTraceBatches(Array.isArray(data.batches) ? data.batches : []);
-    } catch { /* 忽略 */ }
+    } catch { /* 忽略 */ } finally { setTraceLoading(false); }
   }, [batchFilter]);
 
   useEffect(() => {
@@ -107,6 +109,11 @@ function TracesContent() {
     }
   };
 
+  const resetFilters = (): void => {
+    setTaskId(""); setTraceId(""); setFileName(""); setErrorCode(""); setBatchFilter(""); setRowFrom(""); setRowTo("");
+    setHits([]); setSearched(false); setActiveTraceId(""); setTaskInfo(null); setTimeline([]); setTraceErrors([]); setTraceBatches([]);
+  };
+
   // 打开页面即自动加载最近任务（无需手动点击搜索）
   useEffect(() => {
     void search();
@@ -118,7 +125,7 @@ function TracesContent() {
       <section className="shell">
         <section className="panel">
           <div className="panel-title"><Search size={18} /> 全链路 Trace 检索（task_id / trace_id / 文件名 / 错误码 / 行号范围）</div>
-          <div className="history-filters" style={{ gridTemplateColumns: "minmax(180px,1.5fr) minmax(180px,1.5fr) minmax(140px,1fr) 80px 105px 80px 80px auto" }} onKeyDown={(event) => { if (event.key === "Enter") void search(); }}>
+          <div className="history-filters trace-filters" onKeyDown={(event) => { if (event.key === "Enter") void search(); }}>
             <input className="search" placeholder="task_id（精确）" value={taskId} onChange={(event) => setTaskId(event.target.value)} />
             <input className="search" placeholder="trace_id（精确）" value={traceId} onChange={(event) => setTraceId(event.target.value)} />
             <input className="search" placeholder="文件名（模糊）" value={fileName} onChange={(event) => setFileName(event.target.value)} />
@@ -129,7 +136,10 @@ function TracesContent() {
             </select>
             <input className="search" placeholder="行号起" value={rowFrom} onChange={(event) => setRowFrom(event.target.value)} />
             <input className="search" placeholder="行号止" value={rowTo} onChange={(event) => setRowTo(event.target.value)} />
-            <button onClick={() => void search()} disabled={loading}><Search size={16} /> {loading ? "加载中" : "搜索"}</button>
+            <div style={{ display: "flex", gap: 8 }} className="trace-actions">
+              <button onClick={() => void search()} disabled={loading}><Search size={16} /> {loading ? "加载中" : "搜索"}</button>
+              <button className="btn-reset" onClick={() => resetFilters()} disabled={loading}>重置</button>
+            </div>
           </div>
           {loading && (
             <div style={{ marginTop: 10 }}>
@@ -162,7 +172,11 @@ function TracesContent() {
         {activeTraceId && (
           <section className="panel wide">
             <div className="panel-title">时间线 · <span className="code-pill">{activeTraceId}</span></div>
-            {taskInfo && (
+            {traceLoading ? (
+              <div className="panel-loading"><Loader2 className="spinner" size={18} /> 正在加载 trace 详情…</div>
+            ) : (
+              <>
+                {taskInfo && (
               <div className="metric-grid" style={{ marginBottom: 8 }}>
                 <div className="metric-card"><div className="label">任务 / 文件</div><div className="value" style={{ fontSize: 13 }}>{taskInfo.file_name || taskInfo.id}</div></div>
                 <div className="metric-card"><div className="label">任务状态</div><div className="value" style={{ fontSize: 14 }}><span className={`badge ${taskInfo.status}`}>{taskInfo.status}</span></div></div>
@@ -232,6 +246,8 @@ function TracesContent() {
                     </tbody>
                   </table>
                 </div>
+              </>
+            )}
               </>
             )}
           </section>

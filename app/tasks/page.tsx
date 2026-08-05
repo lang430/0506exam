@@ -55,6 +55,7 @@ export default function TasksPage() {
   const [ruleId, setRuleId] = useState("");
   const [tasks, setTasks] = useState<TaskSummary[]>([]);
   const [loadingList, setLoadingList] = useState(true);
+  const [error, setError] = useState("");
   const [fileName, setFileName] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -78,27 +79,31 @@ export default function TasksPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const searchTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  /** 加载任务列表（带分页和筛选） */
-  const loadTasks = useCallback(async (): Promise<void> => {
-    setLoadingList(true);
-    try {
-      const params = new URLSearchParams({
-        page: String(page),
-        page_size: String(pageSize)
-      });
-      if (statusFilter) params.set("status", statusFilter);
-      if (keyword) params.set("keyword", keyword);
+  // 用 ref 保存最新筛选值，避免 loadTasks 闭包捕获过期状态（修复关键词搜索失效的根本原因）
+  const filtersRef = useRef({ page, pageSize, statusFilter, keyword });
+  filtersRef.current = { page, pageSize, statusFilter, keyword };
 
-      const response = await fetch(`/api/import-tasks?${params}`);
+  /** 加载任务列表（带分页和筛选）——始终读取 ref 中的最新值 */
+  const loadTasks = useCallback(async (): Promise<void> => {
+    const { page: p, pageSize: ps, statusFilter: st, keyword: kw } = filtersRef.current;
+    setLoadingList(true);
+    setError("");
+    try {
+      const params = new URLSearchParams({ page: String(p), page_size: String(ps) });
+      if (st) params.set("status", st);
+      if (kw) params.set("keyword", kw);
+
+      const response = await fetch(`/api/import-tasks?${params}`, { cache: "no-store" });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
       if (Array.isArray(data.tasks)) setTasks(data.tasks);
       if (data.pagination) setPagination(data.pagination);
     } catch {
-      /* 静默重试 */
+      setError("任务列表加载失败，请稍后重试");
     } finally {
       setLoadingList(false);
     }
-  }, [page, pageSize, statusFilter, keyword]);
+  }, []);
 
   useEffect(() => {
     // 加载解析规则（仅首次）
@@ -114,29 +119,37 @@ export default function TasksPage() {
 
     void loadTasks();
 
-    // 自动刷新列表（3s 轮询，仅当前页）
+    // 自动刷新列表（3s 轮询，仅当前页，保持处理中任务状态实时）
     const timer = setInterval(() => void loadTasks(), 3000);
     return () => clearInterval(timer);
   }, [loadTasks]);
 
-  /** 筛选条件变化时重置到第 1 页 */
+  /** 筛选条件变化时立即重新拉取（不再等待 3s 轮询） */
   const handleStatusChange = (value: string) => {
     setStatusFilter(value);
     setPage(1);
+    setTimeout(() => void loadTasks(), 0);
   };
 
   const handleKeywordChange = (value: string) => {
     setKeyword(value);
     setPage(1);
-    // 搜索防抖 400ms
+    // 防抖 400ms 后再查询，避免每次按键都打库
     clearTimeout(searchTimerRef.current);
-    searchTimerRef.current = setTimeout(() => {}, 400);
+    searchTimerRef.current = setTimeout(() => void loadTasks(), 400);
+  };
+
+  const handlePageSizeChange = (value: number) => {
+    setPageSize(value);
+    setPage(1);
+    setTimeout(() => void loadTasks(), 0);
   };
 
   /** 翻页 */
   const goToPage = (p: number) => {
     if (p < 1 || p > pagination.total_pages) return;
     setPage(p);
+    setTimeout(() => void loadTasks(), 0);
   };
 
   /** 上传文件 */
@@ -190,6 +203,7 @@ export default function TasksPage() {
       if (result.ok) {
         setMessage("已清空全部导入任务及相关数据");
         setShowClearConfirm(false);
+        setPage(1);
         void loadTasks();
       } else {
         setMessage(result.error ?? "清空失败");
@@ -208,7 +222,6 @@ export default function TasksPage() {
       e.stopPropagation();
       const droppedFile = e.dataTransfer.files?.[0];
       if (droppedFile && fileInputRef.current) {
-        // 将拖拽的文件赋值给隐藏 input
         const dt = new DataTransfer();
         dt.items.add(droppedFile);
         fileInputRef.current.files = dt.files;
@@ -287,6 +300,14 @@ export default function TasksPage() {
     );
   };
 
+  // 当前页统计摘要
+  const processingCount = tasks.filter(
+    (t) => t.status === "processing" || t.status === "pending"
+  ).length;
+  const failedCount = tasks.filter(
+    (t) => t.status === "failed" || t.status === "partial_success"
+  ).length;
+
   return (
     <V4Shell title="导入任务" subtitle="异步导入：上传即返回 task_id，后台事件驱动批量处理">
       <section className="shell">
@@ -296,7 +317,6 @@ export default function TasksPage() {
           <div className="grid" style={{ gridTemplateColumns: "1fr 1fr auto" }}>
             <label
               className="dropzone"
-              style={{ minHeight: 90 }}
               onDrop={handleDrop}
               onDragOver={handleDragOver}
             >
@@ -334,14 +354,7 @@ export default function TasksPage() {
             <button
               onClick={() => setShowClearConfirm(true)}
               disabled={clearing || pagination.total === 0}
-              style={{
-                background: "#fff1f0",
-                color: "#cf1322",
-                borderColor: "#ffccc7",
-                fontSize: 13,
-                minHeight: 30,
-                padding: "4px 12px"
-              }}
+              className="btn-ghost"
               title="清空全部任务数据"
             >
               {clearing ? <Loader2 className="spinner" size={14} /> : <Trash2 size={14} />} 清空数据
@@ -407,10 +420,7 @@ export default function TasksPage() {
             <div style={{ alignSelf: "flex-end" }}>
               <select
                 value={String(pageSize)}
-                onChange={(e) => {
-                  setPageSize(Number(e.target.value));
-                  setPage(1);
-                }}
+                onChange={(e) => handlePageSizeChange(Number(e.target.value))}
                 style={{ width: "auto", minWidth: 100 }}
               >
                 {[10, 20, 50].map((s) => (
@@ -420,35 +430,64 @@ export default function TasksPage() {
             </div>
           </div>
 
+          {/* 列表摘要 */}
+          <div className="list-summary">
+            <span className="summary-chip">共 <strong>{pagination.total}</strong> 条</span>
+            {processingCount > 0 && (
+              <span className="summary-chip"><span className="pulse-dot" style={{ color: "#0b8f8c" }} /> 处理中 <strong>{processingCount}</strong></span>
+            )}
+            {failedCount > 0 && (
+              <span className="summary-chip danger">失败/部分成功 <strong>{failedCount}</strong></span>
+            )}
+            {statusFilter && <span className="summary-chip warn">已筛选：{STATUS_OPTIONS.find((o) => o.value === statusFilter)?.label}</span>}
+            {keyword && <span className="summary-chip warn">关键词：{keyword}</span>}
+          </div>
+
           {/* 表格 */}
           <div className="table-wrap">
             <table className="v4-table">
               <thead>
                 <tr>
-                  <th>task_id</th><th>文件名</th><th>状态</th><th>总行数</th><th>已处理</th>
-                  <th>成功</th><th>失败</th><th>批次</th><th>降级</th><th>创建时间</th>
+                  <th>task_id</th><th>文件名</th><th>状态</th><th className="num">总行数</th><th className="num">已处理</th>
+                  <th className="num">成功</th><th className="num">失败</th><th className="num">批次</th><th>降级</th><th>创建时间</th>
                 </tr>
               </thead>
               <tbody>
-                {tasks.map((task) => (
-                  <tr key={task.id}>
-                    <td><Link href={`/tasks/${task.id}`} className="code-pill">{task.id.slice(0, 14)}…</Link></td>
-                    <td>{task.file_name}</td>
-                    <td><span className={`badge ${task.status}`}>{task.status}</span></td>
-                    <td>{Number(task.total_rows)}</td>
-                    <td>{Number(task.processed_rows)}</td>
-                    <td>{Number(task.success_rows)}</td>
-                    <td>{Number(task.failed_rows)}</td>
-                    <td>{Number(task.total_batches)}</td>
-                    <td>{task.degraded ? "⚠️ 是" : "否"}</td>
-                    <td>{new Date(task.created_at).toLocaleString("zh-CN")}</td>
-                  </tr>
-                ))}
+                {tasks.map((task) => {
+                  const isActive = task.status === "processing" || task.status === "pending";
+                  return (
+                    <tr
+                      key={task.id}
+                      className={`tr-clickable${isActive ? " row-processing" : ""}`}
+                      onClick={() => router.push(`/tasks/${task.id}`)}
+                    >
+                      <td><Link href={`/tasks/${task.id}`} className="code-pill" onClick={(e) => e.stopPropagation()}>{task.id.slice(0, 14)}…</Link></td>
+                      <td>{task.file_name}</td>
+                      <td><span className={`badge ${task.status}`}>{task.status}</span></td>
+                      <td className="num">{Number(task.total_rows)}</td>
+                      <td className="num">{Number(task.processed_rows)}</td>
+                      <td className="num">{Number(task.success_rows)}</td>
+                      <td className="num">{Number(task.failed_rows)}</td>
+                      <td className="num">{Number(task.total_batches)}</td>
+                      <td>{task.degraded ? "⚠️ 是" : "否"}</td>
+                      <td>{new Date(task.created_at).toLocaleString("zh-CN")}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
 
+            {/* 错误态 */}
+            {error && !tasks.length && (
+              <div className="empty-state compact">
+                <div className="empty-illustration">⚠️</div>
+                <strong>加载失败</strong>
+                <span>{error}</span>
+              </div>
+            )}
+
             {/* 骨架屏加载态 */}
-            {loadingList && !tasks.length && (
+            {loadingList && !tasks.length && !error && (
               <div style={{ padding: "6px 10px" }}>
                 <div className="skeleton-row"><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /></div>
                 <div className="skeleton-row"><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /><span className="skeleton" /></div>
@@ -457,7 +496,7 @@ export default function TasksPage() {
             )}
 
             {/* 空状态 */}
-            {!tasks.length && !loadingList && (
+            {!tasks.length && !loadingList && !error && (
               <div className="empty-state compact">
                 <div className="empty-illustration">📋</div>
                 <strong>暂无导入任务</strong>
@@ -492,25 +531,14 @@ export default function TasksPage() {
                 <button
                   onClick={() => setShowClearConfirm(false)}
                   disabled={clearing}
-                  style={{
-                    background: "#fff",
-                    color: "#4e5969",
-                    border: "1px solid #c9cdd4",
-                    minHeight: 34,
-                    padding: "0 20px"
-                  }}
+                  className="btn-ghost"
                 >
                   取消
                 </button>
                 <button
                   onClick={() => void clearAllTasks()}
                   disabled={clearing}
-                  style={{
-                    background: "#cf1322",
-                    borderColor: "#ffccc7",
-                    minHeight: 34,
-                    padding: "0 20px"
-                  }}
+                  style={{ background: "#cf1322", borderColor: "#ffccc7" }}
                 >
                   {clearing ? (
                     <>
